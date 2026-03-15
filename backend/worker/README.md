@@ -1,49 +1,45 @@
 # Cloudflare Worker API
 
-Backend starter for BUS TRACKING SYSTEM.
+Backend has been reorganized into modules so it is easier to maintain and expand.
 
-## Modes
+## Structure
 
-The worker can run in 2 modes:
+- `src/index.ts` — fetch entrypoint
+- `src/router.ts` — route mapping
+- `src/types.ts` — shared types
+- `src/lib/` — HTTP and Supabase helpers
+- `src/data/` — mock seed data
+- `src/repositories/` — data access layer
+- `src/handlers/` — request handlers grouped by role
 
-1. **Mock mode**
-   - Used automatically when Supabase variables are empty
-   - Good for frontend development
+## Implemented API Groups
 
-2. **Supabase mode**
-   - Enabled when `SUPABASE_URL` and a key are configured
-   - Reads/writes through Supabase REST API
-
-## Current Endpoints
-
+### Public / Passenger
 - `GET /health`
 - `GET /routes`
 - `GET /buses/live?routeId=...`
 - `GET /waiting?routeId=...`
 - `POST /waiting`
-- `POST /locations`
+- `DELETE /waiting/:waitingId`
+
+### Driver
+- `POST /auth/driver/login`
 - `POST /drivers/duty`
+- `POST /locations`
+- `GET /driver/waiting?routeId=...`
 
-## Environment
-
-Set in `wrangler.toml` / Cloudflare:
-
-- `APP_NAME`
-- `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY` (secret)
-
-## Example Commands
-
-```bash
-wrangler dev
-wrangler secret put SUPABASE_SERVICE_ROLE_KEY
-wrangler deploy
-```
+### Admin
+- `POST /auth/admin/login`
+- `GET /admin/routes`
+- `POST /admin/routes`
+- `PUT /admin/routes/:routeId`
+- `GET /admin/buses`
+- `POST /admin/buses`
+- `PUT /admin/buses/:busId`
+- `GET /admin/waiting?routeId=...`
 
 ## Notes
 
-- `POST /locations` inserts into `bus_locations` and updates latest bus position in `buses`
-- `POST /drivers/duty` updates current bus status
-- `POST /waiting` creates a passenger waiting row
-- Replace anon/service role choices carefully based on production security design
+- Authentication endpoints are currently mock/starter endpoints.
+- Supabase mode is used when env vars are configured.
+- Route Admin authorization is not enforced yet; that should be the next backend security step.
