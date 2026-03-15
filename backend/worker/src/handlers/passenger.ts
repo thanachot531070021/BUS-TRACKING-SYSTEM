@@ -1,21 +1,21 @@
 import { badRequest, json, readJson } from '../lib/http';
-import { listLiveBuses } from '../repositories/buses';
-import { listRoutes } from '../repositories/routes';
-import { cancelWaiting, createWaiting, listWaiting } from '../repositories/waiting';
+import { listLiveBusesService } from '../services/buses/buses.service';
+import { listRoutesService } from '../services/routes/routes.service';
+import { cancelWaitingService, createWaitingService, listWaitingService } from '../services/waiting/waiting.service';
 import type { CreateWaitingBody, Env } from '../types';
 
 export async function handleListRoutes(env: Env) {
-  return json({ data: await listRoutes(env) });
+  return json({ data: await listRoutesService(env) });
 }
 
 export async function handleLiveBuses(env: Env, request: Request) {
   const routeId = new URL(request.url).searchParams.get('routeId');
-  return json({ data: await listLiveBuses(env, routeId) });
+  return json({ data: await listLiveBusesService(env, routeId) });
 }
 
 export async function handleListWaiting(env: Env, request: Request) {
   const routeId = new URL(request.url).searchParams.get('routeId');
-  return json({ data: await listWaiting(env, routeId) });
+  return json({ data: await listWaitingService(env, routeId) });
 }
 
 export async function handleCreateWaiting(env: Env, request: Request) {
@@ -24,10 +24,10 @@ export async function handleCreateWaiting(env: Env, request: Request) {
     return badRequest('routeId, lat, lng are required');
   }
 
-  return json({ message: 'Passenger waiting request accepted', data: await createWaiting(env, body) }, 201);
+  return json({ message: 'Passenger waiting request accepted', data: await createWaitingService(env, body) }, 201);
 }
 
 export async function handleCancelWaiting(env: Env, waitingId: string) {
   if (!waitingId) return badRequest('waitingId is required');
-  return json({ message: 'Passenger waiting cancelled', data: await cancelWaiting(env, waitingId) });
+  return json({ message: 'Passenger waiting cancelled', data: await cancelWaitingService(env, waitingId) });
 }

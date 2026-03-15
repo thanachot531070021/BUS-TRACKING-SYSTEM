@@ -1,15 +1,23 @@
 # Cloudflare Worker API
 
-Backend has been reorganized into modules so it is easier to maintain and expand.
+Backend has been reorganized into modules and folders by domain.
 
 ## Structure
 
 - `src/index.ts` — fetch entrypoint
-- `src/router.ts` — route mapping
+- `src/router/`
+  - `public/`
+  - `driver/`
+  - `admin/`
 - `src/types.ts` — shared types
 - `src/lib/` — HTTP and Supabase helpers
 - `src/data/` — mock seed data
 - `src/repositories/` — data access layer
+- `src/services/`
+  - `auth/`
+  - `routes/`
+  - `buses/`
+  - `waiting/`
 - `src/handlers/` — request handlers grouped by role
 
 ## Implemented API Groups
