@@ -1,4 +1,5 @@
-import { loginAdmin, loginDriver, loginWithGoogle } from '../repositories/auth';
+import { loginAdmin, loginDriver, loginWithGoogle, loginWithPassword, registerWithPassword } from '../repositories/auth';
+import { findUserByUsernameOrEmail } from '../repositories/users';
 import type { Env } from '../types';
 
 export async function driverLoginService(env: Env, phone: string, password: string) {
@@ -9,6 +10,18 @@ export async function adminLoginService(env: Env, username: string, password: st
   return loginAdmin(env, username, password);
 }
 
+export async function passwordLoginService(env: Env, identifier: string, password: string, expectedRole?: 'driver' | 'admin' | 'passenger') {
+  return loginWithPassword(env, { identifier, password, expectedRole });
+}
+
+export async function registerService(env: Env, email: string, password: string, username?: string, fullName?: string, role?: 'passenger' | 'driver' | 'admin') {
+  return registerWithPassword(env, { email, password, username, fullName, role });
+}
+
 export async function googleLoginService(env: Env, googleIdToken: string, email?: string, fullName?: string, avatarUrl?: string) {
   return loginWithGoogle(env, { googleIdToken, email, fullName, avatarUrl });
+}
+
+export async function currentUserService(env: Env, identifier: string) {
+  return findUserByUsernameOrEmail(env, identifier);
 }

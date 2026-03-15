@@ -1,38 +1,134 @@
-import { createUser } from './users';
+import { createUser, findUserByUsernameOrEmail } from './users';
+import { getSupabaseAnonKey, supabaseAuthFetch, usingSupabase } from '../lib/supabase';
 import type { CreateUserBody, Env } from '../types';
 
-export async function loginDriver(_env: Env, phone: string, password: string) {
+type SupabaseAuthSession = {
+  access_token?: string;
+  refresh_token?: string;
+  expires_in?: number;
+  user?: {
+    id: string;
+    email?: string;
+    phone?: string;
+    user_metadata?: Record<string, unknown>;
+  };
+};
+
+export async function registerWithPassword(env: Env, body: { email: string; password: string; username?: string; fullName?: string; role?: 'passenger' | 'driver' | 'admin' }) {
+  if (!usingSupabase(env)) {
+    const userPayload: CreateUserBody = {
+      authProvider: 'email',
+      email: body.email,
+      emailVerified: false,
+      username: body.username ?? body.email,
+      fullName: body.fullName ?? body.username ?? body.email,
+      role: body.role ?? 'passenger',
+      status: 'active',
+    };
+
+    const user = await createUser(env, userPayload);
+    return {
+      session: {
+        access_token: `mock-passenger-token:${user.id}`,
+        refresh_token: 'mock-refresh-token',
+        expires_in: 3600,
+      },
+      user,
+      note: 'Mock register only. Configure Supabase online keys for real auth.',
+    };
+  }
+
+  const session = await supabaseAuthFetch<SupabaseAuthSession>(env, 'signup', {
+    method: 'POST',
+    body: JSON.stringify({
+      email: body.email,
+      password: body.password,
+      data: {
+        username: body.username ?? null,
+        full_name: body.fullName ?? null,
+      },
+    }),
+  });
+
+  const userPayload: CreateUserBody = {
+    authUserId: session.user?.id ?? null,
+    authProvider: 'email',
+    email: session.user?.email ?? body.email,
+    emailVerified: false,
+    username: body.username ?? body.email,
+    fullName: body.fullName ?? body.username ?? body.email,
+    role: body.role ?? 'passenger',
+    status: 'active',
+  };
+
+  const user = await createUser(env, userPayload);
+  return { session, user };
+}
+
+export async function loginWithPassword(env: Env, body: { identifier: string; password: string; expectedRole?: 'driver' | 'admin' | 'passenger' }) {
+  if (!usingSupabase(env)) {
+    const user = await findUserByUsernameOrEmail(env, body.identifier);
+    const role = body.expectedRole ?? (user?.role ?? 'passenger');
+
+    if (role === 'driver') {
+      return {
+        role: 'driver',
+        token: `mock-driver-token:${user?.id ?? body.identifier}`,
+        user: user ?? { id: 'driver-user-001', username: body.identifier },
+        note: 'Mock login only - replace with Supabase Auth',
+      };
+    }
+
+    if (role === 'admin') {
+      const isSuperAdmin = ['admin', 'superadmin', 'root', 'superadmin@example.com'].includes(body.identifier.toLowerCase());
+      const adminType = isSuperAdmin ? 'super_admin' : 'route_admin';
+      const adminId = isSuperAdmin ? 'admin-001' : 'admin-002';
+      const userId = isSuperAdmin ? 'user-admin-super' : 'user-admin-route';
+      const routeIds = isSuperAdmin ? '' : 'route-r1';
+
+      return {
+        role: 'admin',
+        token: `mock-admin-token:${adminType}:${adminId}:${userId}:${routeIds}`,
+        user: user ?? { id: userId, username: body.identifier, role: 'admin' },
+        note: 'Mock login only - replace with Supabase Auth',
+      };
+    }
+
+    return {
+      role: 'passenger',
+      token: `mock-passenger-token:${user?.id ?? body.identifier}`,
+      user: user ?? { id: 'passenger-user-001', username: body.identifier },
+      note: 'Mock login only - replace with Supabase Auth',
+    };
+  }
+
+  const session = await supabaseAuthFetch<SupabaseAuthSession>(env, 'token?grant_type=password', {
+    method: 'POST',
+    body: JSON.stringify({
+      email: body.identifier,
+      password: body.password,
+    }),
+  });
+
+  const profile = await findUserByUsernameOrEmail(env, body.identifier);
+
   return {
-    role: 'driver',
-    token: `mock-driver-token:${phone}`,
-    user: {
-      id: 'driver-user-001',
-      phone,
-      name: 'Mock Driver',
-    },
-    note: password ? 'Mock login only - replace with Supabase Auth' : 'Password missing',
+    role: profile?.role ?? body.expectedRole ?? 'passenger',
+    access_token: session.access_token,
+    refresh_token: session.refresh_token,
+    expires_in: session.expires_in,
+    auth_user: session.user,
+    profile,
+    anon_key_hint: getSupabaseAnonKey(env).slice(0, 12),
   };
 }
 
-export async function loginAdmin(_env: Env, username: string, password: string) {
-  const isSuperAdmin = ['admin', 'superadmin', 'root'].includes(username.toLowerCase());
-  const adminType = isSuperAdmin ? 'super_admin' : 'route_admin';
-  const adminId = isSuperAdmin ? 'admin-001' : 'admin-002';
-  const userId = isSuperAdmin ? 'user-admin-super' : 'user-admin-route';
-  const routeIds = isSuperAdmin ? '' : 'route-r1';
+export async function loginDriver(env: Env, phoneOrUsername: string, password: string) {
+  return loginWithPassword(env, { identifier: phoneOrUsername, password, expectedRole: 'driver' });
+}
 
-  return {
-    role: 'admin',
-    token: `mock-admin-token:${adminType}:${adminId}:${userId}:${routeIds}`,
-    user: {
-      id: userId,
-      username,
-      name: isSuperAdmin ? 'Mock Super Admin' : 'Mock Route Admin',
-      adminType,
-      routeIds: routeIds ? routeIds.split(',') : [],
-    },
-    note: password ? 'Mock login only - replace with Supabase Auth' : 'Password missing',
-  };
+export async function loginAdmin(env: Env, username: string, password: string) {
+  return loginWithPassword(env, { identifier: username, password, expectedRole: 'admin' });
 }
 
 export async function loginWithGoogle(env: Env, body: { googleIdToken: string; email?: string; fullName?: string; avatarUrl?: string }) {

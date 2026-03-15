@@ -16,9 +16,10 @@
 - [x] Route / Bus / Waiting detail + delete APIs expanded
 - [x] `.env.example` updated for online config
 - [x] Supabase online setup doc added
+- [x] Added auth endpoints scaffold: `register / login / me`
 
 ## In Progress / Partial
-- [ ] Real Supabase Auth verification (currently still mock token parsing)
+- [ ] Real Supabase Auth verification is partial/scaffolded only
 - [ ] Worker connected with real online runtime secrets
 - [ ] Route-admin scope enforcement completed for every route-scoped write
 - [ ] Admin dashboard connected to live API data end-to-end
@@ -26,9 +27,9 @@
 
 ## Next Recommended Tasks
 ### Backend
-- [ ] Replace mock auth with Supabase Auth JWT verification
-- [ ] Add `GET /auth/me` or equivalent current-user endpoint
-- [ ] Add register/login flow for username/email + password
+- [ ] Replace mock bearer parsing in middleware with real Supabase JWT verification
+- [ ] Make `/auth/me` resolve profile from verified Supabase user id instead of mock token id
+- [ ] Finish register/login flow for username/email + password with real Supabase project keys
 - [ ] Finish route-admin scope checks using real DB lookups for all route/bus write actions
 - [ ] Add stronger validation schemas for request bodies
 
@@ -55,5 +56,5 @@
 - [ ] Add driver duty + GPS posting flow
 
 ## Cleanup
-- [ ] Remove temporary mock-only logic after real auth is wired
+- [ ] Remove remaining temporary mock-only logic after real auth is wired
 - [x] Remove large `supabase/cli/supabase.exe` from tracked project files

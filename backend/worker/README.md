@@ -25,6 +25,9 @@ Backend is organized by domain and is now documented as **online-first** for Sup
 
 ### Public / Passenger
 - `GET /health`
+- `POST /auth/register`
+- `POST /auth/login`
+- `GET /auth/me`
 - `POST /auth/google/login`
 - `GET /routes`
 - `GET /routes/:routeId`
@@ -77,7 +80,7 @@ Backend is organized by domain and is now documented as **online-first** for Sup
 - optional `SUPABASE_PUBLISHABLE_KEY` for Flutter setup
 
 ## Current Auth State
-- Driver/Admin login still returns mock bearer tokens for now
-- Google login is still starter-level
+- `register / login / me` now exist as online-ready scaffold endpoints
+- Driver/Admin login still has mock fallback behavior
 - Middleware and role guards are already in place
-- Next step is wiring real Supabase Auth verification
+- Next step is wiring real Supabase JWT verification in middleware and profile resolution
