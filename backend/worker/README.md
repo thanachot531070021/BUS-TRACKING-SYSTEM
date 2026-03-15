@@ -10,35 +10,37 @@ Backend has been reorganized into modules and folders by domain.
   - `driver.ts`
   - `admin.ts`
 - `src/types.ts` — shared types
-- `src/lib/` — HTTP and Supabase helpers
+- `src/lib/` — HTTP, auth, and Supabase helpers
+- `src/middleware/` — auth / role guard middleware
 - `src/data/` — mock seed data
 - `src/repositories/` — data access layer
 - `src/services/`
-  - `auth/`
-  - `routes/`
-  - `buses/`
-  - `waiting/`
-  - `users/`
-  - `drivers/`
-  - `admins/`
-  - `route-admins/`
+  - `auth.service.ts`
+  - `routes.service.ts`
+  - `buses.service.ts`
+  - `waiting.service.ts`
+  - `users.service.ts`
+  - `drivers.service.ts`
+  - `admins.service.ts`
+  - `route-admins.service.ts`
 - `src/handlers/` — request handlers grouped by role
 
 ## Implemented API Groups
 
 ### Public / Passenger
 - `GET /health`
+- `POST /auth/google/login`
 - `GET /routes`
 - `GET /buses/live?routeId=...`
 - `GET /waiting?routeId=...`
-- `POST /waiting`
-- `DELETE /waiting/:waitingId`
+- `POST /waiting` *(Bearer required)*
+- `DELETE /waiting/:waitingId` *(Bearer required)*
 
 ### Driver
 - `POST /auth/driver/login`
-- `POST /drivers/duty`
-- `POST /locations`
-- `GET /driver/waiting?routeId=...`
+- `POST /drivers/duty` *(Driver/Admin token)*
+- `POST /locations` *(Driver/Admin token)*
+- `GET /driver/waiting?routeId=...` *(Driver/Admin token)*
 
 ### Admin
 #### Identity / User Management
@@ -76,8 +78,8 @@ User data is designed to support future Google login / OIDC mapping:
 - `avatar_url`
 - app `role` kept separate from identity provider
 
-## Notes
-- Authentication endpoints are currently mock/starter endpoints.
-- Supabase mode is used when env vars are configured.
-- Route Admin authorization is not enforced yet; that should be the next backend security step.
-e the next backend security step.
+## Current Auth State
+- Driver/Admin login currently returns mock bearer tokens
+- Google login currently creates/maps a local passenger user in starter mode
+- Middleware now enforces bearer token and role checks on protected routes
+- Replace mock token decoding with real Supabase Auth / Google token verification next

@@ -10,6 +10,13 @@ export type JsonRecord = Record<string, unknown>;
 export type UserRole = 'passenger' | 'driver' | 'admin';
 export type AuthProvider = 'guest' | 'phone' | 'google' | 'email';
 
+export type AuthContext = {
+  token: string;
+  role: UserRole;
+  userId: string;
+  provider?: AuthProvider;
+};
+
 export type UserProfile = {
   id: string;
   auth_user_id?: string | null;

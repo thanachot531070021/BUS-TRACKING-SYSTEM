@@ -1,6 +1,7 @@
 import { handleAdminCreateBus, handleAdminCreateRoute, handleAdminListBuses, handleAdminListRoutes, handleAdminLogin, handleAdminUpdateBus, handleAdminUpdateRoute, handleAdminWaiting } from '../handlers/admin';
 import { handleAdminCreateAdmin, handleAdminCreateDriver, handleAdminCreateRouteAdmin, handleAdminCreateUser, handleAdminDeleteRouteAdmin, handleAdminListAdmins, handleAdminListDrivers, handleAdminListRouteAdmins, handleAdminListUsers, handleAdminUpdateAdmin, handleAdminUpdateDriver, handleAdminUpdateUser } from '../handlers/admin-users';
 import { notFound } from '../lib/http';
+import { requireRole } from '../middleware/auth.middleware';
 import type { Env } from '../types';
 
 function getIdFromPath(pathname: string, prefix: string) {
@@ -12,6 +13,11 @@ export async function adminRouter(request: Request, env: Env) {
   const { pathname } = new URL(request.url);
 
   if (pathname === '/auth/admin/login' && request.method === 'POST') return handleAdminLogin(env, request);
+
+  if (pathname.startsWith('/admin/')) {
+    const auth = requireRole(request, ['admin']);
+    if (auth instanceof Response) return auth;
+  }
 
   if (pathname === '/admin/users' && request.method === 'GET') return handleAdminListUsers(env);
   if (pathname === '/admin/users' && request.method === 'POST') return handleAdminCreateUser(env, request);

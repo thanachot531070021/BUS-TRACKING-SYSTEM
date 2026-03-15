@@ -35,6 +35,7 @@ Structured starter project generated from `Requirement.txt`.
 - Uses **Cloudflare Workers** with mock mode and Supabase mode
 - Backend folders are split by router/service/repository domain
 - Includes starter APIs for users, drivers, admins, route-admin assignments, routes, buses, waiting, and driver location flow
+- Includes starter auth middleware + role guard for protected routes
 
 ### Mobile
 - Flutter structure has been separated into screens / services / models
@@ -61,8 +62,8 @@ From project root:
 - `npm run deploy:worker`
 
 ## Next Recommended Step
-1. Replace mock auth with Supabase Auth / Google Sign-In
-2. Add auth middleware and role guards
+1. Replace mock token parsing with real Supabase Auth / Google token verification
+2. Add route-admin scoped authorization rules
 3. Connect admin dashboard to user-management APIs
 4. Install Flutter SDK
 5. Connect Supabase and Google Maps
