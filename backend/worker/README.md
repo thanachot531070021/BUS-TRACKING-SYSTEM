@@ -1,6 +1,18 @@
 # Cloudflare Worker API
 
-This is the backend starter for BUS TRACKING SYSTEM.
+Backend starter for BUS TRACKING SYSTEM.
+
+## Modes
+
+The worker can run in 2 modes:
+
+1. **Mock mode**
+   - Used automatically when Supabase variables are empty
+   - Good for frontend development
+
+2. **Supabase mode**
+   - Enabled when `SUPABASE_URL` and a key are configured
+   - Reads/writes through Supabase REST API
 
 ## Current Endpoints
 
@@ -12,42 +24,26 @@ This is the backend starter for BUS TRACKING SYSTEM.
 - `POST /locations`
 - `POST /drivers/duty`
 
-## Current State
+## Environment
 
-Right now these endpoints return mock/starter responses so frontend work can begin immediately.
+Set in `wrangler.toml` / Cloudflare:
 
-## Next Integration Step
+- `APP_NAME`
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY` (secret)
 
-Replace sample data in `src/index.ts` with:
-- Supabase REST queries, or
-- direct database access through a secure API layer
+## Example Commands
 
-## Example POST Body
-
-### `/waiting`
-```json
-{
-  "routeId": "route-r1",
-  "lat": 13.7512,
-  "lng": 100.5031,
-  "userId": "optional-user-id"
-}
+```bash
+wrangler dev
+wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+wrangler deploy
 ```
 
-### `/locations`
-```json
-{
-  "busId": "bus-001",
-  "lat": 13.7563,
-  "lng": 100.5018,
-  "speed": 30
-}
-```
+## Notes
 
-### `/drivers/duty`
-```json
-{
-  "busId": "bus-001",
-  "status": "on"
-}
-```
+- `POST /locations` inserts into `bus_locations` and updates latest bus position in `buses`
+- `POST /drivers/duty` updates current bus status
+- `POST /waiting` creates a passenger waiting row
+- Replace anon/service role choices carefully based on production security design

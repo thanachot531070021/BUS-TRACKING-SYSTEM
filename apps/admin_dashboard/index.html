@@ -11,11 +11,11 @@
     <aside class="sidebar">
       <h1>BUS TRACKING</h1>
       <nav>
-        <a href="#">Dashboard</a>
-        <a href="#">Routes</a>
-        <a href="#">Buses</a>
-        <a href="#">Drivers</a>
-        <a href="#">Waiting Passengers</a>
+        <a href="#overview">Dashboard</a>
+        <a href="#routes">Routes</a>
+        <a href="#buses">Buses</a>
+        <a href="#waiting">Waiting Passengers</a>
+        <a href="#api">API Config</a>
       </nav>
     </aside>
 
@@ -23,24 +23,40 @@
       <header class="topbar">
         <div>
           <h2>Admin Dashboard</h2>
-          <p>Starter UI based on Requirement.txt</p>
+          <p>Starter UI connected to Worker API</p>
         </div>
-        <button>Refresh</button>
+        <div class="toolbar">
+          <input id="apiBase" placeholder="API Base URL เช่น http://127.0.0.1:8787" />
+          <button id="saveApiBtn">Save API</button>
+          <button id="refreshBtn">Refresh</button>
+        </div>
       </header>
 
-      <section class="cards">
+      <section class="cards" id="overview">
         <div class="card">
           <span>Active Routes</span>
-          <strong>12</strong>
+          <strong id="routesCount">-</strong>
         </div>
         <div class="card">
           <span>Buses ON Duty</span>
-          <strong>28</strong>
+          <strong id="busesCount">-</strong>
         </div>
         <div class="card">
-          <span>Waiting Passengers</span>
-          <strong>47</strong>
+          <span>Waiting Points</span>
+          <strong id="waitingCount">-</strong>
         </div>
+      </section>
+
+      <section class="grid-2">
+        <section class="panel" id="routes">
+          <h3>Routes</h3>
+          <div id="routesList" class="stack-list"></div>
+        </section>
+
+        <section class="panel" id="waiting">
+          <h3>Waiting Passengers</h3>
+          <div id="waitingList" class="stack-list"></div>
+        </section>
       </section>
 
       <section class="panel">
@@ -48,20 +64,26 @@
         <div class="map-placeholder">Google Maps will be integrated here</div>
       </section>
 
-      <section class="panel">
+      <section class="panel" id="buses">
         <h3>Recent Live Bus Status</h3>
         <table>
           <thead>
             <tr>
-              <th>Bus</th>
               <th>Plate</th>
               <th>Route</th>
               <th>Status</th>
+              <th>Speed</th>
+              <th>Coordinates</th>
               <th>Last Seen</th>
             </tr>
           </thead>
           <tbody id="bus-table"></tbody>
         </table>
+      </section>
+
+      <section class="panel" id="api">
+        <h3>API Status</h3>
+        <pre id="apiStatus">Not loaded</pre>
       </section>
     </main>
   </div>

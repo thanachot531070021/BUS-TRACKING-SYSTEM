@@ -8,8 +8,9 @@ Starter project scaffold generated from `Requirement.txt`.
 - `apps/admin_dashboard/` — Web dashboard for Admin
 - `backend/worker/` — Cloudflare Workers API
 - `supabase/schema.sql` — PostgreSQL schema for Supabase
-- `docs/architecture.md` — System architecture and flow
+- `docs/architecture.md` — system architecture and flow
 - `docs/api-plan.md` — planned API surface
+- `docs/next-steps.md` — implementation roadmap
 
 ## Main Features
 
@@ -34,15 +35,24 @@ Starter project scaffold generated from `Requirement.txt`.
 
 Implemented now:
 - starter database schema in `supabase/schema.sql`
-- starter Cloudflare Worker endpoints with mock responses
-- admin dashboard starter UI
-- mobile Flutter starter app
-- architecture and API planning docs
+- Cloudflare Worker endpoints with mock mode + Supabase integration mode
+- admin dashboard starter UI that fetches data from Worker API
+- mobile Flutter starter app with Passenger / Driver / Admin sections
+- architecture, API planning, and roadmap docs
+
+## Important Backend Notes
+
+Worker supports two modes:
+
+1. **Mock mode** — works immediately without Supabase credentials
+2. **Supabase mode** — activated when these env vars are configured:
+   - `SUPABASE_URL`
+   - `SUPABASE_ANON_KEY` or `SUPABASE_SERVICE_ROLE_KEY`
 
 ## Suggested Next Steps
 
 1. Create Supabase project and run `supabase/schema.sql`
-2. Replace worker mock data with real Supabase queries
-3. Configure Google Maps API keys
-4. Build Flutter screens for route list, map, waiting, and driver duty
-5. Build admin CRUD pages for routes and buses
+2. Put Supabase values into Worker environment
+3. Run `wrangler dev` to test APIs locally
+4. Build Flutter HTTP + map integration
+5. Add admin CRUD pages and authentication
