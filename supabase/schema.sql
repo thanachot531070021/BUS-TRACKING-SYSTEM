@@ -18,6 +18,7 @@ create table if not exists users (
   provider_user_id text,
   email text unique,
   email_verified boolean not null default false,
+  username text unique,
   phone_number text unique,
   full_name text,
   given_name text,
@@ -34,6 +35,7 @@ create table if not exists users (
 create index if not exists idx_users_role on users(role);
 create index if not exists idx_users_auth_provider on users(auth_provider);
 create index if not exists idx_users_provider_user_id on users(provider_user_id);
+create index if not exists idx_users_username on users(username);
 
 create table if not exists drivers (
   id uuid primary key default gen_random_uuid(),

@@ -28,6 +28,7 @@ export type UserProfile = {
   provider_user_id?: string | null;
   email?: string | null;
   email_verified: boolean;
+  username?: string | null;
   phone_number?: string | null;
   full_name?: string | null;
   given_name?: string | null;
@@ -147,6 +148,7 @@ export type CreateUserBody = {
   providerUserId?: string | null;
   email?: string | null;
   emailVerified?: boolean;
+  username?: string | null;
   phoneNumber?: string | null;
   fullName?: string | null;
   givenName?: string | null;
