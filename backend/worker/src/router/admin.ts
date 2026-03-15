@@ -1,4 +1,4 @@
-import { handleAdminCreateBus, handleAdminCreateRoute, handleAdminDeleteBus, handleAdminDeleteRoute, handleAdminGetBusById, handleAdminGetRouteById, handleAdminListBuses, handleAdminListRoutes, handleAdminLogin, handleAdminUpdateBus, handleAdminUpdateRoute, handleAdminWaiting } from '../handlers/admin';
+import { handleAdminCreateBus, handleAdminCreateRoute, handleAdminDashboardSummary, handleAdminDeleteBus, handleAdminDeleteRoute, handleAdminGetBusById, handleAdminGetRouteById, handleAdminListBuses, handleAdminListRoutes, handleAdminLogin, handleAdminRouteBuses, handleAdminRouteWaitingSummary, handleAdminUpdateBus, handleAdminUpdateRoute, handleAdminWaiting, handleAdminWaitingSummary } from '../handlers/admin';
 import { handleAdminCreateAdmin, handleAdminCreateDriver, handleAdminCreateRouteAdmin, handleAdminCreateUser, handleAdminDeleteRouteAdmin, handleAdminListAdmins, handleAdminListDrivers, handleAdminListRouteAdmins, handleAdminListUsers, handleAdminUpdateAdmin, handleAdminUpdateDriver, handleAdminUpdateUser } from '../handlers/admin-users';
 import { json, notFound } from '../lib/http';
 import { requireAdminScope, requireRole } from '../middleware/auth.middleware';
@@ -27,10 +27,12 @@ export async function adminRouter(request: Request, env: Env) {
     }
   }
 
-  if (pathname === '/admin/drivers' || pathname.startsWith('/admin/drivers/') || pathname === '/admin/routes' || pathname.startsWith('/admin/routes/') || pathname === '/admin/buses' || pathname.startsWith('/admin/buses/') || pathname === '/admin/waiting') {
+  if (pathname === '/admin/summary' || pathname === '/admin/drivers' || pathname.startsWith('/admin/drivers/') || pathname === '/admin/routes' || pathname.startsWith('/admin/routes/') || pathname === '/admin/buses' || pathname.startsWith('/admin/buses/') || pathname === '/admin/waiting' || pathname === '/admin/waiting-summary') {
     const scoped = await requireAdminScope(env, request, routeIdFromRequest(request));
     if (scoped instanceof Response) return scoped;
   }
+
+  if (pathname === '/admin/summary' && request.method === 'GET') return handleAdminDashboardSummary(env);
 
   if (pathname === '/admin/users' && request.method === 'GET') return handleAdminListUsers(env);
   if (pathname === '/admin/users' && request.method === 'POST') return handleAdminCreateUser(env, request);
@@ -62,6 +64,14 @@ export async function adminRouter(request: Request, env: Env) {
 
   if (pathname === '/admin/routes' && request.method === 'GET') return handleAdminListRoutes(env);
   if (pathname === '/admin/routes' && request.method === 'POST') return handleAdminCreateRoute(env, request);
+  if (pathname.startsWith('/admin/routes/') && pathname.endsWith('/buses') && request.method === 'GET') {
+    const routeId = pathname.split('/')[3];
+    return handleAdminRouteBuses(env, routeId ?? '');
+  }
+  if (pathname.startsWith('/admin/routes/') && pathname.endsWith('/waiting-summary') && request.method === 'GET') {
+    const routeId = pathname.split('/')[3];
+    return handleAdminRouteWaitingSummary(env, routeId ?? '');
+  }
   if (pathname.startsWith('/admin/routes/') && request.method === 'GET') {
     const routeId = getIdFromPath(pathname, '/admin/routes/');
     return handleAdminGetRouteById(env, routeId ?? '');
@@ -91,6 +101,7 @@ export async function adminRouter(request: Request, env: Env) {
   }
 
   if (pathname === '/admin/waiting' && request.method === 'GET') return handleAdminWaiting(env, request);
+  if (pathname === '/admin/waiting-summary' && request.method === 'GET') return handleAdminWaitingSummary(env, request);
 
   return notFound();
 }

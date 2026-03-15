@@ -18,6 +18,18 @@ export async function listDrivers(env: Env) {
   return supabaseFetch<DriverProfile[]>(env, 'drivers?select=*&order=created_at.desc');
 }
 
+export async function getDriverById(env: Env, driverId: string) {
+  if (!usingSupabase(env)) return mockDrivers.find((driver) => driver.id === driverId) ?? null;
+  const rows = await supabaseFetch<DriverProfile[]>(env, `drivers?select=*&id=eq.${driverId}&limit=1`);
+  return rows[0] ?? null;
+}
+
+export async function findDriverByUserId(env: Env, userId: string) {
+  if (!usingSupabase(env)) return mockDrivers.find((driver) => driver.user_id === userId) ?? null;
+  const rows = await supabaseFetch<DriverProfile[]>(env, `drivers?select=*&user_id=eq.${userId}&limit=1`);
+  return rows[0] ?? null;
+}
+
 export async function createDriver(env: Env, body: CreateDriverBody) {
   if (!usingSupabase(env)) {
     return {

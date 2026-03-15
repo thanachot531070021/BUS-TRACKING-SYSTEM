@@ -2,6 +2,9 @@
 
 ## Public / Passenger APIs
 - `GET /health`
+- `POST /auth/register`
+- `POST /auth/login`
+- `GET /auth/me`
 - `POST /auth/google/login`
 - `GET /routes`
 - `GET /routes/{routeId}`
@@ -14,11 +17,19 @@
 
 ## Driver APIs
 - `POST /auth/driver/login`
+- `GET /driver/me` *(Driver/Admin token)*
 - `POST /drivers/duty` *(Driver/Admin token)*
 - `POST /locations` *(Driver/Admin token)*
 - `GET /driver/waiting?routeId={routeId}` *(Driver/Admin token)*
+- `GET /driver/waiting-summary?routeId={routeId}` *(Driver/Admin token)*
+- `POST /driver/waiting/{waitingId}/pickup` *(Driver/Admin token)*
 
 ## Admin APIs
+### Dashboard / Summary
+- `GET /admin/summary` *(Admin token)*
+- `GET /admin/waiting?routeId={routeId}` *(Admin token)*
+- `GET /admin/waiting-summary?routeId={routeId}` *(Admin token)*
+
 ### User Management
 - `GET /admin/users` *(Admin token)*
 - `POST /admin/users` *(Admin token)*
@@ -37,6 +48,8 @@
 - `POST /auth/admin/login`
 - `GET /admin/routes` *(Admin token)*
 - `GET /admin/routes/{routeId}` *(Admin token)*
+- `GET /admin/routes/{routeId}/buses` *(Admin token)*
+- `GET /admin/routes/{routeId}/waiting-summary` *(Admin token)*
 - `POST /admin/routes` *(Admin token)*
 - `PUT /admin/routes/{routeId}` *(Admin token)*
 - `DELETE /admin/routes/{routeId}` *(Admin token)*
@@ -45,7 +58,6 @@
 - `POST /admin/buses` *(Admin token)*
 - `PUT /admin/buses/{busId}` *(Admin token)*
 - `DELETE /admin/buses/{busId}` *(Admin token)*
-- `GET /admin/waiting?routeId={routeId}` *(Admin token)*
 
 ## Online-first Config Plan
 - use Supabase online as primary database/auth/realtime backend

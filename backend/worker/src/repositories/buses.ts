@@ -14,6 +14,11 @@ export async function listLiveBuses(env: Env, routeId?: string | null) {
   return supabaseFetch<BusLive[]>(env, query);
 }
 
+export async function listBusesByRoute(env: Env, routeId: string) {
+  if (!usingSupabase(env)) return sampleBuses.filter((bus) => bus.route_id === routeId);
+  return supabaseFetch<JsonRecord[]>(env, `buses?select=*&route_id=eq.${routeId}&order=created_at.desc`);
+}
+
 export async function getBusById(env: Env, busId: string) {
   if (!usingSupabase(env)) return sampleBuses.find((bus) => bus.id === busId) ?? null;
   const rows = await supabaseFetch<JsonRecord[]>(env, `buses?select=*&id=eq.${busId}&limit=1`);

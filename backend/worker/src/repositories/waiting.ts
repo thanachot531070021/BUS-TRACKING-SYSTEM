@@ -21,6 +21,15 @@ export async function getWaitingById(env: Env, waitingId: string) {
   return rows[0] ?? null;
 }
 
+export async function getWaitingSummary(env: Env, routeId?: string | null) {
+  const waiting = await listWaiting(env, routeId);
+  return {
+    total_points: waiting.length,
+    total_waiting_count: waiting.reduce((sum, item) => sum + (item.waiting_count ?? 1), 0),
+    route_id: routeId ?? null,
+  };
+}
+
 export async function createWaiting(env: Env, body: CreateWaitingBody) {
   if (!usingSupabase(env)) {
     return {
@@ -59,4 +68,17 @@ export async function cancelWaiting(env: Env, waitingId: string) {
   });
 
   return updated[0] ?? { id: waitingId, status: 'cancelled' };
+}
+
+export async function markWaitingPickedUp(env: Env, waitingId: string) {
+  if (!usingSupabase(env)) {
+    return { id: waitingId, status: 'picked_up' };
+  }
+
+  const updated = await supabaseFetch<JsonRecord[]>(env, `passenger_waiting?id=eq.${waitingId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'picked_up' }),
+  });
+
+  return updated[0] ?? { id: waitingId, status: 'picked_up' };
 }
