@@ -4,10 +4,11 @@ Backend has been reorganized into modules and folders by domain.
 
 ## Structure
 - `src/index.ts` — fetch entrypoint
+- `src/router.ts` — main router entry
 - `src/router/`
-  - `public/`
-  - `driver/`
-  - `admin/`
+  - `public.ts`
+  - `driver.ts`
+  - `admin.ts`
 - `src/types.ts` — shared types
 - `src/lib/` — HTTP and Supabase helpers
 - `src/data/` — mock seed data
@@ -79,3 +80,4 @@ User data is designed to support future Google login / OIDC mapping:
 - Authentication endpoints are currently mock/starter endpoints.
 - Supabase mode is used when env vars are configured.
 - Route Admin authorization is not enforced yet; that should be the next backend security step.
+e the next backend security step.

@@ -1,5 +1,5 @@
-import { createAdmin, listAdmins, updateAdmin } from '../../repositories/admins';
-import type { CreateAdminBody, Env, UpdateAdminBody } from '../../types';
+import { createAdmin, listAdmins, updateAdmin } from '../repositories/admins';
+import type { CreateAdminBody, Env, UpdateAdminBody } from '../types';
 
 export async function listAdminsService(env: Env) {
   return listAdmins(env);

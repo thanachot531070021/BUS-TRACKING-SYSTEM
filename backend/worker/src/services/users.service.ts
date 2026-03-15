@@ -1,5 +1,5 @@
-import { createUser, listUsers, updateUser } from '../../repositories/users';
-import type { CreateUserBody, Env, UpdateUserBody } from '../../types';
+import { createUser, listUsers, updateUser } from '../repositories/users';
+import type { CreateUserBody, Env, UpdateUserBody } from '../types';
 
 export async function listUsersService(env: Env) {
   return listUsers(env);

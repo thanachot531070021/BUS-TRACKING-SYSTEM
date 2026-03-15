@@ -1,8 +1,8 @@
 import { badRequest, json, readJson } from '../lib/http';
-import { adminLoginService } from '../services/auth/auth.service';
-import { createBusService, listAdminBusesService, updateBusService } from '../services/buses/buses.service';
-import { createRouteService, listRoutesService, updateRouteService } from '../services/routes/routes.service';
-import { listWaitingService } from '../services/waiting/waiting.service';
+import { adminLoginService } from '../services/auth.service';
+import { createBusService, listAdminBusesService, updateBusService } from '../services/buses.service';
+import { createRouteService, listRoutesService, updateRouteService } from '../services/routes.service';
+import { listWaitingService } from '../services/waiting.service';
 import type { CreateBusBody, CreateRouteBody, Env, UpdateBusBody, UpdateRouteBody } from '../types';
 
 export async function handleAdminLogin(env: Env, request: Request) {

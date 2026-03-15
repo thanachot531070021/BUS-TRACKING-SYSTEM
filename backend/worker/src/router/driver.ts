@@ -1,6 +1,6 @@
-import { handleDriverDuty, handleDriverLocation, handleDriverLogin, handleDriverWaiting } from '../../handlers/driver';
-import { notFound } from '../../lib/http';
-import type { Env } from '../../types';
+import { handleDriverDuty, handleDriverLocation, handleDriverLogin, handleDriverWaiting } from '../handlers/driver';
+import { notFound } from '../lib/http';
+import type { Env } from '../types';
 
 export async function driverRouter(request: Request, env: Env) {
   const { pathname } = new URL(request.url);

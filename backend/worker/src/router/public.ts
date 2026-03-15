@@ -1,7 +1,7 @@
-import { handleHealth } from '../../handlers/health';
-import { handleCancelWaiting, handleCreateWaiting, handleListRoutes, handleListWaiting, handleLiveBuses } from '../../handlers/passenger';
-import { notFound } from '../../lib/http';
-import type { Env } from '../../types';
+import { handleHealth } from '../handlers/health';
+import { handleCancelWaiting, handleCreateWaiting, handleListRoutes, handleListWaiting, handleLiveBuses } from '../handlers/passenger';
+import { notFound } from '../lib/http';
+import type { Env } from '../types';
 
 function getIdFromPath(pathname: string, prefix: string) {
   if (!pathname.startsWith(prefix)) return null;

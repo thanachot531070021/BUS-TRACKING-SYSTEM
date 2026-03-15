@@ -1,7 +1,7 @@
 import { badRequest, json, readJson } from '../lib/http';
-import { driverLoginService } from '../services/auth/auth.service';
-import { createBusLocationService, updateDriverDutyService } from '../services/buses/buses.service';
-import { listWaitingService } from '../services/waiting/waiting.service';
+import { driverLoginService } from '../services/auth.service';
+import { createBusLocationService, updateDriverDutyService } from '../services/buses.service';
+import { listWaitingService } from '../services/waiting.service';
 import type { Env, UpdateDriverDutyBody, UpdateLocationBody } from '../types';
 
 export async function handleDriverLogin(env: Env, request: Request) {

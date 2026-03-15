@@ -1,7 +1,7 @@
 import { badRequest, json, readJson } from '../lib/http';
-import { listLiveBusesService } from '../services/buses/buses.service';
-import { listRoutesService } from '../services/routes/routes.service';
-import { cancelWaitingService, createWaitingService, listWaitingService } from '../services/waiting/waiting.service';
+import { listLiveBusesService } from '../services/buses.service';
+import { listRoutesService } from '../services/routes.service';
+import { cancelWaitingService, createWaitingService, listWaitingService } from '../services/waiting.service';
 import type { CreateWaitingBody, Env } from '../types';
 
 export async function handleListRoutes(env: Env) {

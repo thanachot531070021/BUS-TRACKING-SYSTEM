@@ -1,8 +1,8 @@
 import { badRequest, json, readJson } from '../lib/http';
-import { listUsersService, createUserService, updateUserService } from '../services/users/users.service';
-import { listDriversService, createDriverService, updateDriverService } from '../services/drivers/drivers.service';
-import { listAdminsService, createAdminService, updateAdminService } from '../services/admins/admins.service';
-import { createRouteAdminService, deleteRouteAdminService, listRouteAdminsService } from '../services/route-admins/route-admins.service';
+import { listUsersService, createUserService, updateUserService } from '../services/users.service';
+import { listDriversService, createDriverService, updateDriverService } from '../services/drivers.service';
+import { listAdminsService, createAdminService, updateAdminService } from '../services/admins.service';
+import { createRouteAdminService, deleteRouteAdminService, listRouteAdminsService } from '../services/route-admins.service';
 import type { CreateAdminBody, CreateDriverBody, CreateRouteAdminBody, CreateUserBody, Env, UpdateAdminBody, UpdateDriverBody, UpdateUserBody } from '../types';
 
 export async function handleAdminListUsers(env: Env) {

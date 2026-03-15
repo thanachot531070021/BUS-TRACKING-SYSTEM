@@ -1,5 +1,5 @@
-import { loginAdmin, loginDriver } from '../../repositories/auth';
-import type { Env } from '../../types';
+import { loginAdmin, loginDriver } from '../repositories/auth';
+import type { Env } from '../types';
 
 export async function driverLoginService(env: Env, phone: string, password: string) {
   return loginDriver(env, phone, password);

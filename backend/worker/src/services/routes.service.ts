@@ -1,5 +1,5 @@
-import { createRoute, listRoutes, updateRoute } from '../../repositories/routes';
-import type { CreateRouteBody, Env, UpdateRouteBody } from '../../types';
+import { createRoute, listRoutes, updateRoute } from '../repositories/routes';
+import type { CreateRouteBody, Env, UpdateRouteBody } from '../types';
 
 export async function listRoutesService(env: Env) {
   return listRoutes(env);

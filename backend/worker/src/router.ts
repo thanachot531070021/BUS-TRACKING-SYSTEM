@@ -1,9 +1,9 @@
-import { json } from '../lib/http';
-import { usingSupabase } from '../lib/supabase';
-import { adminRouter } from './admin';
-import { driverRouter } from './driver';
-import { publicRouter } from './public';
-import type { Env } from '../types';
+import { json } from './lib/http';
+import { usingSupabase } from './lib/supabase';
+import { adminRouter } from './router/admin';
+import { driverRouter } from './router/driver';
+import { publicRouter } from './router/public';
+import type { Env } from './types';
 
 export async function routeRequest(request: Request, env: Env) {
   const { pathname } = new URL(request.url);
