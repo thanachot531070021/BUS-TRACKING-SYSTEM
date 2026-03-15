@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BUS TRACKING SYSTEM - Admin Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h1>BUS TRACKING</h1>
+      <nav>
+        <a href="#">Dashboard</a>
+        <a href="#">Routes</a>
+        <a href="#">Buses</a>
+        <a href="#">Drivers</a>
+        <a href="#">Waiting Passengers</a>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <header class="topbar">
+        <div>
+          <h2>Admin Dashboard</h2>
+          <p>Starter UI based on Requirement.txt</p>
+        </div>
+        <button>Refresh</button>
+      </header>
+
+      <section class="cards">
+        <div class="card">
+          <span>Active Routes</span>
+          <strong>12</strong>
+        </div>
+        <div class="card">
+          <span>Buses ON Duty</span>
+          <strong>28</strong>
+        </div>
+        <div class="card">
+          <span>Waiting Passengers</span>
+          <strong>47</strong>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h3>Live Map Placeholder</h3>
+        <div class="map-placeholder">Google Maps will be integrated here</div>
+      </section>
+
+      <section class="panel">
+        <h3>Recent Live Bus Status</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Bus</th>
+              <th>Plate</th>
+              <th>Route</th>
+              <th>Status</th>
+              <th>Last Seen</th>
+            </tr>
+          </thead>
+          <tbody id="bus-table"></tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
