@@ -5,13 +5,22 @@ const mockRouteAdmins: RouteAdminAssignment[] = [
   {
     id: 'route-admin-001',
     route_id: 'route-r1',
-    admin_id: 'admin-001',
+    admin_id: 'admin-002',
   },
 ];
 
 export async function listRouteAdmins(env: Env) {
   if (!usingSupabase(env)) return mockRouteAdmins;
   return supabaseFetch<RouteAdminAssignment[]>(env, 'route_admins?select=*&order=created_at.desc');
+}
+
+export async function listRouteIdsForAdmin(env: Env, adminId: string) {
+  if (!usingSupabase(env)) {
+    return mockRouteAdmins.filter((item) => item.admin_id === adminId).map((item) => item.route_id);
+  }
+
+  const rows = await supabaseFetch<RouteAdminAssignment[]>(env, `route_admins?select=route_id&admin_id=eq.${adminId}`);
+  return rows.map((row) => row.route_id);
 }
 
 export async function createRouteAdmin(env: Env, body: CreateRouteAdminBody) {

@@ -67,19 +67,16 @@ Backend has been reorganized into modules and folders by domain.
 - `PUT /admin/buses/:busId`
 - `GET /admin/waiting?routeId=...`
 
-## Google-ready User Model
-User data is designed to support future Google login / OIDC mapping:
-- `auth_provider`
-- `provider_user_id`
-- `email`
-- `email_verified`
-- `given_name`
-- `family_name`
-- `avatar_url`
-- app `role` kept separate from identity provider
-
 ## Current Auth State
 - Driver/Admin login currently returns mock bearer tokens
 - Google login currently creates/maps a local passenger user in starter mode
-- Middleware now enforces bearer token and role checks on protected routes
+- Middleware enforces bearer token and role checks on protected routes
+- Route admin scope checks are now scaffolded
+- Mock admin login supports both `super_admin` and `route_admin` behavior
 - Replace mock token decoding with real Supabase Auth / Google token verification next
+
+## Route Admin Scope Notes
+- `super_admin` can access all admin resources
+- `route_admin` should only access route-scoped resources assigned to its routes
+- global identity resources like users/admins/route-admin assignments should remain super-admin only
+- for scoped checks, pass `routeId` in query or `x-route-id` header where needed in starter mode

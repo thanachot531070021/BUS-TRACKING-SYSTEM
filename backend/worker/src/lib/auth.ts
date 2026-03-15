@@ -1,4 +1,4 @@
-import type { AuthContext, UserRole } from '../types';
+import type { AdminType, AuthContext, UserRole } from '../types';
 
 export function parseBearerToken(request: Request) {
   const header = request.headers.get('authorization') || request.headers.get('Authorization');
@@ -9,29 +9,35 @@ export function parseBearerToken(request: Request) {
 }
 
 export function decodeMockToken(token: string): AuthContext | null {
-  if (token.startsWith('mock-driver-token-')) {
+  if (token.startsWith('mock-driver-token:')) {
+    const [, userId = 'driver-user-001'] = token.split(':');
     return {
       token,
       role: 'driver',
-      userId: token.replace('mock-driver-token-', '') || 'driver-user-001',
+      userId,
       provider: 'phone',
     };
   }
 
-  if (token.startsWith('mock-admin-token-')) {
+  if (token.startsWith('mock-admin-token:')) {
+    const [, adminType = 'route_admin', adminId = 'admin-002', userId = 'user-admin-route', routeIdsRaw = ''] = token.split(':');
     return {
       token,
       role: 'admin',
-      userId: token.replace('mock-admin-token-', '') || 'admin-user-001',
+      userId,
       provider: 'email',
+      adminType: adminType as AdminType,
+      adminId,
+      routeIds: routeIdsRaw ? routeIdsRaw.split(',').filter(Boolean) : [],
     };
   }
 
-  if (token.startsWith('mock-passenger-token-')) {
+  if (token.startsWith('mock-passenger-token:')) {
+    const [, userId = 'passenger-user-001'] = token.split(':');
     return {
       token,
       role: 'passenger',
-      userId: token.replace('mock-passenger-token-', '') || 'passenger-user-001',
+      userId,
       provider: 'google',
     };
   }

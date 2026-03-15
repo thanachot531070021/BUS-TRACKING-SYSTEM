@@ -4,8 +4,14 @@ import type { AdminProfile, CreateAdminBody, Env, JsonRecord, UpdateAdminBody } 
 const mockAdmins: AdminProfile[] = [
   {
     id: 'admin-001',
-    user_id: 'user-admin-001',
+    user_id: 'user-admin-super',
     admin_type: 'super_admin',
+    status: 'active',
+  },
+  {
+    id: 'admin-002',
+    user_id: 'user-admin-route',
+    admin_type: 'route_admin',
     status: 'active',
   },
 ];
@@ -13,6 +19,12 @@ const mockAdmins: AdminProfile[] = [
 export async function listAdmins(env: Env) {
   if (!usingSupabase(env)) return mockAdmins;
   return supabaseFetch<AdminProfile[]>(env, 'admins?select=*&order=created_at.desc');
+}
+
+export async function findAdminByUserId(env: Env, userId: string) {
+  if (!usingSupabase(env)) return mockAdmins.find((admin) => admin.user_id === userId) ?? null;
+  const rows = await supabaseFetch<AdminProfile[]>(env, `admins?select=*&user_id=eq.${userId}&limit=1`);
+  return rows[0] ?? null;
 }
 
 export async function createAdmin(env: Env, body: CreateAdminBody) {

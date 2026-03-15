@@ -1,7 +1,7 @@
 import { handleAdminCreateBus, handleAdminCreateRoute, handleAdminListBuses, handleAdminListRoutes, handleAdminLogin, handleAdminUpdateBus, handleAdminUpdateRoute, handleAdminWaiting } from '../handlers/admin';
 import { handleAdminCreateAdmin, handleAdminCreateDriver, handleAdminCreateRouteAdmin, handleAdminCreateUser, handleAdminDeleteRouteAdmin, handleAdminListAdmins, handleAdminListDrivers, handleAdminListRouteAdmins, handleAdminListUsers, handleAdminUpdateAdmin, handleAdminUpdateDriver, handleAdminUpdateUser } from '../handlers/admin-users';
-import { notFound } from '../lib/http';
-import { requireRole } from '../middleware/auth.middleware';
+import { json, notFound } from '../lib/http';
+import { requireAdminScope, requireRole } from '../middleware/auth.middleware';
 import type { Env } from '../types';
 
 function getIdFromPath(pathname: string, prefix: string) {
@@ -9,14 +9,27 @@ function getIdFromPath(pathname: string, prefix: string) {
   return pathname.slice(prefix.length).split('/')[0] || null;
 }
 
+function routeIdFromRequest(request: Request) {
+  const url = new URL(request.url);
+  return url.searchParams.get('routeId') || request.headers.get('x-route-id');
+}
+
 export async function adminRouter(request: Request, env: Env) {
   const { pathname } = new URL(request.url);
 
   if (pathname === '/auth/admin/login' && request.method === 'POST') return handleAdminLogin(env, request);
 
-  if (pathname.startsWith('/admin/')) {
+  if (pathname === '/admin/users' || pathname.startsWith('/admin/users/') || pathname === '/admin/admins' || pathname.startsWith('/admin/admins/') || pathname === '/admin/route-admins' || pathname.startsWith('/admin/route-admins/')) {
     const auth = requireRole(request, ['admin']);
     if (auth instanceof Response) return auth;
+    if (auth.adminType === 'route_admin') {
+      return json({ error: 'Forbidden: route admin cannot manage global identity resources' }, 403);
+    }
+  }
+
+  if (pathname === '/admin/drivers' || pathname.startsWith('/admin/drivers/') || pathname === '/admin/routes' || pathname.startsWith('/admin/routes/') || pathname === '/admin/buses' || pathname.startsWith('/admin/buses/') || pathname === '/admin/waiting') {
+    const scoped = await requireAdminScope(env, request, routeIdFromRequest(request));
+    if (scoped instanceof Response) return scoped;
   }
 
   if (pathname === '/admin/users' && request.method === 'GET') return handleAdminListUsers(env);
@@ -51,7 +64,7 @@ export async function adminRouter(request: Request, env: Env) {
   if (pathname === '/admin/routes' && request.method === 'POST') return handleAdminCreateRoute(env, request);
   if (pathname.startsWith('/admin/routes/') && request.method === 'PUT') {
     const routeId = getIdFromPath(pathname, '/admin/routes/');
-    return handleAdminUpdateRoute(env, request, routeId ?? '');
+    return handleAdminUpdateRoute(env, request, routeId ?? routeIdFromRequest(request) ?? '');
   }
 
   if (pathname === '/admin/buses' && request.method === 'GET') return handleAdminListBuses(env);

@@ -9,12 +9,16 @@ export type JsonRecord = Record<string, unknown>;
 
 export type UserRole = 'passenger' | 'driver' | 'admin';
 export type AuthProvider = 'guest' | 'phone' | 'google' | 'email';
+export type AdminType = 'super_admin' | 'route_admin';
 
 export type AuthContext = {
   token: string;
   role: UserRole;
   userId: string;
   provider?: AuthProvider;
+  adminType?: AdminType;
+  adminId?: string;
+  routeIds?: string[];
 };
 
 export type UserProfile = {
@@ -50,7 +54,7 @@ export type DriverProfile = {
 export type AdminProfile = {
   id: string;
   user_id: string;
-  admin_type: 'super_admin' | 'route_admin';
+  admin_type: AdminType;
   status: 'active' | 'inactive';
   created_at?: string;
 };
@@ -167,7 +171,7 @@ export type UpdateDriverBody = Partial<CreateDriverBody>;
 
 export type CreateAdminBody = {
   userId: string;
-  adminType: 'super_admin' | 'route_admin';
+  adminType: AdminType;
   status?: 'active' | 'inactive';
 };
 

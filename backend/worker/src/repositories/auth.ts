@@ -4,7 +4,7 @@ import type { CreateUserBody, Env } from '../types';
 export async function loginDriver(_env: Env, phone: string, password: string) {
   return {
     role: 'driver',
-    token: `mock-driver-token-${phone}`,
+    token: `mock-driver-token:${phone}`,
     user: {
       id: 'driver-user-001',
       phone,
@@ -15,14 +15,21 @@ export async function loginDriver(_env: Env, phone: string, password: string) {
 }
 
 export async function loginAdmin(_env: Env, username: string, password: string) {
+  const isSuperAdmin = ['admin', 'superadmin', 'root'].includes(username.toLowerCase());
+  const adminType = isSuperAdmin ? 'super_admin' : 'route_admin';
+  const adminId = isSuperAdmin ? 'admin-001' : 'admin-002';
+  const userId = isSuperAdmin ? 'user-admin-super' : 'user-admin-route';
+  const routeIds = isSuperAdmin ? '' : 'route-r1';
+
   return {
     role: 'admin',
-    token: `mock-admin-token-${username}`,
+    token: `mock-admin-token:${adminType}:${adminId}:${userId}:${routeIds}`,
     user: {
-      id: 'admin-user-001',
+      id: userId,
       username,
-      name: 'Mock Admin',
-      adminType: 'super_admin',
+      name: isSuperAdmin ? 'Mock Super Admin' : 'Mock Route Admin',
+      adminType,
+      routeIds: routeIds ? routeIds.split(',') : [],
     },
     note: password ? 'Mock login only - replace with Supabase Auth' : 'Password missing',
   };
@@ -46,7 +53,7 @@ export async function loginWithGoogle(env: Env, body: { googleIdToken: string; e
 
   return {
     role: 'passenger',
-    token: `mock-passenger-token-${providerUserId}`,
+    token: `mock-passenger-token:${providerUserId}`,
     user,
     note: 'Starter Google login flow only. Replace with real Google token verification or Supabase Auth.',
   };
