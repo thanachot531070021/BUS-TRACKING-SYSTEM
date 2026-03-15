@@ -13,8 +13,9 @@
       <nav>
         <a href="#overview">Dashboard</a>
         <a href="#auth">Admin Auth</a>
-        <a href="#route-form">Create Route</a>
-        <a href="#bus-form">Create Bus</a>
+        <a href="#route-form">Route Form</a>
+        <a href="#bus-form">Bus Form</a>
+        <a href="#user-management">Users</a>
         <a href="#routes">Routes</a>
         <a href="#buses">Buses</a>
         <a href="#waiting">Waiting</a>
@@ -54,25 +55,35 @@
 
       <section class="grid-2 forms-grid">
         <section class="panel" id="route-form">
-          <div class="panel-header"><h3>Create Route</h3></div>
+          <div class="panel-header"><h3>Create / Edit Route</h3></div>
           <div class="form-grid">
+            <input id="routeEditIdInput" placeholder="Route ID (for edit)" />
             <input id="routeCodeInput" placeholder="Route Code" />
             <input id="routeNameInput" placeholder="Route Name" />
             <input id="routeStartInput" placeholder="Start Location" />
             <input id="routeEndInput" placeholder="End Location" />
-            <button id="createRouteBtn">Create Route</button>
+            <div class="button-row">
+              <button id="createRouteBtn">Create Route</button>
+              <button id="updateRouteBtn" class="secondary">Update Route</button>
+              <button id="clearRouteBtn" class="ghost">Clear</button>
+            </div>
           </div>
           <div id="routeFormStatus" class="form-status">Ready</div>
         </section>
 
         <section class="panel" id="bus-form">
-          <div class="panel-header"><h3>Create Bus</h3></div>
+          <div class="panel-header"><h3>Create / Edit Bus</h3></div>
           <div class="form-grid">
+            <input id="busEditIdInput" placeholder="Bus ID (for edit)" />
             <input id="busPlateInput" placeholder="Plate Number" />
             <input id="busRouteIdInput" placeholder="Route ID" />
             <input id="busDriverIdInput" placeholder="Driver ID (optional)" />
             <input id="busStatusInput" placeholder="Status: off/on/maintenance" />
-            <button id="createBusBtn">Create Bus</button>
+            <div class="button-row">
+              <button id="createBusBtn">Create Bus</button>
+              <button id="updateBusBtn" class="secondary">Update Bus</button>
+              <button id="clearBusBtn" class="ghost">Clear</button>
+            </div>
           </div>
           <div id="busFormStatus" class="form-status">Ready</div>
         </section>
@@ -87,6 +98,21 @@
           <div class="stack-item"><div class="title">Users</div><div class="meta" id="summaryUsers">-</div></div>
           <div class="stack-item"><div class="title">Active Buses</div><div class="meta" id="summaryActiveBuses">-</div></div>
         </div>
+      </section>
+
+      <section class="grid-3" id="user-management">
+        <section class="panel">
+          <div class="panel-header"><h3>Users</h3><button id="reloadUsersBtn" class="secondary">Reload</button></div>
+          <div id="usersList" class="stack-list"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-header"><h3>Drivers</h3><button id="reloadDriversBtn" class="secondary">Reload</button></div>
+          <div id="driversList" class="stack-list"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-header"><h3>Admins</h3><button id="reloadAdminsBtn" class="secondary">Reload</button></div>
+          <div id="adminsList" class="stack-list"></div>
+        </section>
       </section>
 
       <section class="grid-2">
