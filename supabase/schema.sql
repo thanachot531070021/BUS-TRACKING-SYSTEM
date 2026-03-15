@@ -3,6 +3,14 @@
 
 create extension if not exists pgcrypto;
 
+create or replace function set_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
+
 create table if not exists users (
   id uuid primary key default gen_random_uuid(),
   phone_number text unique,
@@ -13,7 +21,7 @@ create table if not exists users (
 
 create table if not exists drivers (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references users(id) on delete cascade,
+  user_id uuid not null unique references users(id) on delete cascade,
   license_no text,
   status text not null default 'active' check (status in ('active', 'inactive')),
   created_at timestamptz not null default now()
@@ -21,7 +29,7 @@ create table if not exists drivers (
 
 create table if not exists admins (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references users(id) on delete cascade,
+  user_id uuid not null unique references users(id) on delete cascade,
   admin_type text not null check (admin_type in ('super_admin', 'route_admin')),
   status text not null default 'active' check (status in ('active', 'inactive')),
   created_at timestamptz not null default now()
@@ -86,3 +94,55 @@ create table if not exists passenger_waiting (
 
 create index if not exists idx_passenger_waiting_route_status
 on passenger_waiting(route_id, status);
+
+create or replace view active_buses_live as
+select
+  b.id,
+  b.plate_number,
+  b.route_id,
+  r.route_name,
+  b.driver_id,
+  b.status,
+  b.current_lat,
+  b.current_lng,
+  b.current_speed,
+  b.last_seen_at
+from buses b
+left join routes r on r.id = b.route_id
+where b.status = 'on';
+
+create or replace view active_waiting_passengers as
+select
+  pw.id,
+  pw.user_id,
+  pw.route_id,
+  r.route_name,
+  pw.lat,
+  pw.lng,
+  pw.status,
+  pw.created_at,
+  pw.updated_at
+from passenger_waiting pw
+left join routes r on r.id = pw.route_id
+where pw.status = 'waiting';
+
+drop trigger if exists trg_routes_set_updated_at on routes;
+create trigger trg_routes_set_updated_at
+before update on routes
+for each row execute function set_updated_at();
+
+drop trigger if exists trg_buses_set_updated_at on buses;
+create trigger trg_buses_set_updated_at
+before update on buses
+for each row execute function set_updated_at();
+
+drop trigger if exists trg_passenger_waiting_set_updated_at on passenger_waiting;
+create trigger trg_passenger_waiting_set_updated_at
+before update on passenger_waiting
+for each row execute function set_updated_at();
+
+-- Enable realtime for core tables in Supabase dashboard:
+-- buses
+-- bus_locations
+-- passenger_waiting
+-- routes

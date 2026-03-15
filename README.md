@@ -9,6 +9,7 @@ Starter project scaffold generated from `Requirement.txt`.
 - `backend/worker/` — Cloudflare Workers API
 - `supabase/schema.sql` — PostgreSQL schema for Supabase
 - `docs/architecture.md` — System architecture and flow
+- `docs/api-plan.md` — planned API surface
 
 ## Main Features
 
@@ -29,10 +30,19 @@ Starter project scaffold generated from `Requirement.txt`.
 - Super Admin: manage routes, admins, buses
 - Route Admin: manage own routes and buses only
 
+## Current Build Status
+
+Implemented now:
+- starter database schema in `supabase/schema.sql`
+- starter Cloudflare Worker endpoints with mock responses
+- admin dashboard starter UI
+- mobile Flutter starter app
+- architecture and API planning docs
+
 ## Suggested Next Steps
 
 1. Create Supabase project and run `supabase/schema.sql`
-2. Configure Google Maps API keys
-3. Implement Flutter screens in `apps/mobile_app/lib/`
-4. Deploy `backend/worker/` to Cloudflare Workers
-5. Connect realtime subscriptions from Supabase Realtime
+2. Replace worker mock data with real Supabase queries
+3. Configure Google Maps API keys
+4. Build Flutter screens for route list, map, waiting, and driver duty
+5. Build admin CRUD pages for routes and buses
