@@ -7,6 +7,12 @@ export async function listRoutes(env: Env) {
   return supabaseFetch<RouteSummary[]>(env, 'routes?select=id,route_code,route_name,start_location,end_location,route_polyline,status&order=route_code.asc');
 }
 
+export async function getRouteById(env: Env, routeId: string) {
+  if (!usingSupabase(env)) return sampleRoutes.find((route) => route.id === routeId) ?? null;
+  const rows = await supabaseFetch<RouteSummary[]>(env, `routes?select=id,route_code,route_name,start_location,end_location,route_polyline,status&id=eq.${routeId}&limit=1`);
+  return rows[0] ?? null;
+}
+
 export async function createRoute(env: Env, body: CreateRouteBody) {
   if (!usingSupabase(env)) {
     return {
@@ -53,4 +59,13 @@ export async function updateRoute(env: Env, routeId: string, body: UpdateRouteBo
   });
 
   return updated[0];
+}
+
+export async function deleteRoute(env: Env, routeId: string) {
+  if (!usingSupabase(env)) return { id: routeId, deleted: true };
+  await supabaseFetch<JsonRecord[]>(env, `routes?id=eq.${routeId}`, {
+    method: 'DELETE',
+    headers: { Prefer: 'return=minimal' },
+  });
+  return { id: routeId, deleted: true };
 }

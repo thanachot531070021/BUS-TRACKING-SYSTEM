@@ -27,32 +27,27 @@ Structured starter project generated from `Requirement.txt`.
 - Super Admin: manage routes, admins, buses
 - Route Admin: manage own routes and buses only
 
-## Current Dev Setup
+## Current Runtime Direction
 ### Web / Admin
 - Uses **Vite** for local development
 
 ### Backend
-- Uses **Cloudflare Workers** with mock mode and Supabase mode
-- Backend folders are split by router/service/repository domain
-- Includes starter APIs for users, drivers, admins, route-admin assignments, routes, buses, waiting, and driver location flow
-- Includes starter auth middleware + role guard for protected routes
+- Uses **Cloudflare Workers** as the API layer
+- Uses **Supabase online** as the primary database/auth/realtime platform
+- Uses mock fallback mode only as a temporary development fallback when online keys are not configured
+- Includes route/bus/waiting/user-management APIs and auth/role scaffolding
 
 ### Mobile
 - Flutter structure has been separated into screens / services / models
 - Flutter SDK is still required on this machine before running the mobile app
 
-## Identity / Google Login Readiness
-The database and backend now prepare for future Google login by storing:
-- `auth_provider`
-- `provider_user_id`
-- `email`
-- `email_verified`
-- `given_name`
-- `family_name`
-- `avatar_url`
-- internal app `role`
-
-This keeps Google identity separate from app authorization.
+## Online Config Strategy
+Fill real values later using:
+- `SUPABASE_URL`
+- `SUPABASE_PUBLISHABLE_KEY`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `GOOGLE_MAPS_API_KEY`
 
 ## Workspace Scripts
 From project root:
@@ -62,8 +57,8 @@ From project root:
 - `npm run deploy:worker`
 
 ## Next Recommended Step
-1. Replace mock token parsing with real Supabase Auth / Google token verification
-2. Add route-admin scoped authorization rules
-3. Connect admin dashboard to user-management APIs
+1. Fill online Supabase keys into runtime config
+2. Replace mock token parsing with real Supabase Auth verification
+3. Connect admin dashboard to route/bus/user APIs
 4. Install Flutter SDK
-5. Connect Supabase and Google Maps
+5. Connect Supabase Realtime and Google Maps in Flutter

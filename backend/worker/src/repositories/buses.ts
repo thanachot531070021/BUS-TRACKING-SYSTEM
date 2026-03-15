@@ -14,6 +14,12 @@ export async function listLiveBuses(env: Env, routeId?: string | null) {
   return supabaseFetch<BusLive[]>(env, query);
 }
 
+export async function getBusById(env: Env, busId: string) {
+  if (!usingSupabase(env)) return sampleBuses.find((bus) => bus.id === busId) ?? null;
+  const rows = await supabaseFetch<JsonRecord[]>(env, `buses?select=*&id=eq.${busId}&limit=1`);
+  return rows[0] ?? null;
+}
+
 export async function listAdminBuses(env: Env) {
   if (!usingSupabase(env)) return sampleBuses;
   return supabaseFetch<JsonRecord[]>(env, 'buses?select=*&order=created_at.desc');
@@ -59,6 +65,15 @@ export async function updateBus(env: Env, busId: string, body: UpdateBusBody) {
   });
 
   return updated[0];
+}
+
+export async function deleteBus(env: Env, busId: string) {
+  if (!usingSupabase(env)) return { id: busId, deleted: true };
+  await supabaseFetch<JsonRecord[]>(env, `buses?id=eq.${busId}`, {
+    method: 'DELETE',
+    headers: { Prefer: 'return=minimal' },
+  });
+  return { id: busId, deleted: true };
 }
 
 export async function updateDriverDuty(env: Env, busId: string, status: 'on' | 'off') {

@@ -1,11 +1,16 @@
 import { badRequest, json, readJson } from '../lib/http';
-import { listLiveBusesService } from '../services/buses.service';
-import { listRoutesService } from '../services/routes.service';
-import { cancelWaitingService, createWaitingService, listWaitingService } from '../services/waiting.service';
+import { getBusByIdService, listLiveBusesService } from '../services/buses.service';
+import { getRouteByIdService, listRoutesService } from '../services/routes.service';
+import { cancelWaitingService, createWaitingService, getWaitingByIdService, listWaitingService } from '../services/waiting.service';
 import type { CreateWaitingBody, Env } from '../types';
 
 export async function handleListRoutes(env: Env) {
   return json({ data: await listRoutesService(env) });
+}
+
+export async function handleGetRouteById(env: Env, routeId: string) {
+  if (!routeId) return badRequest('routeId is required');
+  return json({ data: await getRouteByIdService(env, routeId) });
 }
 
 export async function handleLiveBuses(env: Env, request: Request) {
@@ -13,9 +18,19 @@ export async function handleLiveBuses(env: Env, request: Request) {
   return json({ data: await listLiveBusesService(env, routeId) });
 }
 
+export async function handleGetBusById(env: Env, busId: string) {
+  if (!busId) return badRequest('busId is required');
+  return json({ data: await getBusByIdService(env, busId) });
+}
+
 export async function handleListWaiting(env: Env, request: Request) {
   const routeId = new URL(request.url).searchParams.get('routeId');
   return json({ data: await listWaitingService(env, routeId) });
+}
+
+export async function handleGetWaitingById(env: Env, waitingId: string) {
+  if (!waitingId) return badRequest('waitingId is required');
+  return json({ data: await getWaitingByIdService(env, waitingId) });
 }
 
 export async function handleCreateWaiting(env: Env, request: Request) {

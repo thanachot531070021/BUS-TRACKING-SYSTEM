@@ -4,8 +4,11 @@
 - `GET /health`
 - `POST /auth/google/login`
 - `GET /routes`
+- `GET /routes/{routeId}`
 - `GET /buses/live?routeId={routeId}`
+- `GET /buses/{busId}`
 - `GET /waiting?routeId={routeId}`
+- `GET /waiting/{waitingId}`
 - `POST /waiting` *(Bearer required)*
 - `DELETE /waiting/{waitingId}` *(Bearer required)*
 
@@ -33,23 +36,24 @@
 ### Route / Bus Management
 - `POST /auth/admin/login`
 - `GET /admin/routes` *(Admin token)*
+- `GET /admin/routes/{routeId}` *(Admin token)*
 - `POST /admin/routes` *(Admin token)*
 - `PUT /admin/routes/{routeId}` *(Admin token)*
+- `DELETE /admin/routes/{routeId}` *(Admin token)*
 - `GET /admin/buses` *(Admin token)*
+- `GET /admin/buses/{busId}` *(Admin token)*
 - `POST /admin/buses` *(Admin token)*
 - `PUT /admin/buses/{busId}` *(Admin token)*
+- `DELETE /admin/buses/{busId}` *(Admin token)*
 - `GET /admin/waiting?routeId={routeId}` *(Admin token)*
 
-## Google-compatible User Data Design
-- keep provider-neutral user table (`users`)
-- store `auth_provider` such as `google`
-- store `provider_user_id` from Google subject / OIDC `sub`
-- store `email`, `email_verified`, `full_name`, `given_name`, `family_name`, `avatar_url`
-- keep internal app role separate from auth provider
-- future login should validate Google token / Supabase Auth identity, then map into local `users`
+## Online-first Config Plan
+- use Supabase online as primary database/auth/realtime backend
+- keep worker envs ready for `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
+- keep Flutter ready for `SUPABASE_URL`, publishable/anon key, and Google Maps key
 
 ## Current Auth / Security State
-- middleware now checks bearer token presence
-- role guard now protects driver/admin routes
-- tokens are still mock/starter tokens today
-- next step is replacing mock token parsing with real Supabase Auth / Google token verification
+- middleware checks bearer token presence
+- role guards protect driver/admin routes
+- route-admin scope scaffold exists
+- next step is replacing mock token parsing with real Supabase Auth verification

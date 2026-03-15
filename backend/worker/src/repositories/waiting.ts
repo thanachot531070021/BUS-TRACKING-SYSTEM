@@ -15,6 +15,12 @@ export async function listWaiting(env: Env, routeId?: string | null) {
   return rows.map((row) => ({ ...row, waiting_count: row.waiting_count ?? 1 }));
 }
 
+export async function getWaitingById(env: Env, waitingId: string) {
+  if (!usingSupabase(env)) return sampleWaiting.find((point) => point.id === waitingId) ?? null;
+  const rows = await supabaseFetch<JsonRecord[]>(env, `passenger_waiting?select=*&id=eq.${waitingId}&limit=1`);
+  return rows[0] ?? null;
+}
+
 export async function createWaiting(env: Env, body: CreateWaitingBody) {
   if (!usingSupabase(env)) {
     return {

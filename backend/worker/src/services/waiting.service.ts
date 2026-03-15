@@ -1,8 +1,12 @@
-import { cancelWaiting, createWaiting, listWaiting } from '../repositories/waiting';
+import { cancelWaiting, createWaiting, getWaitingById, listWaiting } from '../repositories/waiting';
 import type { CreateWaitingBody, Env } from '../types';
 
 export async function listWaitingService(env: Env, routeId?: string | null) {
   return listWaiting(env, routeId);
+}
+
+export async function getWaitingByIdService(env: Env, waitingId: string) {
+  return getWaitingById(env, waitingId);
 }
 
 export async function createWaitingService(env: Env, body: CreateWaitingBody) {

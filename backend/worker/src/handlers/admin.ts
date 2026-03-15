@@ -1,7 +1,7 @@
 import { badRequest, json, readJson } from '../lib/http';
 import { adminLoginService } from '../services/auth.service';
-import { createBusService, listAdminBusesService, updateBusService } from '../services/buses.service';
-import { createRouteService, listRoutesService, updateRouteService } from '../services/routes.service';
+import { createBusService, deleteBusService, getBusByIdService, listAdminBusesService, updateBusService } from '../services/buses.service';
+import { createRouteService, deleteRouteService, getRouteByIdService, listRoutesService, updateRouteService } from '../services/routes.service';
 import { listWaitingService } from '../services/waiting.service';
 import type { CreateBusBody, CreateRouteBody, Env, UpdateBusBody, UpdateRouteBody } from '../types';
 
@@ -13,6 +13,11 @@ export async function handleAdminLogin(env: Env, request: Request) {
 
 export async function handleAdminListRoutes(env: Env) {
   return json({ data: await listRoutesService(env) });
+}
+
+export async function handleAdminGetRouteById(env: Env, routeId: string) {
+  if (!routeId) return badRequest('routeId is required');
+  return json({ data: await getRouteByIdService(env, routeId) });
 }
 
 export async function handleAdminCreateRoute(env: Env, request: Request) {
@@ -27,8 +32,18 @@ export async function handleAdminUpdateRoute(env: Env, request: Request, routeId
   return json({ message: 'Route updated', data: await updateRouteService(env, routeId, body ?? {}) });
 }
 
+export async function handleAdminDeleteRoute(env: Env, routeId: string) {
+  if (!routeId) return badRequest('routeId is required');
+  return json({ message: 'Route deleted', data: await deleteRouteService(env, routeId) });
+}
+
 export async function handleAdminListBuses(env: Env) {
   return json({ data: await listAdminBusesService(env) });
+}
+
+export async function handleAdminGetBusById(env: Env, busId: string) {
+  if (!busId) return badRequest('busId is required');
+  return json({ data: await getBusByIdService(env, busId) });
 }
 
 export async function handleAdminCreateBus(env: Env, request: Request) {
@@ -41,6 +56,11 @@ export async function handleAdminUpdateBus(env: Env, request: Request, busId: st
   const body = await readJson<UpdateBusBody>(request);
   if (!busId) return badRequest('busId is required');
   return json({ message: 'Bus updated', data: await updateBusService(env, busId, body ?? {}) });
+}
+
+export async function handleAdminDeleteBus(env: Env, busId: string) {
+  if (!busId) return badRequest('busId is required');
+  return json({ message: 'Bus deleted', data: await deleteBusService(env, busId) });
 }
 
 export async function handleAdminWaiting(env: Env, request: Request) {

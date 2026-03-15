@@ -1,6 +1,6 @@
 # Cloudflare Worker API
 
-Backend has been reorganized into modules and folders by domain.
+Backend is organized by domain and is now documented as **online-first** for Supabase.
 
 ## Structure
 - `src/index.ts` — fetch entrypoint
@@ -14,16 +14,12 @@ Backend has been reorganized into modules and folders by domain.
 - `src/middleware/` — auth / role guard middleware
 - `src/data/` — mock seed data
 - `src/repositories/` — data access layer
-- `src/services/`
-  - `auth.service.ts`
-  - `routes.service.ts`
-  - `buses.service.ts`
-  - `waiting.service.ts`
-  - `users.service.ts`
-  - `drivers.service.ts`
-  - `admins.service.ts`
-  - `route-admins.service.ts`
+- `src/services/` — service layer
 - `src/handlers/` — request handlers grouped by role
+
+## Runtime Direction
+- Primary mode: **Supabase online**
+- Fallback mode: mock data for temporary development only
 
 ## Implemented API Groups
 
@@ -31,8 +27,11 @@ Backend has been reorganized into modules and folders by domain.
 - `GET /health`
 - `POST /auth/google/login`
 - `GET /routes`
+- `GET /routes/:routeId`
 - `GET /buses/live?routeId=...`
+- `GET /buses/:busId`
 - `GET /waiting?routeId=...`
+- `GET /waiting/:waitingId`
 - `POST /waiting` *(Bearer required)*
 - `DELETE /waiting/:waitingId` *(Bearer required)*
 
@@ -60,23 +59,25 @@ Backend has been reorganized into modules and folders by domain.
 #### Route / Bus Management
 - `POST /auth/admin/login`
 - `GET /admin/routes`
+- `GET /admin/routes/:routeId`
 - `POST /admin/routes`
 - `PUT /admin/routes/:routeId`
+- `DELETE /admin/routes/:routeId`
 - `GET /admin/buses`
+- `GET /admin/buses/:busId`
 - `POST /admin/buses`
 - `PUT /admin/buses/:busId`
+- `DELETE /admin/buses/:busId`
 - `GET /admin/waiting?routeId=...`
 
-## Current Auth State
-- Driver/Admin login currently returns mock bearer tokens
-- Google login currently creates/maps a local passenger user in starter mode
-- Middleware enforces bearer token and role checks on protected routes
-- Route admin scope checks are now scaffolded
-- Mock admin login supports both `super_admin` and `route_admin` behavior
-- Replace mock token decoding with real Supabase Auth / Google token verification next
+## Online Config Needed Later
+- `SUPABASE_URL`
+- `SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- optional `SUPABASE_PUBLISHABLE_KEY` for Flutter setup
 
-## Route Admin Scope Notes
-- `super_admin` can access all admin resources
-- `route_admin` should only access route-scoped resources assigned to its routes
-- global identity resources like users/admins/route-admin assignments should remain super-admin only
-- for scoped checks, pass `routeId` in query or `x-route-id` header where needed in starter mode
+## Current Auth State
+- Driver/Admin login still returns mock bearer tokens for now
+- Google login is still starter-level
+- Middleware and role guards are already in place
+- Next step is wiring real Supabase Auth verification

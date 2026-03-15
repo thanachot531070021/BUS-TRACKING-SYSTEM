@@ -1,8 +1,12 @@
-import { createBus, createBusLocation, listAdminBuses, listLiveBuses, updateBus, updateDriverDuty } from '../repositories/buses';
+import { createBus, createBusLocation, deleteBus, getBusById, listAdminBuses, listLiveBuses, updateBus, updateDriverDuty } from '../repositories/buses';
 import type { CreateBusBody, Env, UpdateBusBody, UpdateDriverDutyBody, UpdateLocationBody } from '../types';
 
 export async function listLiveBusesService(env: Env, routeId?: string | null) {
   return listLiveBuses(env, routeId);
+}
+
+export async function getBusByIdService(env: Env, busId: string) {
+  return getBusById(env, busId);
 }
 
 export async function listAdminBusesService(env: Env) {
@@ -15,6 +19,10 @@ export async function createBusService(env: Env, body: CreateBusBody) {
 
 export async function updateBusService(env: Env, busId: string, body: UpdateBusBody) {
   return updateBus(env, busId, body);
+}
+
+export async function deleteBusService(env: Env, busId: string) {
+  return deleteBus(env, busId);
 }
 
 export async function updateDriverDutyService(env: Env, body: UpdateDriverDutyBody) {
