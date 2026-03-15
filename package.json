@@ -1,0 +1,15 @@
+{
+  "name": "bus-tracking-system",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/admin_dashboard",
+    "backend/worker"
+  ],
+  "scripts": {
+    "dev:admin": "npm --workspace apps/admin_dashboard run dev",
+    "dev:worker": "npm --workspace backend/worker run dev",
+    "build:admin": "npm --workspace apps/admin_dashboard run build",
+    "deploy:worker": "npm --workspace backend/worker run deploy"
+  }
+}

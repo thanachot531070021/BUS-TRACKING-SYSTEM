@@ -1,16 +1,14 @@
 # BUS TRACKING SYSTEM
 
-Starter project scaffold generated from `Requirement.txt`.
+Structured starter project generated from `Requirement.txt`.
 
-## Structure
+## Project Layout
 
 - `apps/mobile_app/` — Flutter app for Passenger + Driver
-- `apps/admin_dashboard/` — Web dashboard for Admin
+- `apps/admin_dashboard/` — Vite-based Admin Dashboard
 - `backend/worker/` — Cloudflare Workers API
 - `supabase/schema.sql` — PostgreSQL schema for Supabase
-- `docs/architecture.md` — system architecture and flow
-- `docs/api-plan.md` — planned API surface
-- `docs/next-steps.md` — implementation roadmap
+- `docs/` — architecture, API plan, roadmap, project structure
 
 ## Main Features
 
@@ -31,16 +29,28 @@ Starter project scaffold generated from `Requirement.txt`.
 - Super Admin: manage routes, admins, buses
 - Route Admin: manage own routes and buses only
 
-## Current Build Status
+## Current Dev Setup
 
-Implemented now:
-- starter database schema in `supabase/schema.sql`
-- Cloudflare Worker endpoints with mock mode + Supabase integration mode
-- admin dashboard starter UI that fetches data from Worker API
-- mobile Flutter starter app with Passenger / Driver / Admin sections
-- architecture, API planning, and roadmap docs
+### Web / Admin
+- Uses **Vite** for local development
 
-## Important Backend Notes
+### Backend
+- Uses **Cloudflare Workers** with mock mode and Supabase mode
+
+### Mobile
+- Flutter structure has been separated into screens / services / models
+- Flutter SDK is still required on this machine before running the mobile app
+
+## Workspace Scripts
+
+From project root:
+
+- `npm run dev:admin`
+- `npm run dev:worker`
+- `npm run build:admin`
+- `npm run deploy:worker`
+
+## Important Notes
 
 Worker supports two modes:
 
@@ -49,10 +59,10 @@ Worker supports two modes:
    - `SUPABASE_URL`
    - `SUPABASE_ANON_KEY` or `SUPABASE_SERVICE_ROLE_KEY`
 
-## Suggested Next Steps
+## Next Recommended Step
 
-1. Create Supabase project and run `supabase/schema.sql`
-2. Put Supabase values into Worker environment
-3. Run `wrangler dev` to test APIs locally
-4. Build Flutter HTTP + map integration
-5. Add admin CRUD pages and authentication
+1. Install Node dependencies
+2. Run admin dashboard with Vite
+3. Run worker locally with Wrangler
+4. Install Flutter SDK
+5. Connect Supabase and Google Maps
