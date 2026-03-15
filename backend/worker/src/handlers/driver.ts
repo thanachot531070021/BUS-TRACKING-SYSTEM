@@ -1,10 +1,10 @@
 import { badRequest, json, readJson } from '../lib/http';
 import { driverLoginService } from '../services/auth.service';
-import { createBusLocationService, getBusByIdService } from '../services/buses.service';
+import { createBusLocationService, getBusByIdService, updateDriverDutyService } from '../services/buses.service';
 import { getDriverByUserIdService } from '../services/drivers.service';
 import { getWaitingSummaryService, listWaitingService, markWaitingPickedUpService } from '../services/waiting.service';
-import type { Env, UpdateDriverDutyBody, UpdateLocationBody } from '../types';
-import { updateDriverDutyService } from '../services/buses.service';
+import type { Env } from '../types';
+import { validateDriverDutyBody, validateLocationBody } from '../schemas/driver.schema';
 
 export async function handleDriverLogin(env: Env, request: Request) {
   const body = await readJson<{ phone?: string; password?: string }>(request);
@@ -13,18 +13,18 @@ export async function handleDriverLogin(env: Env, request: Request) {
 }
 
 export async function handleDriverDuty(env: Env, request: Request) {
-  const body = await readJson<UpdateDriverDutyBody>(request);
-  if (!body?.busId || !body.status) return badRequest('busId and status are required');
-  return json({ message: 'Driver duty status updated', data: await updateDriverDutyService(env, body) });
+  const body = await readJson(request);
+  const validated = validateDriverDutyBody(body);
+  if (!validated.ok) return badRequest(validated.error);
+  return json({ message: 'Driver duty status updated', data: await updateDriverDutyService(env, validated.data) });
 }
 
 export async function handleDriverLocation(env: Env, request: Request) {
-  const body = await readJson<UpdateLocationBody>(request);
-  if (!body?.busId || body.lat === undefined || body.lng === undefined) {
-    return badRequest('busId, lat, lng are required');
-  }
+  const body = await readJson(request);
+  const validated = validateLocationBody(body);
+  if (!validated.ok) return badRequest(validated.error);
 
-  return json({ message: 'Bus location update accepted', data: await createBusLocationService(env, body) }, 201);
+  return json({ message: 'Bus location update accepted', data: await createBusLocationService(env, validated.data) }, 201);
 }
 
 export async function handleDriverWaiting(env: Env, request: Request) {

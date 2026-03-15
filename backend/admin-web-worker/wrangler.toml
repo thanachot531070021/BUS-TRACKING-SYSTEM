@@ -1,0 +1,7 @@
+name = "bus-tracking-admin-web"
+main = "src/index.ts"
+compatibility_date = "2026-03-15"
+
+[assets]
+directory = "../../apps/admin_dashboard/dist"
+binding = "ASSETS"

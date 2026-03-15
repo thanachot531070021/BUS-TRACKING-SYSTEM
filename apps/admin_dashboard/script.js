@@ -9,6 +9,11 @@ const routesList = document.getElementById('routesList');
 const waitingList = document.getElementById('waitingList');
 const apiStatus = document.getElementById('apiStatus');
 const busTable = document.getElementById('bus-table');
+const summaryRoutes = document.getElementById('summaryRoutes');
+const summaryBuses = document.getElementById('summaryBuses');
+const summaryDrivers = document.getElementById('summaryDrivers');
+const summaryUsers = document.getElementById('summaryUsers');
+const summaryActiveBuses = document.getElementById('summaryActiveBuses');
 
 const defaultApiBase = localStorage.getItem(storageKey) || 'http://127.0.0.1:8787';
 apiBaseInput.value = defaultApiBase;
@@ -24,9 +29,7 @@ function formatDate(value) {
 
 async function getJson(path) {
   const response = await fetch(`${getApiBase()}${path}`);
-  if (!response.ok) {
-    throw new Error(`${response.status} ${response.statusText}`);
-  }
+  if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
   return response.json();
 }
 
@@ -65,21 +68,30 @@ function renderBuses(buses) {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td>${bus.plate_number}</td>
-      <td>${bus.route_name}</td>
+      <td>${bus.route_name ?? '-'}</td>
       <td>${bus.status}</td>
       <td>${bus.current_speed ?? 0} km/h</td>
-      <td>${bus.current_lat}, ${bus.current_lng}</td>
+      <td>${bus.current_lat ?? '-'}, ${bus.current_lng ?? '-'}</td>
       <td>${formatDate(bus.last_seen_at)}</td>
     `;
     busTable.appendChild(tr);
   });
 }
 
+function renderSummary(summary) {
+  summaryRoutes.textContent = summary.total_routes ?? '-';
+  summaryBuses.textContent = summary.total_buses ?? '-';
+  summaryDrivers.textContent = summary.total_drivers ?? '-';
+  summaryUsers.textContent = summary.total_users ?? '-';
+  summaryActiveBuses.textContent = summary.active_buses ?? '-';
+}
+
 async function loadDashboard() {
   apiStatus.textContent = 'Loading...';
   try {
-    const [health, routes, buses, waiting] = await Promise.all([
+    const [health, summary, routes, buses, waiting] = await Promise.all([
       getJson('/health'),
+      getJson('/admin/summary').catch(() => ({ data: {} })),
       getJson('/routes'),
       getJson('/buses/live'),
       getJson('/waiting'),
@@ -89,9 +101,10 @@ async function loadDashboard() {
     routesCount.textContent = routes.data.length;
     busesCount.textContent = buses.data.length;
     waitingCount.textContent = waiting.data.length;
-    renderRoutes(routes.data);
-    renderBuses(buses.data);
-    renderWaiting(waiting.data);
+    renderSummary(summary.data || {});
+    renderRoutes(routes.data || []);
+    renderBuses(buses.data || []);
+    renderWaiting(waiting.data || []);
   } catch (error) {
     apiStatus.textContent = `Failed to load API\n${error.message}`;
   }

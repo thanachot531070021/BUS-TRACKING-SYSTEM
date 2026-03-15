@@ -4,8 +4,9 @@ Structured starter project generated from `Requirement.txt`.
 
 ## Project Layout
 - `apps/mobile_app/` — Flutter app for Passenger + Driver
-- `apps/admin_dashboard/` — Vite-based Admin Dashboard
+- `apps/admin_dashboard/` — Admin web source (Vite)
 - `backend/worker/` — Cloudflare Workers API
+- `backend/admin-web-worker/` — Cloudflare Worker for serving admin website
 - `supabase/schema.sql` — PostgreSQL schema for Supabase
 - `docs/` — architecture, API plan, roadmap, project structure
 
@@ -28,14 +29,15 @@ Structured starter project generated from `Requirement.txt`.
 - Route Admin: manage own routes and buses only
 
 ## Current Runtime Direction
-### Web / Admin
-- Uses **Vite** for local development
+### Admin Web
+- `apps/admin_dashboard` = source code
+- `backend/admin-web-worker` = separate worker deployment for the website
 
-### Backend
-- Uses **Cloudflare Workers** as the API layer
-- Uses **Supabase online** as the primary database/auth/realtime platform
-- Uses mock fallback mode only as a temporary development fallback when online keys are not configured
-- Includes route/bus/waiting/user-management APIs and auth/role scaffolding
+### Backend API
+- `backend/worker` = API worker
+- validation schemas are now separated under `src/schemas/`
+- request validation helpers are under `src/lib/validate.ts`
+- uses **Supabase online** as the primary database/auth/realtime platform
 
 ### Mobile
 - Flutter structure has been separated into screens / services / models
@@ -52,13 +54,15 @@ Fill real values later using:
 ## Workspace Scripts
 From project root:
 - `npm run dev:admin`
-- `npm run dev:worker`
 - `npm run build:admin`
+- `npm run dev:worker`
+- `npm run dev:admin-web-worker`
 - `npm run deploy:worker`
+- `npm run deploy:admin-web-worker`
 
 ## Next Recommended Step
-1. Fill online Supabase keys into runtime config
+1. Connect admin web to authenticated admin APIs
 2. Replace mock token parsing with real Supabase Auth verification
-3. Connect admin dashboard to route/bus/user APIs
+3. Add stronger validation for remaining management endpoints
 4. Install Flutter SDK
 5. Connect Supabase Realtime and Google Maps in Flutter

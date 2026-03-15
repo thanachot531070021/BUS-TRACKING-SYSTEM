@@ -12,9 +12,10 @@
       <h1>BUS TRACKING</h1>
       <nav>
         <a href="#overview">Dashboard</a>
+        <a href="#summary">Summary</a>
         <a href="#routes">Routes</a>
         <a href="#buses">Buses</a>
-        <a href="#waiting">Waiting Passengers</a>
+        <a href="#waiting">Waiting</a>
         <a href="#api">API Config</a>
       </nav>
     </aside>
@@ -23,27 +24,29 @@
       <header class="topbar">
         <div>
           <h2>Admin Dashboard</h2>
-          <p>Starter UI connected to Worker API</p>
+          <p>Admin web app served separately from API worker</p>
         </div>
         <div class="toolbar">
-          <input id="apiBase" placeholder="API Base URL เช่น http://127.0.0.1:8787" />
+          <input id="apiBase" placeholder="API Base URL เช่น https://api.example.workers.dev" />
           <button id="saveApiBtn">Save API</button>
           <button id="refreshBtn">Refresh</button>
         </div>
       </header>
 
       <section class="cards" id="overview">
-        <div class="card">
-          <span>Active Routes</span>
-          <strong id="routesCount">-</strong>
-        </div>
-        <div class="card">
-          <span>Buses ON Duty</span>
-          <strong id="busesCount">-</strong>
-        </div>
-        <div class="card">
-          <span>Waiting Points</span>
-          <strong id="waitingCount">-</strong>
+        <div class="card"><span>Active Routes</span><strong id="routesCount">-</strong></div>
+        <div class="card"><span>Buses ON Duty</span><strong id="busesCount">-</strong></div>
+        <div class="card"><span>Waiting Points</span><strong id="waitingCount">-</strong></div>
+      </section>
+
+      <section class="panel" id="summary">
+        <h3>System Summary</h3>
+        <div class="summary-grid">
+          <div class="stack-item"><div class="title">Routes</div><div class="meta" id="summaryRoutes">-</div></div>
+          <div class="stack-item"><div class="title">Buses</div><div class="meta" id="summaryBuses">-</div></div>
+          <div class="stack-item"><div class="title">Drivers</div><div class="meta" id="summaryDrivers">-</div></div>
+          <div class="stack-item"><div class="title">Users</div><div class="meta" id="summaryUsers">-</div></div>
+          <div class="stack-item"><div class="title">Active Buses</div><div class="meta" id="summaryActiveBuses">-</div></div>
         </div>
       </section>
 
@@ -52,7 +55,6 @@
           <h3>Routes</h3>
           <div id="routesList" class="stack-list"></div>
         </section>
-
         <section class="panel" id="waiting">
           <h3>Waiting Passengers</h3>
           <div id="waitingList" class="stack-list"></div>

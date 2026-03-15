@@ -1,6 +1,7 @@
 import { badRequest, json, readJson } from '../lib/http';
 import { currentUserService, googleLoginService, passwordLoginService, registerService } from '../services/auth.service';
 import { requireAuth } from '../middleware/auth.middleware';
+import { validateLoginBody, validateRegisterBody } from '../schemas/auth.schema';
 import type { Env } from '../types';
 
 export async function handleGoogleLogin(env: Env, request: Request) {
@@ -16,26 +17,24 @@ export async function handleGoogleLogin(env: Env, request: Request) {
 }
 
 export async function handleRegister(env: Env, request: Request) {
-  const body = await readJson<{ email?: string; password?: string; username?: string; fullName?: string; role?: 'passenger' | 'driver' | 'admin' }>(request);
-  if (!body?.email || !body.password) {
-    return badRequest('email and password are required');
-  }
+  const body = await readJson(request);
+  const validated = validateRegisterBody(body);
+  if (!validated.ok) return badRequest(validated.error);
 
   return json({
     message: 'Register success',
-    data: await registerService(env, body.email, body.password, body.username, body.fullName, body.role),
+    data: await registerService(env, validated.data.email, validated.data.password, validated.data.username, validated.data.fullName, validated.data.role as any),
   }, 201);
 }
 
 export async function handlePasswordLogin(env: Env, request: Request) {
-  const body = await readJson<{ identifier?: string; password?: string; expectedRole?: 'driver' | 'admin' | 'passenger' }>(request);
-  if (!body?.identifier || !body.password) {
-    return badRequest('identifier and password are required');
-  }
+  const body = await readJson(request);
+  const validated = validateLoginBody(body);
+  if (!validated.ok) return badRequest(validated.error);
 
   return json({
     message: 'Login success',
-    data: await passwordLoginService(env, body.identifier, body.password, body.expectedRole),
+    data: await passwordLoginService(env, validated.data.identifier, validated.data.password, validated.data.expectedRole as any),
   });
 }
 

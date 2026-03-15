@@ -5,7 +5,9 @@ import { createRouteService, deleteRouteService, getRouteByIdService, listRoutes
 import { getWaitingSummaryService, listWaitingService } from '../services/waiting.service';
 import { listDriversService } from '../services/drivers.service';
 import { listUsersService } from '../services/users.service';
-import type { CreateBusBody, CreateRouteBody, Env, UpdateBusBody, UpdateRouteBody } from '../types';
+import type { Env, UpdateBusBody, UpdateRouteBody } from '../types';
+import { validateCreateBusBody } from '../schemas/bus.schema';
+import { validateCreateRouteBody } from '../schemas/route.schema';
 
 export async function handleAdminLogin(env: Env, request: Request) {
   const body = await readJson<{ username?: string; password?: string }>(request);
@@ -42,9 +44,10 @@ export async function handleAdminGetRouteById(env: Env, routeId: string) {
 }
 
 export async function handleAdminCreateRoute(env: Env, request: Request) {
-  const body = await readJson<CreateRouteBody>(request);
-  if (!body?.routeName) return badRequest('routeName is required');
-  return json({ message: 'Route created', data: await createRouteService(env, body) }, 201);
+  const body = await readJson(request);
+  const validated = validateCreateRouteBody(body);
+  if (!validated.ok) return badRequest(validated.error);
+  return json({ message: 'Route created', data: await createRouteService(env, validated.data) }, 201);
 }
 
 export async function handleAdminUpdateRoute(env: Env, request: Request, routeId: string) {
@@ -78,9 +81,10 @@ export async function handleAdminGetBusById(env: Env, busId: string) {
 }
 
 export async function handleAdminCreateBus(env: Env, request: Request) {
-  const body = await readJson<CreateBusBody>(request);
-  if (!body?.plateNumber) return badRequest('plateNumber is required');
-  return json({ message: 'Bus created', data: await createBusService(env, body) }, 201);
+  const body = await readJson(request);
+  const validated = validateCreateBusBody(body);
+  if (!validated.ok) return badRequest(validated.error);
+  return json({ message: 'Bus created', data: await createBusService(env, validated.data) }, 201);
 }
 
 export async function handleAdminUpdateBus(env: Env, request: Request, busId: string) {
