@@ -11,6 +11,18 @@ const authStatus = document.getElementById('authStatus');
 const reloadRoutesBtn = document.getElementById('reloadRoutesBtn');
 const reloadWaitingBtn = document.getElementById('reloadWaitingBtn');
 const reloadBusesBtn = document.getElementById('reloadBusesBtn');
+const createRouteBtn = document.getElementById('createRouteBtn');
+const createBusBtn = document.getElementById('createBusBtn');
+const routeCodeInput = document.getElementById('routeCodeInput');
+const routeNameInput = document.getElementById('routeNameInput');
+const routeStartInput = document.getElementById('routeStartInput');
+const routeEndInput = document.getElementById('routeEndInput');
+const busPlateInput = document.getElementById('busPlateInput');
+const busRouteIdInput = document.getElementById('busRouteIdInput');
+const busDriverIdInput = document.getElementById('busDriverIdInput');
+const busStatusInput = document.getElementById('busStatusInput');
+const routeFormStatus = document.getElementById('routeFormStatus');
+const busFormStatus = document.getElementById('busFormStatus');
 const routesCount = document.getElementById('routesCount');
 const busesCount = document.getElementById('busesCount');
 const waitingCount = document.getElementById('waitingCount');
@@ -27,38 +39,18 @@ const summaryActiveBuses = document.getElementById('summaryActiveBuses');
 const defaultApiBase = localStorage.getItem(storageKey) || 'http://127.0.0.1:8787';
 apiBaseInput.value = defaultApiBase;
 
-function getApiBase() {
-  return apiBaseInput.value.trim().replace(/\/$/, '');
-}
-
-function getToken() {
-  return localStorage.getItem(tokenKey) || '';
-}
-
-function setToken(token) {
-  if (token) localStorage.setItem(tokenKey, token);
-  else localStorage.removeItem(tokenKey);
-  updateAuthStatus();
-}
-
-function updateAuthStatus() {
-  authStatus.textContent = getToken() ? 'Admin token saved' : 'Not logged in';
-}
-
-function formatDate(value) {
-  if (!value) return '-';
-  return new Date(value).toLocaleString();
-}
+function getApiBase() { return apiBaseInput.value.trim().replace(/\/$/, ''); }
+function getToken() { return localStorage.getItem(tokenKey) || ''; }
+function setToken(token) { if (token) localStorage.setItem(tokenKey, token); else localStorage.removeItem(tokenKey); updateAuthStatus(); }
+function updateAuthStatus() { authStatus.textContent = getToken() ? 'Admin token saved' : 'Not logged in'; }
+function formatDate(value) { return value ? new Date(value).toLocaleString() : '-'; }
 
 async function apiFetch(path, options = {}, requireAuth = false) {
   const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
   if (requireAuth && getToken()) headers.Authorization = `Bearer ${getToken()}`;
-
   const response = await fetch(`${getApiBase()}${path}`, { ...options, headers });
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(data.error || `${response.status} ${response.statusText}`);
-  }
+  if (!response.ok) throw new Error(data.error || `${response.status} ${response.statusText}`);
   return data;
 }
 
@@ -68,10 +60,13 @@ function renderRoutes(routes) {
     const div = document.createElement('div');
     div.className = 'stack-item';
     div.innerHTML = `
-      <div class="title">${route.route_code} - ${route.route_name}</div>
+      <div class="title">${route.route_code || '-'} - ${route.route_name}</div>
       <div class="meta">${route.start_location || '-'} → ${route.end_location || '-'}</div>
       <div class="meta">Status: ${route.status}</div>
       <div class="meta">Route ID: ${route.id}</div>
+      <div class="action-row">
+        <button class="secondary delete-route-btn" data-route-id="${route.id}">Delete</button>
+      </div>
     `;
     routesList.appendChild(div);
   });
@@ -101,7 +96,9 @@ function renderBuses(buses) {
       <td>${bus.route_id ?? bus.route_name ?? '-'}</td>
       <td>${bus.status}</td>
       <td>${bus.current_lat ?? '-'}, ${bus.current_lng ?? '-'}</td>
-      <td><button class="secondary" data-bus-id="${bus.id}">Inspect</button></td>
+      <td>
+        <button class="secondary delete-bus-btn" data-bus-id="${bus.id}">Delete</button>
+      </td>
     `;
     busTable.appendChild(tr);
   });
@@ -131,6 +128,72 @@ async function loginAdmin() {
   }
 }
 
+async function createRoute() {
+  try {
+    routeFormStatus.textContent = 'Creating route...';
+    await apiFetch('/admin/routes', {
+      method: 'POST',
+      body: JSON.stringify({
+        routeCode: routeCodeInput.value.trim(),
+        routeName: routeNameInput.value.trim(),
+        startLocation: routeStartInput.value.trim(),
+        endLocation: routeEndInput.value.trim(),
+      }),
+    }, true);
+    routeFormStatus.textContent = 'Route created';
+    routeCodeInput.value = '';
+    routeNameInput.value = '';
+    routeStartInput.value = '';
+    routeEndInput.value = '';
+    await loadDashboard();
+  } catch (error) {
+    routeFormStatus.textContent = `Create route failed: ${error.message}`;
+  }
+}
+
+async function createBus() {
+  try {
+    busFormStatus.textContent = 'Creating bus...';
+    await apiFetch('/admin/buses', {
+      method: 'POST',
+      body: JSON.stringify({
+        plateNumber: busPlateInput.value.trim(),
+        routeId: busRouteIdInput.value.trim() || undefined,
+        driverId: busDriverIdInput.value.trim() || undefined,
+        status: busStatusInput.value.trim() || undefined,
+      }),
+    }, true);
+    busFormStatus.textContent = 'Bus created';
+    busPlateInput.value = '';
+    busRouteIdInput.value = '';
+    busDriverIdInput.value = '';
+    busStatusInput.value = '';
+    await loadDashboard();
+  } catch (error) {
+    busFormStatus.textContent = `Create bus failed: ${error.message}`;
+  }
+}
+
+async function deleteRoute(routeId) {
+  if (!confirm(`Delete route ${routeId}?`)) return;
+  try {
+    await apiFetch(`/admin/routes/${routeId}`, { method: 'DELETE' }, true);
+    await loadDashboard();
+  } catch (error) {
+    apiStatus.textContent = `Delete route failed\n${error.message}`;
+  }
+}
+
+async function deleteBus(busId) {
+  if (!confirm(`Delete bus ${busId}?`)) return;
+  try {
+    await apiFetch(`/admin/buses/${busId}`, { method: 'DELETE' }, true);
+    await loadDashboard();
+  } catch (error) {
+    apiStatus.textContent = `Delete bus failed\n${error.message}`;
+  }
+}
+
 async function loadDashboard() {
   apiStatus.textContent = 'Loading...';
   try {
@@ -155,16 +218,21 @@ async function loadDashboard() {
   }
 }
 
-saveApiBtn.addEventListener('click', () => {
-  localStorage.setItem(storageKey, getApiBase());
-  loadDashboard();
-});
+saveApiBtn.addEventListener('click', () => { localStorage.setItem(storageKey, getApiBase()); loadDashboard(); });
 refreshBtn.addEventListener('click', loadDashboard);
 adminLoginBtn.addEventListener('click', loginAdmin);
 adminLogoutBtn.addEventListener('click', () => setToken(''));
 reloadRoutesBtn.addEventListener('click', loadDashboard);
 reloadWaitingBtn.addEventListener('click', loadDashboard);
 reloadBusesBtn.addEventListener('click', loadDashboard);
+createRouteBtn.addEventListener('click', createRoute);
+createBusBtn.addEventListener('click', createBus);
+
+document.addEventListener('click', (event) => {
+  const target = event.target;
+  if (target.classList.contains('delete-route-btn')) deleteRoute(target.dataset.routeId);
+  if (target.classList.contains('delete-bus-btn')) deleteBus(target.dataset.busId);
+});
 
 updateAuthStatus();
 loadDashboard();

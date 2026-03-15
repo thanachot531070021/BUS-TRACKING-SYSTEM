@@ -13,7 +13,8 @@
       <nav>
         <a href="#overview">Dashboard</a>
         <a href="#auth">Admin Auth</a>
-        <a href="#summary">Summary</a>
+        <a href="#route-form">Create Route</a>
+        <a href="#bus-form">Create Bus</a>
         <a href="#routes">Routes</a>
         <a href="#buses">Buses</a>
         <a href="#waiting">Waiting</a>
@@ -49,6 +50,32 @@
           <button id="adminLogoutBtn" class="secondary">Logout</button>
         </div>
         <div id="authStatus" class="auth-status">Not logged in</div>
+      </section>
+
+      <section class="grid-2 forms-grid">
+        <section class="panel" id="route-form">
+          <div class="panel-header"><h3>Create Route</h3></div>
+          <div class="form-grid">
+            <input id="routeCodeInput" placeholder="Route Code" />
+            <input id="routeNameInput" placeholder="Route Name" />
+            <input id="routeStartInput" placeholder="Start Location" />
+            <input id="routeEndInput" placeholder="End Location" />
+            <button id="createRouteBtn">Create Route</button>
+          </div>
+          <div id="routeFormStatus" class="form-status">Ready</div>
+        </section>
+
+        <section class="panel" id="bus-form">
+          <div class="panel-header"><h3>Create Bus</h3></div>
+          <div class="form-grid">
+            <input id="busPlateInput" placeholder="Plate Number" />
+            <input id="busRouteIdInput" placeholder="Route ID" />
+            <input id="busDriverIdInput" placeholder="Driver ID (optional)" />
+            <input id="busStatusInput" placeholder="Status: off/on/maintenance" />
+            <button id="createBusBtn">Create Bus</button>
+          </div>
+          <div id="busFormStatus" class="form-status">Ready</div>
+        </section>
       </section>
 
       <section class="panel" id="summary">

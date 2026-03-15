@@ -7,7 +7,9 @@ body { margin: 0; font-family: Arial, sans-serif; background: #f3f6fb; color: #1
 .sidebar a { color: #cbd5e1; text-decoration: none; }
 .content { padding: 24px; }
 .topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 24px; }
-.toolbar, .auth-grid, .panel-header { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.toolbar, .auth-grid, .panel-header, .action-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.forms-grid { margin-bottom: 24px; }
+.form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
 .summary-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
@@ -18,17 +20,17 @@ body { margin: 0; font-family: Arial, sans-serif; background: #f3f6fb; color: #1
 .stack-list { display: grid; gap: 12px; }
 .stack-item { border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; background: #f8fafc; }
 .stack-item .title { font-weight: 700; margin-bottom: 4px; }
-.stack-item .meta, .auth-status { color: #475569; font-size: 14px; }
+.stack-item .meta, .auth-status, .form-status { color: #475569; font-size: 14px; }
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: 12px; border-bottom: 1px solid #e5e7eb; }
 button { background: #2563eb; color: white; border: 0; padding: 10px 16px; border-radius: 10px; cursor: pointer; }
 button.secondary { background: #475569; }
 input { min-width: 220px; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 10px; }
 pre { white-space: pre-wrap; word-break: break-word; background: #0f172a; color: #e2e8f0; padding: 16px; border-radius: 12px; }
-@media (max-width: 1200px) { .summary-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 1200px) { .summary-grid, .form-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 960px) {
   .layout { grid-template-columns: 1fr; }
   .sidebar { height: auto; position: static; }
-  .cards, .grid-2, .summary-grid { grid-template-columns: 1fr; }
+  .cards, .grid-2, .summary-grid, .form-grid { grid-template-columns: 1fr; }
   input { min-width: 100%; }
 }

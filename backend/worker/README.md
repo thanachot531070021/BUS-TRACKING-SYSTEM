@@ -22,16 +22,15 @@ Backend is organized by domain and is now documented as **online-first** for Sup
 - `src/services/` — service layer
 - `src/handlers/` — request handlers grouped by role
 
-## Runtime Direction
-- Primary mode: **Supabase online**
-- Fallback mode: mock data for temporary development only
-
 ## Admin Web Separation
 - `apps/admin_dashboard/` = admin web source
 - `backend/admin-web-worker/` = separate worker that serves built admin assets
 - `backend/worker/` = API only
 
-## Current Auth State
-- `register / login / me` exist as online-ready scaffold endpoints
-- admin dashboard now includes basic admin login/token storage flow
-- Driver/Admin login still has mock fallback behavior until real Supabase JWT verification is finished
+## Current Admin Web State
+- admin login panel exists
+- token is stored in browser localStorage
+- dashboard reads from admin endpoints when token is present
+- create/delete route UI scaffold exists
+- create/delete bus UI scaffold exists
+- edit forms are the next logical UI step
