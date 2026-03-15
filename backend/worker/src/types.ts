@@ -7,6 +7,54 @@ export interface Env {
 
 export type JsonRecord = Record<string, unknown>;
 
+export type UserRole = 'passenger' | 'driver' | 'admin';
+export type AuthProvider = 'guest' | 'phone' | 'google' | 'email';
+
+export type UserProfile = {
+  id: string;
+  auth_user_id?: string | null;
+  auth_provider: AuthProvider;
+  provider_user_id?: string | null;
+  email?: string | null;
+  email_verified: boolean;
+  phone_number?: string | null;
+  full_name?: string | null;
+  given_name?: string | null;
+  family_name?: string | null;
+  avatar_url?: string | null;
+  role: UserRole;
+  status: 'active' | 'inactive' | 'suspended';
+  last_login_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type DriverProfile = {
+  id: string;
+  user_id: string;
+  employee_code?: string | null;
+  license_no?: string | null;
+  assigned_bus_id?: string | null;
+  assigned_route_id?: string | null;
+  status: 'active' | 'inactive';
+  created_at?: string;
+};
+
+export type AdminProfile = {
+  id: string;
+  user_id: string;
+  admin_type: 'super_admin' | 'route_admin';
+  status: 'active' | 'inactive';
+  created_at?: string;
+};
+
+export type RouteAdminAssignment = {
+  id: string;
+  route_id: string;
+  admin_id: string;
+  created_at?: string;
+};
+
 export type RouteSummary = {
   id: string;
   route_code: string;
@@ -81,3 +129,44 @@ export type CreateBusBody = {
 };
 
 export type UpdateBusBody = Partial<CreateBusBody>;
+
+export type CreateUserBody = {
+  authUserId?: string | null;
+  authProvider?: AuthProvider;
+  providerUserId?: string | null;
+  email?: string | null;
+  emailVerified?: boolean;
+  phoneNumber?: string | null;
+  fullName?: string | null;
+  givenName?: string | null;
+  familyName?: string | null;
+  avatarUrl?: string | null;
+  role: UserRole;
+  status?: 'active' | 'inactive' | 'suspended';
+};
+
+export type UpdateUserBody = Partial<CreateUserBody>;
+
+export type CreateDriverBody = {
+  userId: string;
+  employeeCode?: string | null;
+  licenseNo?: string | null;
+  assignedBusId?: string | null;
+  assignedRouteId?: string | null;
+  status?: 'active' | 'inactive';
+};
+
+export type UpdateDriverBody = Partial<CreateDriverBody>;
+
+export type CreateAdminBody = {
+  userId: string;
+  adminType: 'super_admin' | 'route_admin';
+  status?: 'active' | 'inactive';
+};
+
+export type UpdateAdminBody = Partial<CreateAdminBody>;
+
+export type CreateRouteAdminBody = {
+  routeId: string;
+  adminId: string;
+};

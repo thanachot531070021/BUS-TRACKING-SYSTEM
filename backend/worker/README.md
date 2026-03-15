@@ -3,7 +3,6 @@
 Backend has been reorganized into modules and folders by domain.
 
 ## Structure
-
 - `src/index.ts` — fetch entrypoint
 - `src/router/`
   - `public/`
@@ -18,6 +17,10 @@ Backend has been reorganized into modules and folders by domain.
   - `routes/`
   - `buses/`
   - `waiting/`
+  - `users/`
+  - `drivers/`
+  - `admins/`
+  - `route-admins/`
 - `src/handlers/` — request handlers grouped by role
 
 ## Implemented API Groups
@@ -37,6 +40,21 @@ Backend has been reorganized into modules and folders by domain.
 - `GET /driver/waiting?routeId=...`
 
 ### Admin
+#### Identity / User Management
+- `GET /admin/users`
+- `POST /admin/users`
+- `PUT /admin/users/:userId`
+- `GET /admin/drivers`
+- `POST /admin/drivers`
+- `PUT /admin/drivers/:driverId`
+- `GET /admin/admins`
+- `POST /admin/admins`
+- `PUT /admin/admins/:adminId`
+- `GET /admin/route-admins`
+- `POST /admin/route-admins`
+- `DELETE /admin/route-admins/:assignmentId`
+
+#### Route / Bus Management
 - `POST /auth/admin/login`
 - `GET /admin/routes`
 - `POST /admin/routes`
@@ -46,8 +64,18 @@ Backend has been reorganized into modules and folders by domain.
 - `PUT /admin/buses/:busId`
 - `GET /admin/waiting?routeId=...`
 
-## Notes
+## Google-ready User Model
+User data is designed to support future Google login / OIDC mapping:
+- `auth_provider`
+- `provider_user_id`
+- `email`
+- `email_verified`
+- `given_name`
+- `family_name`
+- `avatar_url`
+- app `role` kept separate from identity provider
 
+## Notes
 - Authentication endpoints are currently mock/starter endpoints.
 - Supabase mode is used when env vars are configured.
 - Route Admin authorization is not enforced yet; that should be the next backend security step.

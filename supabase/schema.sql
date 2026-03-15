@@ -13,18 +13,38 @@ $$ language plpgsql;
 
 create table if not exists users (
   id uuid primary key default gen_random_uuid(),
+  auth_user_id uuid unique,
+  auth_provider text not null default 'guest' check (auth_provider in ('guest', 'phone', 'google', 'email')),
+  provider_user_id text,
+  email text unique,
+  email_verified boolean not null default false,
   phone_number text unique,
   full_name text,
+  given_name text,
+  family_name text,
+  avatar_url text,
   role text not null check (role in ('passenger', 'driver', 'admin')),
-  created_at timestamptz not null default now()
+  status text not null default 'active' check (status in ('active', 'inactive', 'suspended')),
+  last_login_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique(auth_provider, provider_user_id)
 );
+
+create index if not exists idx_users_role on users(role);
+create index if not exists idx_users_auth_provider on users(auth_provider);
+create index if not exists idx_users_provider_user_id on users(provider_user_id);
 
 create table if not exists drivers (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null unique references users(id) on delete cascade,
+  employee_code text unique,
   license_no text,
+  assigned_bus_id uuid,
+  assigned_route_id uuid,
   status text not null default 'active' check (status in ('active', 'inactive')),
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 create table if not exists admins (
@@ -32,7 +52,8 @@ create table if not exists admins (
   user_id uuid not null unique references users(id) on delete cascade,
   admin_type text not null check (admin_type in ('super_admin', 'route_admin')),
   status text not null default 'active' check (status in ('active', 'inactive')),
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
 
 create table if not exists routes (
@@ -68,6 +89,16 @@ create table if not exists buses (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table if exists drivers
+  drop constraint if exists drivers_assigned_bus_id_fkey;
+alter table if exists drivers
+  add constraint drivers_assigned_bus_id_fkey foreign key (assigned_bus_id) references buses(id) on delete set null;
+
+alter table if exists drivers
+  drop constraint if exists drivers_assigned_route_id_fkey;
+alter table if exists drivers
+  add constraint drivers_assigned_route_id_fkey foreign key (assigned_route_id) references routes(id) on delete set null;
 
 create table if not exists bus_locations (
   id bigserial primary key,
@@ -126,6 +157,21 @@ from passenger_waiting pw
 left join routes r on r.id = pw.route_id
 where pw.status = 'waiting';
 
+drop trigger if exists trg_users_set_updated_at on users;
+create trigger trg_users_set_updated_at
+before update on users
+for each row execute function set_updated_at();
+
+drop trigger if exists trg_drivers_set_updated_at on drivers;
+create trigger trg_drivers_set_updated_at
+before update on drivers
+for each row execute function set_updated_at();
+
+drop trigger if exists trg_admins_set_updated_at on admins;
+create trigger trg_admins_set_updated_at
+before update on admins
+for each row execute function set_updated_at();
+
 drop trigger if exists trg_routes_set_updated_at on routes;
 create trigger trg_routes_set_updated_at
 before update on routes
@@ -146,3 +192,6 @@ for each row execute function set_updated_at();
 -- bus_locations
 -- passenger_waiting
 -- routes
+-- users
+-- drivers
+-- admins
