@@ -10,8 +10,13 @@ Backend is organized by domain and is now documented as **online-first** for Sup
   - `driver.ts`
   - `admin.ts`
 - `src/types.ts` — shared types
-- `src/lib/` — HTTP, auth, and Supabase helpers
+- `src/lib/`
+  - `http.ts`
+  - `auth.ts`
+  - `supabase.ts`
+  - `validate.ts`
 - `src/middleware/` — auth / role guard middleware
+- `src/schemas/` — request validation schemas
 - `src/data/` — mock seed data
 - `src/repositories/` — data access layer
 - `src/services/` — service layer
@@ -21,66 +26,12 @@ Backend is organized by domain and is now documented as **online-first** for Sup
 - Primary mode: **Supabase online**
 - Fallback mode: mock data for temporary development only
 
-## Implemented API Groups
-
-### Public / Passenger
-- `GET /health`
-- `POST /auth/register`
-- `POST /auth/login`
-- `GET /auth/me`
-- `POST /auth/google/login`
-- `GET /routes`
-- `GET /routes/:routeId`
-- `GET /buses/live?routeId=...`
-- `GET /buses/:busId`
-- `GET /waiting?routeId=...`
-- `GET /waiting/:waitingId`
-- `POST /waiting` *(Bearer required)*
-- `DELETE /waiting/:waitingId` *(Bearer required)*
-
-### Driver
-- `POST /auth/driver/login`
-- `POST /drivers/duty` *(Driver/Admin token)*
-- `POST /locations` *(Driver/Admin token)*
-- `GET /driver/waiting?routeId=...` *(Driver/Admin token)*
-
-### Admin
-#### Identity / User Management
-- `GET /admin/users`
-- `POST /admin/users`
-- `PUT /admin/users/:userId`
-- `GET /admin/drivers`
-- `POST /admin/drivers`
-- `PUT /admin/drivers/:driverId`
-- `GET /admin/admins`
-- `POST /admin/admins`
-- `PUT /admin/admins/:adminId`
-- `GET /admin/route-admins`
-- `POST /admin/route-admins`
-- `DELETE /admin/route-admins/:assignmentId`
-
-#### Route / Bus Management
-- `POST /auth/admin/login`
-- `GET /admin/routes`
-- `GET /admin/routes/:routeId`
-- `POST /admin/routes`
-- `PUT /admin/routes/:routeId`
-- `DELETE /admin/routes/:routeId`
-- `GET /admin/buses`
-- `GET /admin/buses/:busId`
-- `POST /admin/buses`
-- `PUT /admin/buses/:busId`
-- `DELETE /admin/buses/:busId`
-- `GET /admin/waiting?routeId=...`
-
-## Online Config Needed Later
-- `SUPABASE_URL`
-- `SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- optional `SUPABASE_PUBLISHABLE_KEY` for Flutter setup
+## Admin Web Separation
+- `apps/admin_dashboard/` = admin web source
+- `backend/admin-web-worker/` = separate worker that serves built admin assets
+- `backend/worker/` = API only
 
 ## Current Auth State
-- `register / login / me` now exist as online-ready scaffold endpoints
-- Driver/Admin login still has mock fallback behavior
-- Middleware and role guards are already in place
-- Next step is wiring real Supabase JWT verification in middleware and profile resolution
+- `register / login / me` exist as online-ready scaffold endpoints
+- admin dashboard now includes basic admin login/token storage flow
+- Driver/Admin login still has mock fallback behavior until real Supabase JWT verification is finished

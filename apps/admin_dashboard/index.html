@@ -12,6 +12,7 @@
       <h1>BUS TRACKING</h1>
       <nav>
         <a href="#overview">Dashboard</a>
+        <a href="#auth">Admin Auth</a>
         <a href="#summary">Summary</a>
         <a href="#routes">Routes</a>
         <a href="#buses">Buses</a>
@@ -39,6 +40,17 @@
         <div class="card"><span>Waiting Points</span><strong id="waitingCount">-</strong></div>
       </section>
 
+      <section class="panel" id="auth">
+        <h3>Admin Login</h3>
+        <div class="auth-grid">
+          <input id="adminUsername" placeholder="Username" />
+          <input id="adminPassword" type="password" placeholder="Password" />
+          <button id="adminLoginBtn">Login</button>
+          <button id="adminLogoutBtn" class="secondary">Logout</button>
+        </div>
+        <div id="authStatus" class="auth-status">Not logged in</div>
+      </section>
+
       <section class="panel" id="summary">
         <h3>System Summary</h3>
         <div class="summary-grid">
@@ -52,11 +64,17 @@
 
       <section class="grid-2">
         <section class="panel" id="routes">
-          <h3>Routes</h3>
+          <div class="panel-header">
+            <h3>Routes</h3>
+            <button id="reloadRoutesBtn" class="secondary">Reload Routes</button>
+          </div>
           <div id="routesList" class="stack-list"></div>
         </section>
         <section class="panel" id="waiting">
-          <h3>Waiting Passengers</h3>
+          <div class="panel-header">
+            <h3>Waiting Passengers</h3>
+            <button id="reloadWaitingBtn" class="secondary">Reload Waiting</button>
+          </div>
           <div id="waitingList" class="stack-list"></div>
         </section>
       </section>
@@ -67,16 +85,18 @@
       </section>
 
       <section class="panel" id="buses">
-        <h3>Recent Live Bus Status</h3>
+        <div class="panel-header">
+          <h3>Buses</h3>
+          <button id="reloadBusesBtn" class="secondary">Reload Buses</button>
+        </div>
         <table>
           <thead>
             <tr>
               <th>Plate</th>
               <th>Route</th>
               <th>Status</th>
-              <th>Speed</th>
               <th>Coordinates</th>
-              <th>Last Seen</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody id="bus-table"></tbody>
