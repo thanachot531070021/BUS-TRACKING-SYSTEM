@@ -1,25 +1,40 @@
 import { json } from '../lib/http';
-import { decodeMockToken, hasRequiredRole, parseBearerToken } from '../lib/auth';
+import { authFromJwtPayload, decodeJwtPayload, decodeMockToken, hasRequiredRole, parseBearerToken } from '../lib/auth';
 import { findAdminByUserId } from '../repositories/admins';
 import { listRouteIdsForAdmin } from '../repositories/route-admins';
+import { getUserByAuthUserId } from '../repositories/users';
 import type { AuthContext, Env, UserRole } from '../types';
 
-export function requireAuth(request: Request): AuthContext | Response {
+export async function requireAuth(env: Env, request: Request): Promise<AuthContext | Response> {
   const token = parseBearerToken(request);
   if (!token) {
     return json({ error: 'Unauthorized: missing bearer token' }, 401);
   }
 
-  const auth = decodeMockToken(token);
-  if (!auth) {
+  const mockAuth = decodeMockToken(token);
+  if (mockAuth) return mockAuth;
+
+  const payload = decodeJwtPayload(token);
+  const jwtAuth = payload ? authFromJwtPayload(token, payload) : null;
+  if (!jwtAuth) {
     return json({ error: 'Unauthorized: invalid token' }, 401);
   }
 
-  return auth;
+  const profile = await getUserByAuthUserId(env, jwtAuth.userId);
+  if (!profile) {
+    return json({ error: 'Unauthorized: no linked user profile for auth account' }, 401);
+  }
+
+  return {
+    ...jwtAuth,
+    userId: profile.id,
+    role: profile.role,
+    provider: profile.auth_provider,
+  };
 }
 
-export function requireRole(request: Request, allowedRoles: UserRole[]): AuthContext | Response {
-  const auth = requireAuth(request);
+export async function requireRole(env: Env, request: Request, allowedRoles: UserRole[]): Promise<AuthContext | Response> {
+  const auth = await requireAuth(env, request);
   if (auth instanceof Response) return auth;
 
   if (!hasRequiredRole(auth, allowedRoles)) {
@@ -49,7 +64,7 @@ export async function enrichAdminScope(env: Env, auth: AuthContext) {
 }
 
 export async function requireAdminScope(env: Env, request: Request, routeId?: string | null) {
-  const auth = requireRole(request, ['admin']);
+  const auth = await requireRole(env, request, ['admin']);
   if (auth instanceof Response) return auth;
 
   const enriched = await enrichAdminScope(env, auth);

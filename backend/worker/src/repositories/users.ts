@@ -57,6 +57,12 @@ export async function getUserById(env: Env, userId: string) {
   return rows[0] ?? null;
 }
 
+export async function getUserByAuthUserId(env: Env, authUserId: string) {
+  if (!usingSupabase(env)) return mockUsers.find((user) => user.auth_user_id === authUserId) ?? null;
+  const rows = await supabaseFetch<UserProfile[]>(env, `users?select=*&auth_user_id=eq.${authUserId}&limit=1`);
+  return rows[0] ?? null;
+}
+
 export async function findUserByUsernameOrEmail(env: Env, identifier: string) {
   if (!usingSupabase(env)) {
     return mockUsers.find((user) => user.username === identifier || user.email === identifier || user.phone_number === identifier) ?? null;
@@ -82,6 +88,7 @@ export async function createUser(env: Env, body: CreateUserBody) {
       avatar_url: body.avatarUrl ?? null,
       role: body.role,
       status: body.status ?? 'active',
+      auth_user_id: body.authUserId ?? null,
     };
   }
 

@@ -39,12 +39,12 @@ export async function handlePasswordLogin(env: Env, request: Request) {
 }
 
 export async function handleCurrentUser(env: Env, request: Request) {
-  const auth = requireAuth(request);
+  const auth = await requireAuth(env, request);
   if (auth instanceof Response) return auth;
 
   return json({
     message: 'Current user resolved',
-    data: await currentUserService(env, auth.userId),
+    data: await currentUserService(env, auth.userId, 'profile-id'),
     auth,
   });
 }

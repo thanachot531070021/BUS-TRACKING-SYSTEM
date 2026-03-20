@@ -3,7 +3,8 @@
 ## Current Direction
 - Supabase Auth is the long-term auth source.
 - `public.users` stores business profile and role.
-- Login should support username/email from UI, then map to the proper email for Supabase Auth.
+- Login supports username/email from UI, then maps to the proper email for Supabase Auth.
+- Protected API routes now move closer to `auth_user_id`-based profile resolution.
 
 ## Current Test Accounts
 These profiles exist in `public.users`:
@@ -21,9 +22,14 @@ Temporary test password target:
 2. Backend looks up `public.users`.
 3. If username is used, backend resolves the matching email.
 4. Backend logs into Supabase Auth with email + password.
-5. Backend returns token + profile.
+5. Supabase returns an access token.
+6. API resolves the app profile from `public.users`.
 
-## Why This Matters
-- Supabase Auth manages credentials/session/JWT.
-- `public.users` manages business role/profile.
-- This keeps auth and app authorization separated cleanly.
+## Important Link Field
+Primary app-profile link should be:
+- `public.users.auth_user_id = auth.users.id`
+
+## Current State
+- Login flow now supports username -> email -> Supabase Auth.
+- Middleware can now decode JWT payload and attempt profile lookup by `auth_user_id`.
+- Remaining work: make all protected flows rely on verified Supabase JWT + linked `auth_user_id` consistently.
