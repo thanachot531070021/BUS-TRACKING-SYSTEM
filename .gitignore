@@ -32,3 +32,8 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Wrangler temp
+.wrangler/
+backend/worker/.wrangler/
+backend/admin-web-worker/.wrangler/
