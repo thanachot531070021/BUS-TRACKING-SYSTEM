@@ -15,7 +15,11 @@
         <a href="#auth">Admin Auth</a>
         <a href="#route-form">Route Form</a>
         <a href="#bus-form">Bus Form</a>
-        <a href="#user-management">Users</a>
+        <a href="#user-form">User Form</a>
+        <a href="#driver-form">Driver Form</a>
+        <a href="#admin-form">Admin Form</a>
+        <a href="#route-admin-form">Route Admin Form</a>
+        <a href="#user-management">Management Lists</a>
         <a href="#routes">Routes</a>
         <a href="#buses">Buses</a>
         <a href="#waiting">Waiting</a>
@@ -27,7 +31,7 @@
       <header class="topbar">
         <div>
           <h2>Admin Dashboard</h2>
-          <p>Admin web app served separately from API worker</p>
+          <p>Operational admin panel for BUS TRACKING SYSTEM</p>
         </div>
         <div class="toolbar">
           <input id="apiBase" placeholder="API Base URL เช่น https://api.example.workers.dev" />
@@ -89,6 +93,78 @@
         </section>
       </section>
 
+      <section class="grid-2 forms-grid">
+        <section class="panel" id="user-form">
+          <div class="panel-header"><h3>Create / Edit User</h3></div>
+          <div class="form-grid">
+            <input id="userEditIdInput" placeholder="User ID (for edit)" />
+            <input id="userUsernameInput" placeholder="Username" />
+            <input id="userEmailInput" placeholder="Email" />
+            <input id="userFullNameInput" placeholder="Full Name" />
+            <input id="userRoleInput" placeholder="Role: passenger/driver/admin" />
+            <input id="userStatusInput" placeholder="Status: active/inactive/suspended" />
+            <div class="button-row">
+              <button id="createUserBtn">Create User</button>
+              <button id="updateUserBtn" class="secondary">Update User</button>
+              <button id="clearUserBtn" class="ghost">Clear</button>
+            </div>
+          </div>
+          <div id="userFormStatus" class="form-status">Ready</div>
+        </section>
+
+        <section class="panel" id="driver-form">
+          <div class="panel-header"><h3>Create / Edit Driver</h3></div>
+          <div class="form-grid">
+            <input id="driverEditIdInput" placeholder="Driver ID (for edit)" />
+            <input id="driverUserIdInput" placeholder="User ID" />
+            <input id="driverEmployeeCodeInput" placeholder="Employee Code" />
+            <input id="driverLicenseInput" placeholder="License No" />
+            <input id="driverAssignedBusInput" placeholder="Assigned Bus ID" />
+            <input id="driverAssignedRouteInput" placeholder="Assigned Route ID" />
+            <input id="driverStatusInput" placeholder="Status: active/inactive" />
+            <div class="button-row">
+              <button id="createDriverBtn">Create Driver</button>
+              <button id="updateDriverBtn" class="secondary">Update Driver</button>
+              <button id="clearDriverBtn" class="ghost">Clear</button>
+            </div>
+          </div>
+          <div id="driverFormStatus" class="form-status">Ready</div>
+        </section>
+      </section>
+
+      <section class="grid-2 forms-grid">
+        <section class="panel" id="admin-form">
+          <div class="panel-header"><h3>Create / Edit Admin</h3></div>
+          <div class="form-grid">
+            <input id="adminEditIdInput" placeholder="Admin ID (for edit)" />
+            <input id="adminUserIdInput" placeholder="User ID" />
+            <input id="adminTypeInput" placeholder="Admin Type: super_admin/route_admin" />
+            <input id="adminStatusInput" placeholder="Status: active/inactive" />
+            <div class="button-row">
+              <button id="createAdminBtn">Create Admin</button>
+              <button id="updateAdminBtn" class="secondary">Update Admin</button>
+              <button id="clearAdminBtn" class="ghost">Clear</button>
+            </div>
+          </div>
+          <div id="adminFormStatus" class="form-status">Ready</div>
+        </section>
+
+        <section class="panel" id="route-admin-form">
+          <div class="panel-header"><h3>Route Admin Assignment</h3></div>
+          <div class="form-grid">
+            <input id="routeAdminIdInput" placeholder="Assignment ID (view/delete)" />
+            <input id="routeAdminRouteIdInput" placeholder="Route ID" />
+            <input id="routeAdminAdminIdInput" placeholder="Admin ID" />
+            <div class="button-row">
+              <button id="createRouteAdminBtn">Assign Route Admin</button>
+              <button id="deleteRouteAdminBtn" class="danger">Delete Assignment</button>
+              <button id="clearRouteAdminBtn" class="ghost">Clear</button>
+            </div>
+          </div>
+          <div id="routeAdminFormStatus" class="form-status">Ready</div>
+        </section>
+      </section>
+
       <section class="panel" id="summary">
         <h3>System Summary</h3>
         <div class="summary-grid">
@@ -100,7 +176,7 @@
         </div>
       </section>
 
-      <section class="grid-3" id="user-management">
+      <section class="grid-2" id="user-management">
         <section class="panel">
           <div class="panel-header"><h3>Users</h3><button id="reloadUsersBtn" class="secondary">Reload</button></div>
           <div id="usersList" class="stack-list"></div>
@@ -109,9 +185,16 @@
           <div class="panel-header"><h3>Drivers</h3><button id="reloadDriversBtn" class="secondary">Reload</button></div>
           <div id="driversList" class="stack-list"></div>
         </section>
+      </section>
+
+      <section class="grid-2">
         <section class="panel">
           <div class="panel-header"><h3>Admins</h3><button id="reloadAdminsBtn" class="secondary">Reload</button></div>
           <div id="adminsList" class="stack-list"></div>
+        </section>
+        <section class="panel">
+          <div class="panel-header"><h3>Route Admin Assignments</h3><button id="reloadRouteAdminsBtn" class="secondary">Reload</button></div>
+          <div id="routeAdminsList" class="stack-list"></div>
         </section>
       </section>
 

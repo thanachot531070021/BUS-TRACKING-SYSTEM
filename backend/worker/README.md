@@ -31,7 +31,10 @@ Backend is organized by domain and is now documented as **online-first** for Sup
 - admin login panel exists
 - token is stored in browser localStorage
 - dashboard reads from admin endpoints when token is present
-- create/update/delete route UI scaffold exists
-- create/update/delete bus UI scaffold exists
-- users/drivers/admins overview panels exist
-- UX feedback for form states and loading/errors is improved
+- create/update/delete route UI exists
+- create/update/delete bus UI exists
+- create/update/delete user UI exists
+- create/update/delete driver UI exists
+- create/update/delete admin UI exists
+- route-admin assignment create/delete UI exists
+- management sections are grouped into cleaner operational panels
