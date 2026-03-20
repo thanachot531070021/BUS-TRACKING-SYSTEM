@@ -4,8 +4,8 @@ compatibility_date = "2026-03-15"
 
 [vars]
 APP_NAME = "BUS TRACKING SYSTEM"
-SUPABASE_URL = ""
-SUPABASE_ANON_KEY = ""
+SUPABASE_URL = "https://kxmpllemwhfrgzdsdukt.supabase.co"
+SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt4bXBsbGVtd2hmcmd6ZHNkdWt0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1NDM4MTYsImV4cCI6MjA4OTExOTgxNn0.j976mLmq5p4Ci3XYMBGFiUivmkqh6jbmIta3d5Zrx6g"
 
 # Set secret separately when deploying:
 # wrangler secret put SUPABASE_SERVICE_ROLE_KEY

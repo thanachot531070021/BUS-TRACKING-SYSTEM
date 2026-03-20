@@ -1,5 +1,5 @@
 import { handleCurrentUser, handleGoogleLogin, handlePasswordLogin, handleRegister } from '../handlers/auth';
-import { handleHealth } from '../handlers/health';
+import { handleDbHealth, handleHealth } from '../handlers/health';
 import { handleCancelWaiting, handleCreateWaiting, handleGetBusById, handleGetRouteById, handleGetWaitingById, handleListRoutes, handleListWaiting, handleLiveBuses } from '../handlers/passenger';
 import { notFound } from '../lib/http';
 import { requireAuth } from '../middleware/auth.middleware';
@@ -14,6 +14,7 @@ export async function publicRouter(request: Request, env: Env) {
   const { pathname } = new URL(request.url);
 
   if (pathname === '/health' && request.method === 'GET') return handleHealth(env);
+  if (pathname === '/health/db' && request.method === 'GET') return handleDbHealth(env);
   if (pathname === '/auth/register' && request.method === 'POST') return handleRegister(env, request);
   if (pathname === '/auth/login' && request.method === 'POST') return handlePasswordLogin(env, request);
   if (pathname === '/auth/me' && request.method === 'GET') return handleCurrentUser(env, request);
