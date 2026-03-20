@@ -1,12 +1,17 @@
 import { badRequest, json, readJson } from '../lib/http';
-import { listUsersService, createUserService, updateUserService } from '../services/users.service';
-import { listDriversService, createDriverService, updateDriverService } from '../services/drivers.service';
-import { listAdminsService, createAdminService, updateAdminService } from '../services/admins.service';
-import { createRouteAdminService, deleteRouteAdminService, listRouteAdminsService } from '../services/route-admins.service';
+import { listUsersService, createUserService, updateUserService, getUserByIdService, deleteUserService } from '../services/users.service';
+import { listDriversService, createDriverService, updateDriverService, getDriverByIdService, deleteDriverService } from '../services/drivers.service';
+import { listAdminsService, createAdminService, updateAdminService, getAdminByIdService, deleteAdminService } from '../services/admins.service';
+import { createRouteAdminService, deleteRouteAdminService, getRouteAdminByIdService, listRouteAdminsService } from '../services/route-admins.service';
 import type { CreateAdminBody, CreateDriverBody, CreateRouteAdminBody, CreateUserBody, Env, UpdateAdminBody, UpdateDriverBody, UpdateUserBody } from '../types';
 
 export async function handleAdminListUsers(env: Env) {
   return json({ data: await listUsersService(env) });
+}
+
+export async function handleAdminGetUserById(env: Env, userId: string) {
+  if (!userId) return badRequest('userId is required');
+  return json({ data: await getUserByIdService(env, userId) });
 }
 
 export async function handleAdminCreateUser(env: Env, request: Request) {
@@ -21,8 +26,18 @@ export async function handleAdminUpdateUser(env: Env, request: Request, userId: 
   return json({ message: 'User updated', data: await updateUserService(env, userId, body ?? {}) });
 }
 
+export async function handleAdminDeleteUser(env: Env, userId: string) {
+  if (!userId) return badRequest('userId is required');
+  return json({ message: 'User deleted', data: await deleteUserService(env, userId) });
+}
+
 export async function handleAdminListDrivers(env: Env) {
   return json({ data: await listDriversService(env) });
+}
+
+export async function handleAdminGetDriverById(env: Env, driverId: string) {
+  if (!driverId) return badRequest('driverId is required');
+  return json({ data: await getDriverByIdService(env, driverId) });
 }
 
 export async function handleAdminCreateDriver(env: Env, request: Request) {
@@ -37,8 +52,18 @@ export async function handleAdminUpdateDriver(env: Env, request: Request, driver
   return json({ message: 'Driver updated', data: await updateDriverService(env, driverId, body ?? {}) });
 }
 
+export async function handleAdminDeleteDriver(env: Env, driverId: string) {
+  if (!driverId) return badRequest('driverId is required');
+  return json({ message: 'Driver deleted', data: await deleteDriverService(env, driverId) });
+}
+
 export async function handleAdminListAdmins(env: Env) {
   return json({ data: await listAdminsService(env) });
+}
+
+export async function handleAdminGetAdminById(env: Env, adminId: string) {
+  if (!adminId) return badRequest('adminId is required');
+  return json({ data: await getAdminByIdService(env, adminId) });
 }
 
 export async function handleAdminCreateAdmin(env: Env, request: Request) {
@@ -53,8 +78,18 @@ export async function handleAdminUpdateAdmin(env: Env, request: Request, adminId
   return json({ message: 'Admin updated', data: await updateAdminService(env, adminId, body ?? {}) });
 }
 
+export async function handleAdminDeleteAdmin(env: Env, adminId: string) {
+  if (!adminId) return badRequest('adminId is required');
+  return json({ message: 'Admin deleted', data: await deleteAdminService(env, adminId) });
+}
+
 export async function handleAdminListRouteAdmins(env: Env) {
   return json({ data: await listRouteAdminsService(env) });
+}
+
+export async function handleAdminGetRouteAdminById(env: Env, assignmentId: string) {
+  if (!assignmentId) return badRequest('assignmentId is required');
+  return json({ data: await getRouteAdminByIdService(env, assignmentId) });
 }
 
 export async function handleAdminCreateRouteAdmin(env: Env, request: Request) {

@@ -75,3 +75,12 @@ export async function updateDriver(env: Env, driverId: string, body: UpdateDrive
 
   return updated[0];
 }
+
+export async function deleteDriver(env: Env, driverId: string) {
+  if (!usingSupabase(env)) return { id: driverId, deleted: true };
+  await supabaseFetch<JsonRecord[]>(env, `drivers?id=eq.${driverId}`, {
+    method: 'DELETE',
+    headers: { Prefer: 'return=minimal' },
+  });
+  return { id: driverId, deleted: true };
+}

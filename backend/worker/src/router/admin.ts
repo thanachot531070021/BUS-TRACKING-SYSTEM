@@ -1,5 +1,5 @@
 import { handleAdminCreateBus, handleAdminCreateRoute, handleAdminDashboardSummary, handleAdminDeleteBus, handleAdminDeleteRoute, handleAdminGetBusById, handleAdminGetRouteById, handleAdminListBuses, handleAdminListRoutes, handleAdminLogin, handleAdminRouteBuses, handleAdminRouteWaitingSummary, handleAdminUpdateBus, handleAdminUpdateRoute, handleAdminWaiting, handleAdminWaitingSummary } from '../handlers/admin';
-import { handleAdminCreateAdmin, handleAdminCreateDriver, handleAdminCreateRouteAdmin, handleAdminCreateUser, handleAdminDeleteRouteAdmin, handleAdminListAdmins, handleAdminListDrivers, handleAdminListRouteAdmins, handleAdminListUsers, handleAdminUpdateAdmin, handleAdminUpdateDriver, handleAdminUpdateUser } from '../handlers/admin-users';
+import { handleAdminCreateAdmin, handleAdminCreateDriver, handleAdminCreateRouteAdmin, handleAdminCreateUser, handleAdminDeleteAdmin, handleAdminDeleteDriver, handleAdminDeleteRouteAdmin, handleAdminDeleteUser, handleAdminGetAdminById, handleAdminGetDriverById, handleAdminGetRouteAdminById, handleAdminGetUserById, handleAdminListAdmins, handleAdminListDrivers, handleAdminListRouteAdmins, handleAdminListUsers, handleAdminUpdateAdmin, handleAdminUpdateDriver, handleAdminUpdateUser } from '../handlers/admin-users';
 import { json, notFound } from '../lib/http';
 import { requireAdminScope, requireRole } from '../middleware/auth.middleware';
 import type { Env } from '../types';
@@ -36,27 +36,55 @@ export async function adminRouter(request: Request, env: Env) {
 
   if (pathname === '/admin/users' && request.method === 'GET') return handleAdminListUsers(env);
   if (pathname === '/admin/users' && request.method === 'POST') return handleAdminCreateUser(env, request);
+  if (pathname.startsWith('/admin/users/') && request.method === 'GET') {
+    const userId = getIdFromPath(pathname, '/admin/users/');
+    return handleAdminGetUserById(env, userId ?? '');
+  }
   if (pathname.startsWith('/admin/users/') && request.method === 'PUT') {
     const userId = getIdFromPath(pathname, '/admin/users/');
     return handleAdminUpdateUser(env, request, userId ?? '');
   }
+  if (pathname.startsWith('/admin/users/') && request.method === 'DELETE') {
+    const userId = getIdFromPath(pathname, '/admin/users/');
+    return handleAdminDeleteUser(env, userId ?? '');
+  }
 
   if (pathname === '/admin/drivers' && request.method === 'GET') return handleAdminListDrivers(env);
   if (pathname === '/admin/drivers' && request.method === 'POST') return handleAdminCreateDriver(env, request);
+  if (pathname.startsWith('/admin/drivers/') && request.method === 'GET') {
+    const driverId = getIdFromPath(pathname, '/admin/drivers/');
+    return handleAdminGetDriverById(env, driverId ?? '');
+  }
   if (pathname.startsWith('/admin/drivers/') && request.method === 'PUT') {
     const driverId = getIdFromPath(pathname, '/admin/drivers/');
     return handleAdminUpdateDriver(env, request, driverId ?? '');
   }
+  if (pathname.startsWith('/admin/drivers/') && request.method === 'DELETE') {
+    const driverId = getIdFromPath(pathname, '/admin/drivers/');
+    return handleAdminDeleteDriver(env, driverId ?? '');
+  }
 
   if (pathname === '/admin/admins' && request.method === 'GET') return handleAdminListAdmins(env);
   if (pathname === '/admin/admins' && request.method === 'POST') return handleAdminCreateAdmin(env, request);
+  if (pathname.startsWith('/admin/admins/') && request.method === 'GET') {
+    const adminId = getIdFromPath(pathname, '/admin/admins/');
+    return handleAdminGetAdminById(env, adminId ?? '');
+  }
   if (pathname.startsWith('/admin/admins/') && request.method === 'PUT') {
     const adminId = getIdFromPath(pathname, '/admin/admins/');
     return handleAdminUpdateAdmin(env, request, adminId ?? '');
   }
+  if (pathname.startsWith('/admin/admins/') && request.method === 'DELETE') {
+    const adminId = getIdFromPath(pathname, '/admin/admins/');
+    return handleAdminDeleteAdmin(env, adminId ?? '');
+  }
 
   if (pathname === '/admin/route-admins' && request.method === 'GET') return handleAdminListRouteAdmins(env);
   if (pathname === '/admin/route-admins' && request.method === 'POST') return handleAdminCreateRouteAdmin(env, request);
+  if (pathname.startsWith('/admin/route-admins/') && request.method === 'GET') {
+    const assignmentId = getIdFromPath(pathname, '/admin/route-admins/');
+    return handleAdminGetRouteAdminById(env, assignmentId ?? '');
+  }
   if (pathname.startsWith('/admin/route-admins/') && request.method === 'DELETE') {
     const assignmentId = getIdFromPath(pathname, '/admin/route-admins/');
     return handleAdminDeleteRouteAdmin(env, assignmentId ?? '');

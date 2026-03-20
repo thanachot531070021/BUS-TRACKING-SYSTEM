@@ -2,6 +2,7 @@
 
 ## Public / Passenger APIs
 - `GET /health`
+- `GET /health/db`
 - `POST /auth/register`
 - `POST /auth/login`
 - `GET /auth/me`
@@ -32,15 +33,22 @@
 
 ### User Management
 - `GET /admin/users` *(Admin token)*
+- `GET /admin/users/{userId}` *(Admin token)*
 - `POST /admin/users` *(Admin token)*
 - `PUT /admin/users/{userId}` *(Admin token)*
+- `DELETE /admin/users/{userId}` *(Admin token)*
 - `GET /admin/drivers` *(Admin token)*
+- `GET /admin/drivers/{driverId}` *(Admin token)*
 - `POST /admin/drivers` *(Admin token)*
 - `PUT /admin/drivers/{driverId}` *(Admin token)*
+- `DELETE /admin/drivers/{driverId}` *(Admin token)*
 - `GET /admin/admins` *(Admin token)*
+- `GET /admin/admins/{adminId}` *(Admin token)*
 - `POST /admin/admins` *(Admin token)*
 - `PUT /admin/admins/{adminId}` *(Admin token)*
+- `DELETE /admin/admins/{adminId}` *(Admin token)*
 - `GET /admin/route-admins` *(Admin token)*
+- `GET /admin/route-admins/{assignmentId}` *(Admin token)*
 - `POST /admin/route-admins` *(Admin token)*
 - `DELETE /admin/route-admins/{assignmentId}` *(Admin token)*
 

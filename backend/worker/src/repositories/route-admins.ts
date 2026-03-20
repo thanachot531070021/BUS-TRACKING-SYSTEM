@@ -14,6 +14,12 @@ export async function listRouteAdmins(env: Env) {
   return supabaseFetch<RouteAdminAssignment[]>(env, 'route_admins?select=*&order=created_at.desc');
 }
 
+export async function getRouteAdminById(env: Env, assignmentId: string) {
+  if (!usingSupabase(env)) return mockRouteAdmins.find((item) => item.id === assignmentId) ?? null;
+  const rows = await supabaseFetch<RouteAdminAssignment[]>(env, `route_admins?select=*&id=eq.${assignmentId}&limit=1`);
+  return rows[0] ?? null;
+}
+
 export async function listRouteIdsForAdmin(env: Env, adminId: string) {
   if (!usingSupabase(env)) {
     return mockRouteAdmins.filter((item) => item.admin_id === adminId).map((item) => item.route_id);

@@ -51,6 +51,12 @@ export async function listUsers(env: Env) {
   return supabaseFetch<UserProfile[]>(env, 'users?select=*&order=created_at.desc');
 }
 
+export async function getUserById(env: Env, userId: string) {
+  if (!usingSupabase(env)) return mockUsers.find((user) => user.id === userId) ?? null;
+  const rows = await supabaseFetch<UserProfile[]>(env, `users?select=*&id=eq.${userId}&limit=1`);
+  return rows[0] ?? null;
+}
+
 export async function findUserByUsernameOrEmail(env: Env, identifier: string) {
   if (!usingSupabase(env)) {
     return mockUsers.find((user) => user.username === identifier || user.email === identifier || user.phone_number === identifier) ?? null;
@@ -125,4 +131,13 @@ export async function updateUser(env: Env, userId: string, body: UpdateUserBody)
   });
 
   return updated[0];
+}
+
+export async function deleteUser(env: Env, userId: string) {
+  if (!usingSupabase(env)) return { id: userId, deleted: true };
+  await supabaseFetch<JsonRecord[]>(env, `users?id=eq.${userId}`, {
+    method: 'DELETE',
+    headers: { Prefer: 'return=minimal' },
+  });
+  return { id: userId, deleted: true };
 }

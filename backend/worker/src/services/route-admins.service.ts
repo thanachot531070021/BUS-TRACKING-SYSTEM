@@ -1,8 +1,12 @@
-import { createRouteAdmin, deleteRouteAdmin, listRouteAdmins } from '../repositories/route-admins';
+import { createRouteAdmin, deleteRouteAdmin, getRouteAdminById, listRouteAdmins } from '../repositories/route-admins';
 import type { CreateRouteAdminBody, Env } from '../types';
 
 export async function listRouteAdminsService(env: Env) {
   return listRouteAdmins(env);
+}
+
+export async function getRouteAdminByIdService(env: Env, assignmentId: string) {
+  return getRouteAdminById(env, assignmentId);
 }
 
 export async function createRouteAdminService(env: Env, body: CreateRouteAdminBody) {

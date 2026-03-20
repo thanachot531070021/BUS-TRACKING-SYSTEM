@@ -1,4 +1,4 @@
-import { createDriver, findDriverByUserId, getDriverById, listDrivers, updateDriver } from '../repositories/drivers';
+import { createDriver, deleteDriver, findDriverByUserId, getDriverById, listDrivers, updateDriver } from '../repositories/drivers';
 import type { CreateDriverBody, Env, UpdateDriverBody } from '../types';
 
 export async function listDriversService(env: Env) {
@@ -19,4 +19,8 @@ export async function createDriverService(env: Env, body: CreateDriverBody) {
 
 export async function updateDriverService(env: Env, driverId: string, body: UpdateDriverBody) {
   return updateDriver(env, driverId, body);
+}
+
+export async function deleteDriverService(env: Env, driverId: string) {
+  return deleteDriver(env, driverId);
 }
