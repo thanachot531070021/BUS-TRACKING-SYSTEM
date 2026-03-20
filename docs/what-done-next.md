@@ -10,12 +10,15 @@
 7. Added auth middleware, role guards, and route-admin scope scaffold
 8. Expanded route / bus / waiting APIs with detail and delete endpoints
 9. Added online-ready auth scaffold for register/login/me
-10. Added admin CRUD UI scaffold for routes and buses
-11. Added health/db-check endpoint and online seed SQL for test data
+10. Added admin CRUD-style UI scaffolds and management flows
+11. Added DB health-check endpoint
+12. Added API reference docs and auth flow docs
+13. Fixed username -> email -> Supabase Auth login flow
+14. Added SQL sync helper for `public.users.auth_user_id`
 
 ## What should happen next
-1. Run `supabase/seed.sql` in Supabase SQL Editor
-2. Check `/health/db` and `/routes` again
-3. Replace mock token verification with real Supabase JWT verification
-4. Continue user/driver/admin CRUD UI and API hardening
+1. Run `supabase/sync-auth-user-id.sql` in Supabase SQL Editor
+2. Test `/auth/me` again
+3. Continue replacing remaining mock auth behavior in protected routes
+4. Keep improving admin UX and real CRUD flows
 5. Connect Flutter app to Auth + API + Realtime + Google Maps
