@@ -23,5 +23,7 @@ export async function googleLoginService(env: Env, googleIdToken: string, email?
 }
 
 export async function currentUserService(env: Env, identifier: string) {
+  const byId = await getUserById(env, identifier);
+  if (byId) return byId;
   return findUserByUsernameOrEmail(env, identifier);
 }

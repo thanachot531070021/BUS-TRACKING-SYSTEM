@@ -66,8 +66,9 @@ export async function registerWithPassword(env: Env, body: { email: string; pass
 }
 
 export async function loginWithPassword(env: Env, body: { identifier: string; password: string; expectedRole?: 'driver' | 'admin' | 'passenger' }) {
+  const user = await findUserByUsernameOrEmail(env, body.identifier);
+
   if (!usingSupabase(env)) {
-    const user = await findUserByUsernameOrEmail(env, body.identifier);
     const role = body.expectedRole ?? (user?.role ?? 'passenger');
 
     if (role === 'driver') {
@@ -102,15 +103,20 @@ export async function loginWithPassword(env: Env, body: { identifier: string; pa
     };
   }
 
+  const loginEmail = user?.email ?? body.identifier;
+  if (!loginEmail) {
+    throw new Error('No email found for login identifier');
+  }
+
   const session = await supabaseAuthFetch<SupabaseAuthSession>(env, 'token?grant_type=password', {
     method: 'POST',
     body: JSON.stringify({
-      email: body.identifier,
+      email: loginEmail,
       password: body.password,
     }),
   });
 
-  const profile = await findUserByUsernameOrEmail(env, body.identifier);
+  const profile = user ?? (session.user?.email ? await findUserByUsernameOrEmail(env, session.user.email) : null);
 
   return {
     role: profile?.role ?? body.expectedRole ?? 'passenger',
