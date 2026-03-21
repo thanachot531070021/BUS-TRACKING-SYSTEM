@@ -197,3 +197,24 @@ for each row execute function set_updated_at();
 -- users
 -- drivers
 -- admins
+
+-- ===== ANALYTICS =====
+create table if not exists analytics_events (
+  id          uuid primary key default gen_random_uuid(),
+  source      text not null check (source in ('web_admin', 'mobile_app')),
+  event_type  text not null,
+  user_id     uuid references users(id) on delete set null,
+  session_id  text,
+  page        text,
+  platform    text,
+  os          text,
+  device_type text,
+  user_agent  text,
+  ip_hint     text,
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists idx_analytics_source_created_at on analytics_events(source, created_at desc);
+create index if not exists idx_analytics_event_type_created_at on analytics_events(event_type, created_at desc);
+create index if not exists idx_analytics_user_id on analytics_events(user_id);
+create index if not exists idx_analytics_created_at on analytics_events(created_at desc);

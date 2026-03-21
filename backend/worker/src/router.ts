@@ -45,6 +45,8 @@ export async function routeRequest(request: Request, env: Env) {
         adminBuses: 'GET/POST /admin/buses (Admin token)',
         adminBusById: 'GET/PUT/DELETE /admin/buses/:busId (Admin token)',
         adminWaiting: 'GET /admin/waiting?routeId=... (Admin token)',
+        analyticsLogEvent: 'POST /analytics/event (Public — web_admin or mobile_app)',
+        analyticsReport: 'GET /admin/analytics?days=7 (Admin token)',
       },
     });
   }

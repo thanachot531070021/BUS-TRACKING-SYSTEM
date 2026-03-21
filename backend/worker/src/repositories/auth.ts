@@ -1,4 +1,4 @@
-import { createUser, findUserByUsernameOrEmail } from './users';
+import { createUser, findUserByUsernameOrEmail, updateUser } from './users';
 import { getSupabaseAnonKey, supabaseAuthFetch, usingSupabase } from '../lib/supabase';
 import type { CreateUserBody, Env } from '../types';
 
@@ -117,6 +117,12 @@ export async function loginWithPassword(env: Env, body: { identifier: string; pa
   });
 
   const profile = user ?? (session.user?.email ? await findUserByUsernameOrEmail(env, session.user.email) : null);
+
+  // Auto-link auth_user_id if not yet set (first Supabase login after account was manually created)
+  if (profile && !profile.auth_user_id && session.user?.id) {
+    await updateUser(env, profile.id, { authUserId: session.user.id });
+    profile.auth_user_id = session.user.id;
+  }
 
   return {
     role: profile?.role ?? body.expectedRole ?? 'passenger',

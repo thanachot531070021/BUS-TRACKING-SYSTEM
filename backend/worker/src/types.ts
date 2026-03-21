@@ -183,3 +183,28 @@ export type CreateRouteAdminBody = {
   routeId: string;
   adminId: string;
 };
+
+export type AnalyticsEvent = {
+  id: string;
+  source: 'web_admin' | 'mobile_app';
+  event_type: string;
+  user_id?: string | null;
+  session_id?: string | null;
+  page?: string | null;
+  platform?: string | null;
+  os?: string | null;
+  device_type?: string | null;
+  user_agent?: string | null;
+  ip_hint?: string | null;
+  created_at?: string;
+};
+
+export type CreateAnalyticsBody = {
+  source: 'web_admin' | 'mobile_app';
+  eventType: string;
+  page?: string;
+  platform?: string;
+  os?: string;
+  deviceType?: string;
+  sessionId?: string;
+};

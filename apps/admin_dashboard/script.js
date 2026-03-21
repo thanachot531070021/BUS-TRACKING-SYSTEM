@@ -237,6 +237,11 @@ const SECTIONS = {
     ],
   },
 
+  analytics: {
+    title: 'Analytics', icon: '📈',
+    subtitle: 'สถิติการใช้งานระบบแยกตามช่องทาง',
+  },
+
   settings: {
     title: 'การตั้งค่า API', icon: '⚙️',
     subtitle: 'กำหนด API Base URL สำหรับ backend',
@@ -315,6 +320,26 @@ function toast(msg, type = 'info') {
 }
 
 /* =====================================================
+   SIDEBAR TOGGLE (mobile)
+   ===================================================== */
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebarOverlay').classList.add('show');
+  document.getElementById('menuToggle').classList.add('active');
+}
+
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('show');
+  document.getElementById('menuToggle').classList.remove('active');
+}
+
+function toggleSidebar() {
+  const isOpen = document.getElementById('sidebar').classList.contains('open');
+  isOpen ? closeSidebar() : openSidebar();
+}
+
+/* =====================================================
    NAVIGATION
    ===================================================== */
 function navigate(section) {
@@ -325,6 +350,9 @@ function navigate(section) {
   const cfg = SECTIONS[section];
   document.getElementById('pageTitle').textContent    = `${cfg.icon} ${cfg.title}`;
   document.getElementById('pageSubtitle').textContent = cfg.subtitle;
+  // Auto-close sidebar on mobile after navigation
+  if (window.innerWidth <= 900) closeSidebar();
+  trackEvent('page_view', section);
   loadSection(section);
 }
 
@@ -335,6 +363,7 @@ async function loadSection(section) {
   const content = document.getElementById('mainContent');
 
   if (section === 'dashboard') { renderDashboard(); return; }
+  if (section === 'analytics') { renderAnalytics(); return; }
   if (section === 'settings')  { renderSettings();  return; }
 
   const cfg = SECTIONS[section];
@@ -475,6 +504,261 @@ async function renderDashboard() {
   } catch (err) {
     content.innerHTML = errCard('dashboard', err.message);
   }
+}
+
+/* =====================================================
+   ANALYTICS (Chart.js)
+   ===================================================== */
+let _chartInstances = {};
+
+function destroyCharts() {
+  Object.values(_chartInstances).forEach(c => { try { c.destroy(); } catch {} });
+  _chartInstances = {};
+}
+
+function makeChart(id, config) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (_chartInstances[id]) { try { _chartInstances[id].destroy(); } catch {} }
+  _chartInstances[id] = new Chart(el, config);
+}
+
+async function renderAnalytics() {
+  destroyCharts();
+  const content = document.getElementById('mainContent');
+  content.innerHTML = `<div class="card"><div class="loading"><div class="spinner"></div> กำลังโหลด Analytics...</div></div>`;
+
+  try {
+    const raw = await apiFetch('/admin/analytics?days=7');
+    const d = raw?.data || {};
+
+    const totalToday  = d.total_today ?? 0;
+    const totalWeek   = d.total_week  ?? 0;
+    const bySource    = d.by_source    || [];
+    const byEvent     = d.by_event_type || [];
+    const byPlatform  = d.by_platform  || [];
+    const byDevice    = d.by_device_type || [];
+    const daily       = d.daily_counts || [];
+    const recent      = d.recent       || [];
+
+    const webCount    = bySource.find(s => s.name === 'web_admin')?.count  ?? 0;
+    const mobileCount = bySource.find(s => s.name === 'mobile_app')?.count ?? 0;
+
+    function sourceBadge(s) {
+      return s === 'web_admin'
+        ? '<span class="badge b-blue">🌐 Web Admin</span>'
+        : '<span class="badge b-green">📱 Mobile App</span>';
+    }
+
+    content.innerHTML = `
+      <!-- Stat cards -->
+      <div class="stats-grid" style="margin-bottom:20px">
+        <div class="stat-card">
+          <div class="stat-icon si-blue">📅</div>
+          <div><div class="stat-value">${totalToday}</div><div class="stat-label">Events วันนี้</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon si-indigo">📊</div>
+          <div><div class="stat-value">${totalWeek}</div><div class="stat-label">Events 7 วัน</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon si-purple">🌐</div>
+          <div><div class="stat-value">${webCount}</div><div class="stat-label">Web Admin</div></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon si-green">📱</div>
+          <div><div class="stat-value">${mobileCount}</div><div class="stat-label">Mobile App</div></div>
+        </div>
+      </div>
+
+      <!-- Row 1: Daily line + Source doughnut -->
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">📅 Events รายวัน (7 วัน)</div>
+            <button class="btn btn-secondary btn-sm" onclick="renderAnalytics()">🔄 รีเฟรช</button>
+          </div>
+          <div class="card-body" style="padding:16px">
+            <canvas id="chartDaily" height="110"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">📡 Channel</div></div>
+          <div class="card-body" style="display:flex;align-items:center;justify-content:center;padding:16px">
+            <canvas id="chartSource" style="max-height:180px"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 2: Platform bar + Device doughnut -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div class="card">
+          <div class="card-header"><div class="card-title">💻 Platform / OS</div></div>
+          <div class="card-body" style="padding:16px">
+            <canvas id="chartPlatform" height="160"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">🎯 ประเภท Event</div></div>
+          <div class="card-body" style="padding:16px">
+            <canvas id="chartEvent" height="160"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent events table -->
+      <div class="card">
+        <div class="card-header"><div class="card-title">🕐 Events ล่าสุด (20 รายการ)</div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>เวลา</th><th>Channel</th><th>Event</th><th>หน้า/Screen</th><th>Platform</th><th>Device</th><th>User ID</th>
+            </tr></thead>
+            <tbody>
+              ${recent.length
+                ? recent.map(e => `<tr>
+                    <td>${fmtDate(e.created_at)}</td>
+                    <td>${sourceBadge(e.source)}</td>
+                    <td><span class="badge b-yellow">${esc(e.event_type)}</span></td>
+                    <td>${esc(e.page || '—')}</td>
+                    <td>${esc(e.platform || '—')}</td>
+                    <td>${esc(e.device_type || '—')}</td>
+                    <td>${e.user_id ? chip(e.user_id) : '<span class="text-muted">—</span>'}</td>
+                  </tr>`).join('')
+                : `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--muted)">
+                    <div style="font-size:36px;margin-bottom:10px">📭</div>ยังไม่มี events — สร้าง table ใน Supabase แล้วลอง navigate เมนูใดก็ได้
+                  </td></tr>`
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+
+    // ---- Chart.js ----
+    const chartDefaults = {
+      plugins: { legend: { labels: { font: { family: 'Inter', size: 12 }, padding: 12 } } },
+    };
+
+    // 1. Daily line chart
+    makeChart('chartDaily', {
+      type: 'line',
+      data: {
+        labels: daily.map(d => d.date.slice(5)),
+        datasets: [{
+          label: 'Events',
+          data: daily.map(d => d.count),
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59,130,246,0.1)',
+          borderWidth: 2.5,
+          pointBackgroundColor: '#3b82f6',
+          pointRadius: 4,
+          tension: 0.4,
+          fill: true,
+        }],
+      },
+      options: {
+        ...chartDefaults,
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: '#f1f5f9' } },
+          x: { ticks: { font: { size: 11 } }, grid: { display: false } },
+        },
+      },
+    });
+
+    // 2. Source doughnut
+    makeChart('chartSource', {
+      type: 'doughnut',
+      data: {
+        labels: ['🌐 Web Admin', '📱 Mobile App'],
+        datasets: [{
+          data: [webCount, mobileCount],
+          backgroundColor: ['#3b82f6', '#10b981'],
+          borderColor: '#fff',
+          borderWidth: 3,
+          hoverOffset: 6,
+        }],
+      },
+      options: {
+        ...chartDefaults,
+        cutout: '65%',
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 12 } } } },
+      },
+    });
+
+    // 3. Platform horizontal bar
+    makeChart('chartPlatform', {
+      type: 'bar',
+      data: {
+        labels: byPlatform.map(p => p.name),
+        datasets: [{
+          label: 'Events',
+          data: byPlatform.map(p => p.count),
+          backgroundColor: ['#8b5cf6','#a78bfa','#c4b5fd','#ddd6fe','#ede9fe'],
+          borderRadius: 6,
+        }],
+      },
+      options: {
+        ...chartDefaults,
+        indexAxis: 'y',
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: '#f1f5f9' } },
+          y: { ticks: { font: { size: 12 } }, grid: { display: false } },
+        },
+      },
+    });
+
+    // 4. Event types doughnut
+    const evColors = ['#f59e0b','#3b82f6','#10b981','#ef4444','#8b5cf6','#06b6d4'];
+    makeChart('chartEvent', {
+      type: 'doughnut',
+      data: {
+        labels: byEvent.map(e => e.name),
+        datasets: [{
+          data: byEvent.map(e => e.count),
+          backgroundColor: evColors,
+          borderColor: '#fff',
+          borderWidth: 3,
+          hoverOffset: 6,
+        }],
+      },
+      options: {
+        ...chartDefaults,
+        cutout: '60%',
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 8 } } },
+      },
+    });
+
+  } catch (err) {
+    content.innerHTML = errCard('analytics', err.message);
+  }
+}
+
+/* =====================================================
+   TRACK EVENT (fire & forget — ไม่รอ response)
+   ===================================================== */
+function trackEvent(eventType, page = '') {
+  try {
+    const ua = navigator.userAgent;
+    const platform =
+      /iPhone|iPad|iPod/.test(ua) ? 'iOS' :
+      /Android/.test(ua)          ? 'Android' :
+      /Windows/.test(ua)          ? 'Windows' :
+      /Mac/.test(ua)              ? 'macOS' :
+      /Linux/.test(ua)            ? 'Linux' : 'Unknown';
+    const deviceType =
+      /Mobi|Android.*Mobile|iPhone|iPod/.test(ua) ? 'mobile' :
+      /iPad|Android(?!.*Mobile)/.test(ua)          ? 'tablet' : 'desktop';
+
+    fetch(`${getApiBase()}/analytics/event`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(getToken() ? { Authorization: `Bearer ${getToken()}` } : {}) },
+      body: JSON.stringify({ source: 'web_admin', eventType, page, platform, deviceType }),
+    }).catch(() => {}); // silent fail — never block UX
+  } catch {}
 }
 
 /* =====================================================
@@ -758,6 +1042,8 @@ window.addEventListener('DOMContentLoaded', init);
    when loaded as type="module")
    ===================================================== */
 window.navigate       = navigate;
+window.toggleSidebar  = toggleSidebar;
+window.closeSidebar   = closeSidebar;
 window.logout         = logout;
 window.openCreate     = openCreate;
 window.openEdit       = openEdit;
@@ -772,3 +1058,4 @@ window.resetApiUrl    = resetApiUrl;
 window.runHealthCheck = runHealthCheck;
 window.loadSection    = loadSection;
 window.renderDashboard = renderDashboard;
+window.renderAnalytics = renderAnalytics;

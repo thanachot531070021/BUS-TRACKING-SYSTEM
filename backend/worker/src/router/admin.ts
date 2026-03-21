@@ -1,5 +1,6 @@
 import { handleAdminCreateBus, handleAdminCreateRoute, handleAdminDashboardSummary, handleAdminDeleteBus, handleAdminDeleteRoute, handleAdminGetBusById, handleAdminGetRouteById, handleAdminListBuses, handleAdminListRoutes, handleAdminLogin, handleAdminRouteBuses, handleAdminRouteWaitingSummary, handleAdminUpdateBus, handleAdminUpdateRoute, handleAdminWaiting, handleAdminWaitingSummary } from '../handlers/admin';
 import { handleAdminCreateAdmin, handleAdminCreateDriver, handleAdminCreateRouteAdmin, handleAdminCreateUser, handleAdminDeleteAdmin, handleAdminDeleteDriver, handleAdminDeleteRouteAdmin, handleAdminDeleteUser, handleAdminGetAdminById, handleAdminGetDriverById, handleAdminGetRouteAdminById, handleAdminGetUserById, handleAdminListAdmins, handleAdminListDrivers, handleAdminListRouteAdmins, handleAdminListUsers, handleAdminUpdateAdmin, handleAdminUpdateDriver, handleAdminUpdateUser } from '../handlers/admin-users';
+import { handleGetAnalytics, handleLogEvent } from '../handlers/analytics';
 import { json, notFound } from '../lib/http';
 import { requireAdminScope, requireRole } from '../middleware/auth.middleware';
 import type { Env } from '../types';
@@ -130,6 +131,17 @@ export async function adminRouter(request: Request, env: Env) {
 
   if (pathname === '/admin/waiting' && request.method === 'GET') return handleAdminWaiting(env, request);
   if (pathname === '/admin/waiting-summary' && request.method === 'GET') return handleAdminWaitingSummary(env, request);
+
+  // ===== ANALYTICS =====
+  // POST /analytics/event — public, no auth required (tracks from web + mobile)
+  if (pathname === '/analytics/event' && request.method === 'POST') return handleLogEvent(env, request);
+
+  // GET /admin/analytics — admin only
+  if (pathname === '/admin/analytics' && request.method === 'GET') {
+    const auth = await requireAdminScope(env, request);
+    if (auth instanceof Response) return auth;
+    return handleGetAnalytics(env, request);
+  }
 
   return notFound();
 }

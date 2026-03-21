@@ -472,16 +472,78 @@ pre {
   overflow-x: auto; white-space: pre-wrap; word-break: break-word;
 }
 
+/* ===== HAMBURGER BUTTON ===== */
+.menu-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  width: 38px; height: 38px;
+  background: none;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+}
+.menu-toggle span {
+  display: block;
+  width: 18px; height: 2px;
+  background: var(--text);
+  border-radius: 2px;
+  transition: all .25s;
+}
+.menu-toggle:hover { background: #f1f5f9; }
+
+/* Hamburger → X animation */
+.menu-toggle.active span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.menu-toggle.active span:nth-child(2) { opacity: 0; transform: scaleX(0); }
+.menu-toggle.active span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* Topbar left group */
+.topbar-left {
+  display: flex; align-items: center; gap: 12px;
+  min-width: 0; flex: 1;
+}
+
+/* Sidebar overlay */
+.sidebar-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(15,23,42,0.45);
+  z-index: 99;
+  backdrop-filter: blur(2px);
+}
+.sidebar-overlay.show { display: block; animation: fadeIn .2s ease; }
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 900px) {
-  .sidebar { transform: translateX(-100%); transition: transform .3s; }
-  .sidebar.open { transform: translateX(0); }
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform .28s cubic-bezier(.4,0,.2,1);
+    box-shadow: none;
+  }
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 6px 0 24px rgba(0,0,0,0.25);
+  }
   .main { margin-left: 0; }
+  .menu-toggle { display: flex; }
   .stats-grid { grid-template-columns: 1fr 1fr; }
 }
+
 @media (max-width: 600px) {
   .stats-grid { grid-template-columns: 1fr; }
   .form-row   { grid-template-columns: 1fr; }
-  .content    { padding: 14px; }
-  .search-wrap input { width: 150px; }
+  .content    { padding: 12px; }
+  .search-wrap input { width: 130px; }
+  .page-title    { font-size: 14px; }
+  .page-subtitle { display: none; }
+  .health-text   { display: none; }
+  .logout-text   { display: none; }
+  .btn-logout    { padding: 7px 10px; }
+  .topbar        { padding: 0 12px; }
+  .card-header   { padding: 12px 14px; }
+  .toolbar       { gap: 6px; }
 }

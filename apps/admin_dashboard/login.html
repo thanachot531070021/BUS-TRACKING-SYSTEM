@@ -291,12 +291,26 @@
           setLoading(false); return;
         }
 
-        const token = data?.token || data?.data?.token || data?.accessToken || data?.data?.accessToken;
+        const token = data?.token || data?.data?.token
+                   || data?.accessToken || data?.data?.accessToken
+                   || data?.access_token || data?.data?.access_token;
         if (!token) { showErr('ไม่ได้รับ token กรุณาตรวจสอบสิทธิ์บัญชี'); setLoading(false); return; }
 
         localStorage.setItem(TOKEN_KEY, token);
-        const user = data?.user || data?.data?.user || data?.profile;
+        const user = data?.user || data?.data?.user || data?.data?.profile || data?.profile;
         if (user) localStorage.setItem('bus-tracking-admin-user', JSON.stringify(user));
+
+        // Track login event (fire & forget)
+        try {
+          const ua = navigator.userAgent;
+          const platform = /Windows/.test(ua)?'Windows':/Macintosh/.test(ua)?'macOS':/Linux/.test(ua)?'Linux':/iPhone|iPad/.test(ua)?'iOS':/Android/.test(ua)?'Android':'Unknown';
+          const deviceType = /Mobi|iPhone|iPod/.test(ua)?'mobile':/iPad|Android(?!.*Mobile)/.test(ua)?'tablet':'desktop';
+          fetch(`${API}/analytics/event`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ source: 'web_admin', eventType: 'login', page: 'login', platform, deviceType }),
+          }).catch(() => {});
+        } catch {}
 
         window.location.replace('index.html');
       } catch {

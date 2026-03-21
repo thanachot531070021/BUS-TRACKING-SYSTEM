@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -29,6 +30,9 @@
         <div class="nav-group-label">ภาพรวม</div>
         <button class="nav-item active" data-section="dashboard" onclick="navigate('dashboard')">
           <span class="nav-icon">📊</span><span>Dashboard</span>
+        </button>
+        <button class="nav-item" data-section="analytics" onclick="navigate('analytics')">
+          <span class="nav-icon">📈</span><span>Analytics</span>
         </button>
       </div>
 
@@ -82,20 +86,28 @@
 
   </aside>
 
+  <!-- Sidebar overlay (mobile) -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
   <!-- ===== MAIN ===== -->
   <div class="main">
 
     <!-- Topbar -->
     <header class="topbar">
-      <div>
-        <div class="page-title" id="pageTitle">📊 Dashboard</div>
-        <div class="page-subtitle" id="pageSubtitle">ภาพรวมระบบ Bus Tracking</div>
+      <div class="topbar-left">
+        <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()" aria-label="เปิดเมนู">
+          <span></span><span></span><span></span>
+        </button>
+        <div>
+          <div class="page-title" id="pageTitle">📊 Dashboard</div>
+          <div class="page-subtitle" id="pageSubtitle">ภาพรวมระบบ Bus Tracking</div>
+        </div>
       </div>
       <div class="topbar-right">
         <div class="health-badge" id="healthBadge" style="display:none">
-          <span class="health-dot"></span> ระบบออนไลน์
+          <span class="health-dot"></span> <span class="health-text">ระบบออนไลน์</span>
         </div>
-        <button class="btn-logout" onclick="logout()">🚪 ออกจากระบบ</button>
+        <button class="btn-logout" onclick="logout()">🚪 <span class="logout-text">ออกจากระบบ</span></button>
       </div>
     </header>
 

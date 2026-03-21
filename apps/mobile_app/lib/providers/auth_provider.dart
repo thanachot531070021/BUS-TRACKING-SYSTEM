@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
+import '../services/analytics_service.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 
@@ -52,6 +53,8 @@ class AuthProvider extends ChangeNotifier {
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_tokenKey, _token!);
+
+      analyticsService.logEvent('login', page: 'login_screen');
 
       _loading = false;
       notifyListeners();
