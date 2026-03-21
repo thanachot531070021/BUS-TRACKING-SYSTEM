@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
-
-import 'screens/admin_info_screen.dart';
-import 'screens/driver_screen.dart';
-import 'screens/passenger_screen.dart';
+import 'package:provider/provider.dart';
+import 'providers/auth_provider.dart';
+import 'providers/driver_provider.dart';
+import 'providers/route_provider.dart';
+import 'screens/splash_screen.dart';
+import 'services/api_service.dart';
+import 'services/auth_service.dart';
+import 'services/bus_service.dart';
+import 'services/location_service.dart';
+import 'services/route_service.dart';
+import 'services/waiting_service.dart';
 
 void main() {
   runApp(const BusTrackingApp());
@@ -13,47 +20,44 @@ class BusTrackingApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'BUS TRACKING SYSTEM',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-      ),
-      home: const MainShell(),
-    );
-  }
-}
+    return MultiProvider(
+      providers: [
+        // Services
+        Provider<AuthService>(create: (_) => AuthService(apiService)),
+        Provider<RouteService>(create: (_) => RouteService(apiService)),
+        Provider<BusService>(create: (_) => BusService(apiService)),
+        Provider<WaitingService>(create: (_) => WaitingService(apiService)),
+        Provider<LocationService>(create: (_) => LocationService(apiService)),
 
-class MainShell extends StatefulWidget {
-  const MainShell({super.key});
-
-  @override
-  State<MainShell> createState() => _MainShellState();
-}
-
-class _MainShellState extends State<MainShell> {
-  int currentIndex = 0;
-
-  final screens = const [
-    PassengerScreen(),
-    DriverScreen(),
-    AdminInfoScreen(),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('BUS TRACKING SYSTEM')),
-      body: screens[currentIndex],
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: currentIndex,
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.person_pin_circle), label: 'Passenger'),
-          NavigationDestination(icon: Icon(Icons.directions_bus), label: 'Driver'),
-          NavigationDestination(icon: Icon(Icons.admin_panel_settings), label: 'Admin'),
-        ],
-        onDestinationSelected: (index) => setState(() => currentIndex = index),
+        // Providers (state management)
+        ChangeNotifierProvider<AuthProvider>(
+          create: (ctx) => AuthProvider(ctx.read<AuthService>()),
+        ),
+        ChangeNotifierProvider<RouteProvider>(
+          create: (ctx) => RouteProvider(
+            ctx.read<RouteService>(),
+            ctx.read<BusService>(),
+            ctx.read<WaitingService>(),
+          ),
+        ),
+        ChangeNotifierProvider<DriverProvider>(
+          create: (ctx) => DriverProvider(
+            apiService,
+            ctx.read<LocationService>(),
+            ctx.read<WaitingService>(),
+          ),
+        ),
+      ],
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Bus Tracking System',
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF2563EB),
+          ),
+          useMaterial3: true,
+        ),
+        home: const SplashScreen(),
       ),
     );
   }
