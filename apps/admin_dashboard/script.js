@@ -1,250 +1,774 @@
-const storageKey = 'bus-tracking-api-base';
-const tokenKey = 'bus-tracking-admin-token';
-const $ = (id) => document.getElementById(id);
+'use strict';
 
-const apiBaseInput = $('apiBase');
-const saveApiBtn = $('saveApiBtn');
-const refreshBtn = $('refreshBtn');
-const adminUsername = $('adminUsername');
-const adminPassword = $('adminPassword');
-const adminLoginBtn = $('adminLoginBtn');
-const adminLogoutBtn = $('adminLogoutBtn');
-const authStatus = $('authStatus');
-const routeAdminsList = $('routeAdminsList');
-const reloadRoutesBtn = $('reloadRoutesBtn');
-const reloadWaitingBtn = $('reloadWaitingBtn');
-const reloadBusesBtn = $('reloadBusesBtn');
-const reloadUsersBtn = $('reloadUsersBtn');
-const reloadDriversBtn = $('reloadDriversBtn');
-const reloadAdminsBtn = $('reloadAdminsBtn');
-const reloadRouteAdminsBtn = $('reloadRouteAdminsBtn');
-const createRouteBtn = $('createRouteBtn');
-const updateRouteBtn = $('updateRouteBtn');
-const clearRouteBtn = $('clearRouteBtn');
-const createBusBtn = $('createBusBtn');
-const updateBusBtn = $('updateBusBtn');
-const clearBusBtn = $('clearBusBtn');
-const createUserBtn = $('createUserBtn');
-const updateUserBtn = $('updateUserBtn');
-const clearUserBtn = $('clearUserBtn');
-const createDriverBtn = $('createDriverBtn');
-const updateDriverBtn = $('updateDriverBtn');
-const clearDriverBtn = $('clearDriverBtn');
-const createAdminBtn = $('createAdminBtn');
-const updateAdminBtn = $('updateAdminBtn');
-const clearAdminBtn = $('clearAdminBtn');
-const createRouteAdminBtn = $('createRouteAdminBtn');
-const deleteRouteAdminBtn = $('deleteRouteAdminBtn');
-const clearRouteAdminBtn = $('clearRouteAdminBtn');
+/* =====================================================
+   BUS TRACKING ADMIN — MAIN APP SCRIPT
+   ===================================================== */
 
-const routeEditIdInput = $('routeEditIdInput');
-const routeCodeInput = $('routeCodeInput');
-const routeNameInput = $('routeNameInput');
-const routeStartInput = $('routeStartInput');
-const routeEndInput = $('routeEndInput');
-const busEditIdInput = $('busEditIdInput');
-const busPlateInput = $('busPlateInput');
-const busRouteIdInput = $('busRouteIdInput');
-const busDriverIdInput = $('busDriverIdInput');
-const busStatusInput = $('busStatusInput');
-const userEditIdInput = $('userEditIdInput');
-const userUsernameInput = $('userUsernameInput');
-const userEmailInput = $('userEmailInput');
-const userFullNameInput = $('userFullNameInput');
-const userRoleInput = $('userRoleInput');
-const userStatusInput = $('userStatusInput');
-const driverEditIdInput = $('driverEditIdInput');
-const driverUserIdInput = $('driverUserIdInput');
-const driverEmployeeCodeInput = $('driverEmployeeCodeInput');
-const driverLicenseInput = $('driverLicenseInput');
-const driverAssignedBusInput = $('driverAssignedBusInput');
-const driverAssignedRouteInput = $('driverAssignedRouteInput');
-const driverStatusInput = $('driverStatusInput');
-const adminEditIdInput = $('adminEditIdInput');
-const adminUserIdInput = $('adminUserIdInput');
-const adminTypeInput = $('adminTypeInput');
-const adminStatusInput = $('adminStatusInput');
-const routeAdminIdInput = $('routeAdminIdInput');
-const routeAdminRouteIdInput = $('routeAdminRouteIdInput');
-const routeAdminAdminIdInput = $('routeAdminAdminIdInput');
+const DEFAULT_API = 'https://bus-tracking-worker.thanachot-jo888.workers.dev';
+const TOKEN_KEY   = 'bus-tracking-admin-token';
+const USER_KEY    = 'bus-tracking-admin-user';
+const API_KEY     = 'bus-tracking-api-base';
 
-const routeFormStatus = $('routeFormStatus');
-const busFormStatus = $('busFormStatus');
-const userFormStatus = $('userFormStatus');
-const driverFormStatus = $('driverFormStatus');
-const adminFormStatus = $('adminFormStatus');
-const routeAdminFormStatus = $('routeAdminFormStatus');
+// ===== AUTH =====
+const getToken  = () => localStorage.getItem(TOKEN_KEY) || '';
+const clearAuth = () => { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(USER_KEY); };
+const getApiBase = () => (localStorage.getItem(API_KEY) || DEFAULT_API).replace(/\/$/, '');
 
-const routesCount = $('routesCount');
-const busesCount = $('busesCount');
-const waitingCount = $('waitingCount');
-const routesList = $('routesList');
-const waitingList = $('waitingList');
-const usersList = $('usersList');
-const driversList = $('driversList');
-const adminsList = $('adminsList');
-const apiStatus = $('apiStatus');
-const busTable = $('bus-table');
-const summaryRoutes = $('summaryRoutes');
-const summaryBuses = $('summaryBuses');
-const summaryDrivers = $('summaryDrivers');
-const summaryUsers = $('summaryUsers');
-const summaryActiveBuses = $('summaryActiveBuses');
-
-apiBaseInput.value = localStorage.getItem(storageKey) || 'http://127.0.0.1:8787';
-
-function getApiBase() { return apiBaseInput.value.trim().replace(/\/$/, ''); }
-function getToken() { return localStorage.getItem(tokenKey) || ''; }
-function setToken(token) { token ? localStorage.setItem(tokenKey, token) : localStorage.removeItem(tokenKey); updateAuthStatus(); }
-function updateAuthStatus(message) { authStatus.textContent = message || (getToken() ? 'Admin token saved' : 'Not logged in'); }
-function setStatus(el, message, type = 'info') { el.textContent = message; el.dataset.type = type; }
-function formatDate(value) { return value ? new Date(value).toLocaleString() : '-'; }
-
-async function apiFetch(path, options = {}, requireAuth = false) {
-  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
-  if (requireAuth && getToken()) headers.Authorization = `Bearer ${getToken()}`;
-  const response = await fetch(`${getApiBase()}${path}`, { ...options, headers });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error || `${response.status} ${response.statusText}`);
+// ===== API FETCH =====
+async function apiFetch(path, opts = {}, auth = true) {
+  const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+  if (auth && getToken()) headers.Authorization = `Bearer ${getToken()}`;
+  const res = await fetch(`${getApiBase()}${path}`, { ...opts, headers });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || data.message || `HTTP ${res.status}`);
   return data;
 }
 
-function fillRouteForm(route) { routeEditIdInput.value = route.id || ''; routeCodeInput.value = route.route_code || ''; routeNameInput.value = route.route_name || ''; routeStartInput.value = route.start_location || ''; routeEndInput.value = route.end_location || ''; setStatus(routeFormStatus, `Loaded route ${route.id} for editing`, 'success'); }
-function clearRouteForm() { routeEditIdInput.value=''; routeCodeInput.value=''; routeNameInput.value=''; routeStartInput.value=''; routeEndInput.value=''; setStatus(routeFormStatus, 'Ready', 'info'); }
-function fillBusForm(bus) { busEditIdInput.value = bus.id || ''; busPlateInput.value = bus.plate_number || ''; busRouteIdInput.value = bus.route_id || ''; busDriverIdInput.value = bus.driver_id || ''; busStatusInput.value = bus.status || ''; setStatus(busFormStatus, `Loaded bus ${bus.id} for editing`, 'success'); }
-function clearBusForm() { busEditIdInput.value=''; busPlateInput.value=''; busRouteIdInput.value=''; busDriverIdInput.value=''; busStatusInput.value=''; setStatus(busFormStatus, 'Ready', 'info'); }
-function fillUserForm(user) { userEditIdInput.value=user.id||''; userUsernameInput.value=user.username||''; userEmailInput.value=user.email||''; userFullNameInput.value=user.full_name||''; userRoleInput.value=user.role||''; userStatusInput.value=user.status||''; setStatus(userFormStatus, `Loaded user ${user.id}`, 'success'); }
-function clearUserForm() { userEditIdInput.value=''; userUsernameInput.value=''; userEmailInput.value=''; userFullNameInput.value=''; userRoleInput.value=''; userStatusInput.value=''; setStatus(userFormStatus, 'Ready', 'info'); }
-function fillDriverForm(driver) { driverEditIdInput.value=driver.id||''; driverUserIdInput.value=driver.user_id||''; driverEmployeeCodeInput.value=driver.employee_code||''; driverLicenseInput.value=driver.license_no||''; driverAssignedBusInput.value=driver.assigned_bus_id||''; driverAssignedRouteInput.value=driver.assigned_route_id||''; driverStatusInput.value=driver.status||''; setStatus(driverFormStatus, `Loaded driver ${driver.id}`, 'success'); }
-function clearDriverForm() { driverEditIdInput.value=''; driverUserIdInput.value=''; driverEmployeeCodeInput.value=''; driverLicenseInput.value=''; driverAssignedBusInput.value=''; driverAssignedRouteInput.value=''; driverStatusInput.value=''; setStatus(driverFormStatus, 'Ready', 'info'); }
-function fillAdminForm(admin) { adminEditIdInput.value=admin.id||''; adminUserIdInput.value=admin.user_id||''; adminTypeInput.value=admin.admin_type||''; adminStatusInput.value=admin.status||''; setStatus(adminFormStatus, `Loaded admin ${admin.id}`, 'success'); }
-function clearAdminForm() { adminEditIdInput.value=''; adminUserIdInput.value=''; adminTypeInput.value=''; adminStatusInput.value=''; setStatus(adminFormStatus, 'Ready', 'info'); }
-function fillRouteAdminForm(item) { routeAdminIdInput.value=item.id||''; routeAdminRouteIdInput.value=item.route_id||''; routeAdminAdminIdInput.value=item.admin_id||''; setStatus(routeAdminFormStatus, `Loaded assignment ${item.id}`, 'success'); }
-function clearRouteAdminForm() { routeAdminIdInput.value=''; routeAdminRouteIdInput.value=''; routeAdminAdminIdInput.value=''; setStatus(routeAdminFormStatus, 'Ready', 'info'); }
-
-function renderRoutes(routes) {
-  routesList.innerHTML = '';
-  routes.forEach((route) => {
-    const div = document.createElement('div'); div.className='stack-item';
-    div.innerHTML = `<div class="title">${route.route_code || '-'} - ${route.route_name}</div><div class="meta">${route.start_location || '-'} → ${route.end_location || '-'}</div><div class="meta">Status: ${route.status}</div><div class="meta">Route ID: ${route.id}</div><div class="action-row"><button class="secondary edit-route-btn" data-route='${JSON.stringify(route).replace(/'/g,'&apos;')}'>Edit</button><button class="danger delete-route-btn" data-route-id="${route.id}">Delete</button></div>`;
-    routesList.appendChild(div);
-  });
-}
-function renderWaiting(points) { waitingList.innerHTML=''; points.forEach((point)=>{ const div=document.createElement('div'); div.className='stack-item'; div.innerHTML=`<div class="title">${point.route_name || point.route_id}</div><div class="meta">Waiting count: ${point.waiting_count ?? 1}</div><div class="meta">Lat/Lng: ${point.lat}, ${point.lng}</div><div class="meta">Created: ${formatDate(point.created_at)}</div>`; waitingList.appendChild(div); }); }
-function renderBuses(buses) { busTable.innerHTML=''; buses.forEach((bus)=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${bus.plate_number}</td><td>${bus.route_id ?? bus.route_name ?? '-'}</td><td>${bus.status}</td><td>${bus.current_lat ?? '-'}, ${bus.current_lng ?? '-'}</td><td><button class="secondary edit-bus-btn" data-bus='${JSON.stringify(bus).replace(/'/g,'&apos;')}'>Edit</button><button class="danger delete-bus-btn" data-bus-id="${bus.id}">Delete</button></td>`; busTable.appendChild(tr); }); }
-function renderSummary(summary) { summaryRoutes.textContent=summary.total_routes ?? '-'; summaryBuses.textContent=summary.total_buses ?? '-'; summaryDrivers.textContent=summary.total_drivers ?? '-'; summaryUsers.textContent=summary.total_users ?? '-'; summaryActiveBuses.textContent=summary.active_buses ?? '-'; }
-
-function renderManagedList(target, items, type, formatter) {
-  target.innerHTML = '';
-  items.forEach((item) => {
-    const div = document.createElement('div');
-    div.className = 'stack-item';
-    div.innerHTML = `${formatter(item)}<div class="action-row">${type !== 'route-admin' ? `<button class="secondary edit-${type}-btn" data-item='${JSON.stringify(item).replace(/'/g,'&apos;')}'>Edit</button>` : `<button class="secondary edit-route-admin-btn" data-item='${JSON.stringify(item).replace(/'/g,'&apos;')}'>Load</button>`}<button class="danger delete-${type}-btn" data-id="${item.id}">Delete</button></div>`;
-    target.appendChild(div);
-  });
+function extractList(r) {
+  if (Array.isArray(r)) return r;
+  const keys = ['data','users','drivers','admins','routes','buses',
+                 'assignments','waiting','items','list','results'];
+  for (const k of keys) if (Array.isArray(r?.[k])) return r[k];
+  return Object.values(r || {}).find(v => Array.isArray(v)) || [];
 }
 
-async function loginAdmin() {
-  try { updateAuthStatus('Logging in...'); const result = await apiFetch('/auth/admin/login', { method: 'POST', body: JSON.stringify({ username: adminUsername.value.trim(), password: adminPassword.value }) }); const token = result?.data?.token || result?.data?.access_token; if (!token) throw new Error('No token returned from admin login'); setToken(token); updateAuthStatus(`Logged in as ${result?.data?.user?.username || adminUsername.value.trim()}`); await loadDashboard(); } catch (error) { updateAuthStatus(`Login failed: ${error.message}`); }
+// ===== STATE =====
+const state = { section: 'dashboard', user: null, cache: {} };
+
+/* =====================================================
+   SECTION CONFIGS
+   ===================================================== */
+const SECTIONS = {
+
+  dashboard: {
+    title: 'Dashboard', icon: '📊',
+    subtitle: 'ภาพรวมระบบ Bus Tracking',
+  },
+
+  users: {
+    title: 'ผู้ใช้งาน', icon: '👥',
+    subtitle: 'จัดการข้อมูลผู้ใช้งานทั้งหมด',
+    listPath:   '/admin/users',
+    createPath: '/admin/users',
+    updatePath: id => `/admin/users/${id}`,
+    deletePath: id => `/admin/users/${id}`,
+    idField: 'id',
+    columns: [
+      { key: 'id',        label: 'ID',           r: chip },
+      { key: 'username',  label: 'Username',      bold: true },
+      { key: 'full_name', label: 'ชื่อ-นามสกุล' },
+      { key: 'email',     label: 'Email' },
+      { key: 'role',      label: 'บทบาท',         r: roleBadge },
+      { key: 'status',    label: 'สถานะ',          r: statusBadge },
+    ],
+    formFields: [
+      { n: 'username',  rk: 'username',  label: 'Username',      type: 'text',     req: true  },
+      { n: 'email',     rk: 'email',     label: 'Email',          type: 'email',    req: true  },
+      { n: 'fullName',  rk: 'full_name', label: 'ชื่อ-นามสกุล',  type: 'text',     req: false },
+      { n: 'password',  rk: null,        label: 'รหัสผ่าน',       type: 'password', req: false, createOnly: true },
+      { n: 'role',      rk: 'role',      label: 'บทบาท',           type: 'select',   req: true,
+        options: [
+          { v: 'passenger', l: '🧑 ผู้โดยสาร' },
+          { v: 'driver',    l: '🚌 คนขับรถ'   },
+          { v: 'admin',     l: '👤 Admin'     },
+        ]
+      },
+      { n: 'status', rk: 'status', label: 'สถานะ', type: 'select', req: false,
+        options: [
+          { v: 'active',    l: '✅ ใช้งาน'   },
+          { v: 'inactive',  l: '⛔ ไม่ใช้งาน' },
+          { v: 'suspended', l: '🚫 ระงับ'     },
+        ]
+      },
+    ],
+    extraCreate: { authProvider: 'email' },
+  },
+
+  drivers: {
+    title: 'คนขับรถ', icon: '🚌',
+    subtitle: 'จัดการข้อมูลคนขับรถโดยสาร',
+    listPath:   '/admin/drivers',
+    createPath: '/admin/drivers',
+    updatePath: id => `/admin/drivers/${id}`,
+    deletePath: id => `/admin/drivers/${id}`,
+    idField: 'id',
+    columns: [
+      { key: 'id',              label: 'ID',            r: chip },
+      { key: 'employee_code',   label: 'รหัสพนักงาน',   bold: true },
+      { key: 'license_no',      label: 'ใบขับขี่'        },
+      { key: 'user_id',         label: 'User ID',        r: chip },
+      { key: 'assigned_route_id', label: 'Route ID',     r: v => v ? chip(v) : '-' },
+      { key: 'status',          label: 'สถานะ',          r: statusBadge },
+    ],
+    formFields: [
+      { n: 'userId',         rk: 'user_id',           label: 'User ID',              type: 'text', req: true  },
+      { n: 'employeeCode',   rk: 'employee_code',     label: 'รหัสพนักงาน',           type: 'text', req: false },
+      { n: 'licenseNo',      rk: 'license_no',        label: 'หมายเลขใบขับขี่',       type: 'text', req: false },
+      { n: 'assignedBusId',  rk: 'assigned_bus_id',   label: 'Bus ID ที่มอบหมาย',      type: 'text', req: false },
+      { n: 'assignedRouteId',rk: 'assigned_route_id', label: 'Route ID ที่มอบหมาย',   type: 'text', req: false },
+      { n: 'status',         rk: 'status',            label: 'สถานะ', type: 'select', req: false,
+        options: [
+          { v: 'active',   l: '✅ ใช้งาน'    },
+          { v: 'inactive', l: '⛔ ไม่ใช้งาน'  },
+        ]
+      },
+    ],
+  },
+
+  admins: {
+    title: 'ผู้ดูแลระบบ', icon: '👤',
+    subtitle: 'จัดการบัญชีผู้ดูแลระบบ',
+    listPath:   '/admin/admins',
+    createPath: '/admin/admins',
+    updatePath: id => `/admin/admins/${id}`,
+    deletePath: id => `/admin/admins/${id}`,
+    idField: 'id',
+    columns: [
+      { key: 'id',         label: 'ID',            r: chip },
+      { key: 'user_id',    label: 'User ID',        r: chip },
+      { key: 'admin_type', label: 'ประเภท',          r: adminTypeBadge },
+      { key: 'status',     label: 'สถานะ',           r: statusBadge },
+    ],
+    formFields: [
+      { n: 'userId',    rk: 'user_id',    label: 'User ID',      type: 'text',   req: true,
+        hint: 'กรอก ID ของ user ที่ต้องการยกระดับเป็น admin'
+      },
+      { n: 'adminType', rk: 'admin_type', label: 'ประเภท Admin',  type: 'select', req: true,
+        options: [
+          { v: 'super_admin', l: '⭐ Super Admin' },
+          { v: 'route_admin', l: '🛣️ Route Admin' },
+        ]
+      },
+      { n: 'status', rk: 'status', label: 'สถานะ', type: 'select', req: false,
+        options: [
+          { v: 'active',   l: '✅ ใช้งาน'   },
+          { v: 'inactive', l: '⛔ ไม่ใช้งาน' },
+        ]
+      },
+    ],
+  },
+
+  routes: {
+    title: 'เส้นทางรถ', icon: '🛣️',
+    subtitle: 'จัดการเส้นทางการให้บริการ',
+    listPath:   '/admin/routes',
+    createPath: '/admin/routes',
+    updatePath: id => `/admin/routes/${id}`,
+    deletePath: id => `/admin/routes/${id}`,
+    idField: 'id',
+    columns: [
+      { key: 'id',             label: 'ID',           r: chip },
+      { key: 'route_code',     label: 'รหัสเส้นทาง',  bold: true },
+      { key: 'route_name',     label: 'ชื่อเส้นทาง'  },
+      { key: 'start_location', label: 'จุดเริ่มต้น'   },
+      { key: 'end_location',   label: 'จุดสิ้นสุด'    },
+      { key: 'status',         label: 'สถานะ',         r: statusBadge },
+    ],
+    formFields: [
+      { n: 'routeCode',     rk: 'route_code',     label: 'รหัสเส้นทาง',  type: 'text', req: true  },
+      { n: 'routeName',     rk: 'route_name',     label: 'ชื่อเส้นทาง',   type: 'text', req: true  },
+      { n: 'startLocation', rk: 'start_location', label: 'จุดเริ่มต้น',   type: 'text', req: false },
+      { n: 'endLocation',   rk: 'end_location',   label: 'จุดสิ้นสุด',    type: 'text', req: false },
+    ],
+  },
+
+  buses: {
+    title: 'รถโดยสาร', icon: '🚍',
+    subtitle: 'จัดการข้อมูลรถโดยสารทั้งหมด',
+    listPath:   '/admin/buses',
+    createPath: '/admin/buses',
+    updatePath: id => `/admin/buses/${id}`,
+    deletePath: id => `/admin/buses/${id}`,
+    idField: 'id',
+    columns: [
+      { key: 'id',           label: 'ID',           r: chip },
+      { key: 'plate_number', label: 'ทะเบียนรถ',    bold: true },
+      { key: 'route_id',     label: 'Route ID',      r: v => v ? chip(v) : '-' },
+      { key: 'driver_id',    label: 'Driver ID',     r: v => v ? chip(v) : '-' },
+      { key: 'status',       label: 'สถานะ',          r: statusBadge },
+    ],
+    formFields: [
+      { n: 'plateNumber', rk: 'plate_number', label: 'ทะเบียนรถ', type: 'text', req: true },
+      { n: 'routeId',     rk: 'route_id',     label: 'Route ID',   type: 'text', req: false },
+      { n: 'driverId',    rk: 'driver_id',    label: 'Driver ID',  type: 'text', req: false },
+      { n: 'status', rk: 'status', label: 'สถานะ', type: 'select', req: false,
+        options: [
+          { v: 'off',         l: '⚫ ไม่ได้ใช้งาน' },
+          { v: 'on',          l: '🟢 ให้บริการ'     },
+          { v: 'maintenance', l: '🔧 ซ่อมบำรุง'     },
+        ]
+      },
+    ],
+  },
+
+  routeAdmins: {
+    title: 'มอบหมายเส้นทาง', icon: '🔗',
+    subtitle: 'กำหนด Admin ประจำเส้นทาง',
+    listPath:   '/admin/route-admins',
+    createPath: '/admin/route-admins',
+    deletePath: id => `/admin/route-admins/${id}`,
+    idField: 'id',
+    noEdit: true,
+    columns: [
+      { key: 'id',       label: 'ID',       r: chip },
+      { key: 'route_id', label: 'Route ID', r: chip },
+      { key: 'admin_id', label: 'Admin ID', r: chip },
+    ],
+    formFields: [
+      { n: 'routeId', rk: 'route_id', label: 'Route ID', type: 'text', req: true },
+      { n: 'adminId', rk: 'admin_id', label: 'Admin ID', type: 'text', req: true },
+    ],
+  },
+
+  waiting: {
+    title: 'รายการรอรับ', icon: '⏳',
+    subtitle: 'ติดตามรายการผู้โดยสารที่รอรับ',
+    listPath: '/admin/waiting',
+    idField: 'id',
+    readOnly: true,
+    columns: [
+      { key: 'id',         label: 'ID',       r: chip },
+      { key: 'user_id',    label: 'User ID',   r: v => v ? chip(v) : '-' },
+      { key: 'route_id',   label: 'Route ID',  r: v => v ? chip(v) : '-' },
+      { key: 'status',     label: 'สถานะ',     r: statusBadge },
+      { key: 'lat',        label: 'Lat' },
+      { key: 'lng',        label: 'Lng' },
+      { key: 'created_at', label: 'เวลา',      r: fmtDate },
+    ],
+  },
+
+  settings: {
+    title: 'การตั้งค่า API', icon: '⚙️',
+    subtitle: 'กำหนด API Base URL สำหรับ backend',
+  },
+};
+
+/* =====================================================
+   HELPERS
+   ===================================================== */
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-async function createRoute(){ try{ setStatus(routeFormStatus,'Creating route...','loading'); await apiFetch('/admin/routes',{method:'POST',body:JSON.stringify({routeCode:routeCodeInput.value.trim(),routeName:routeNameInput.value.trim(),startLocation:routeStartInput.value.trim(),endLocation:routeEndInput.value.trim()})},true); clearRouteForm(); setStatus(routeFormStatus,'Route created','success'); await loadDashboard(); } catch(error){ setStatus(routeFormStatus,`Create route failed: ${error.message}`,'error'); } }
-async function updateRoute(){ try{ if(!routeEditIdInput.value.trim()) throw new Error('Route ID is required for update'); setStatus(routeFormStatus,'Updating route...','loading'); await apiFetch(`/admin/routes/${routeEditIdInput.value.trim()}`,{method:'PUT',body:JSON.stringify({routeCode:routeCodeInput.value.trim(),routeName:routeNameInput.value.trim(),startLocation:routeStartInput.value.trim(),endLocation:routeEndInput.value.trim()})},true); setStatus(routeFormStatus,'Route updated','success'); await loadDashboard(); } catch(error){ setStatus(routeFormStatus,`Update route failed: ${error.message}`,'error'); } }
-async function createBus(){ try{ setStatus(busFormStatus,'Creating bus...','loading'); await apiFetch('/admin/buses',{method:'POST',body:JSON.stringify({plateNumber:busPlateInput.value.trim(),routeId:busRouteIdInput.value.trim()||undefined,driverId:busDriverIdInput.value.trim()||undefined,status:busStatusInput.value.trim()||undefined})},true); clearBusForm(); setStatus(busFormStatus,'Bus created','success'); await loadDashboard(); } catch(error){ setStatus(busFormStatus,`Create bus failed: ${error.message}`,'error'); } }
-async function updateBus(){ try{ if(!busEditIdInput.value.trim()) throw new Error('Bus ID is required for update'); setStatus(busFormStatus,'Updating bus...','loading'); await apiFetch(`/admin/buses/${busEditIdInput.value.trim()}`,{method:'PUT',body:JSON.stringify({plateNumber:busPlateInput.value.trim(),routeId:busRouteIdInput.value.trim()||undefined,driverId:busDriverIdInput.value.trim()||undefined,status:busStatusInput.value.trim()||undefined})},true); setStatus(busFormStatus,'Bus updated','success'); await loadDashboard(); } catch(error){ setStatus(busFormStatus,`Update bus failed: ${error.message}`,'error'); } }
-async function createUser(){ try{ setStatus(userFormStatus,'Creating user...','loading'); await apiFetch('/admin/users',{method:'POST',body:JSON.stringify({username:userUsernameInput.value.trim()||undefined,email:userEmailInput.value.trim()||undefined,fullName:userFullNameInput.value.trim()||undefined,role:userRoleInput.value.trim(),status:userStatusInput.value.trim()||'active',authProvider:'email'})},true); clearUserForm(); setStatus(userFormStatus,'User created','success'); await loadDashboard(); } catch(error){ setStatus(userFormStatus,`Create user failed: ${error.message}`,'error'); } }
-async function updateUser(){ try{ if(!userEditIdInput.value.trim()) throw new Error('User ID is required for update'); setStatus(userFormStatus,'Updating user...','loading'); await apiFetch(`/admin/users/${userEditIdInput.value.trim()}`,{method:'PUT',body:JSON.stringify({username:userUsernameInput.value.trim()||undefined,email:userEmailInput.value.trim()||undefined,fullName:userFullNameInput.value.trim()||undefined,role:userRoleInput.value.trim()||undefined,status:userStatusInput.value.trim()||undefined})},true); setStatus(userFormStatus,'User updated','success'); await loadDashboard(); } catch(error){ setStatus(userFormStatus,`Update user failed: ${error.message}`,'error'); } }
-async function createDriver(){ try{ setStatus(driverFormStatus,'Creating driver...','loading'); await apiFetch('/admin/drivers',{method:'POST',body:JSON.stringify({userId:driverUserIdInput.value.trim(),employeeCode:driverEmployeeCodeInput.value.trim()||undefined,licenseNo:driverLicenseInput.value.trim()||undefined,assignedBusId:driverAssignedBusInput.value.trim()||undefined,assignedRouteId:driverAssignedRouteInput.value.trim()||undefined,status:driverStatusInput.value.trim()||'active'})},true); clearDriverForm(); setStatus(driverFormStatus,'Driver created','success'); await loadDashboard(); } catch(error){ setStatus(driverFormStatus,`Create driver failed: ${error.message}`,'error'); } }
-async function updateDriver(){ try{ if(!driverEditIdInput.value.trim()) throw new Error('Driver ID is required for update'); setStatus(driverFormStatus,'Updating driver...','loading'); await apiFetch(`/admin/drivers/${driverEditIdInput.value.trim()}`,{method:'PUT',body:JSON.stringify({userId:driverUserIdInput.value.trim()||undefined,employeeCode:driverEmployeeCodeInput.value.trim()||undefined,licenseNo:driverLicenseInput.value.trim()||undefined,assignedBusId:driverAssignedBusInput.value.trim()||undefined,assignedRouteId:driverAssignedRouteInput.value.trim()||undefined,status:driverStatusInput.value.trim()||undefined})},true); setStatus(driverFormStatus,'Driver updated','success'); await loadDashboard(); } catch(error){ setStatus(driverFormStatus,`Update driver failed: ${error.message}`,'error'); } }
-async function createAdminUser(){ try{ setStatus(adminFormStatus,'Creating admin...','loading'); await apiFetch('/admin/admins',{method:'POST',body:JSON.stringify({userId:adminUserIdInput.value.trim(),adminType:adminTypeInput.value.trim(),status:adminStatusInput.value.trim()||'active'})},true); clearAdminForm(); setStatus(adminFormStatus,'Admin created','success'); await loadDashboard(); } catch(error){ setStatus(adminFormStatus,`Create admin failed: ${error.message}`,'error'); } }
-async function updateAdminUser(){ try{ if(!adminEditIdInput.value.trim()) throw new Error('Admin ID is required for update'); setStatus(adminFormStatus,'Updating admin...','loading'); await apiFetch(`/admin/admins/${adminEditIdInput.value.trim()}`,{method:'PUT',body:JSON.stringify({userId:adminUserIdInput.value.trim()||undefined,adminType:adminTypeInput.value.trim()||undefined,status:adminStatusInput.value.trim()||undefined})},true); setStatus(adminFormStatus,'Admin updated','success'); await loadDashboard(); } catch(error){ setStatus(adminFormStatus,`Update admin failed: ${error.message}`,'error'); } }
-async function createRouteAdmin(){ try{ setStatus(routeAdminFormStatus,'Assigning route admin...','loading'); await apiFetch('/admin/route-admins',{method:'POST',body:JSON.stringify({routeId:routeAdminRouteIdInput.value.trim(),adminId:routeAdminAdminIdInput.value.trim()})},true); clearRouteAdminForm(); setStatus(routeAdminFormStatus,'Assignment created','success'); await loadDashboard(); } catch(error){ setStatus(routeAdminFormStatus,`Create assignment failed: ${error.message}`,'error'); } }
-async function deleteByPath(path, messageTarget, successText){ try{ await apiFetch(path,{method:'DELETE'},true); setStatus(messageTarget,successText,'success'); await loadDashboard(); } catch(error){ setStatus(messageTarget,`${successText} failed: ${error.message}`,'error'); } }
-async function deleteRoute(routeId){ if(confirm(`Delete route ${routeId}?`)) await deleteByPath(`/admin/routes/${routeId}`, routeFormStatus, 'Route deleted'); }
-async function deleteBus(busId){ if(confirm(`Delete bus ${busId}?`)) await deleteByPath(`/admin/buses/${busId}`, busFormStatus, 'Bus deleted'); }
-async function deleteUser(userId){ if(confirm(`Delete user ${userId}?`)) await deleteByPath(`/admin/users/${userId}`, userFormStatus, 'User deleted'); }
-async function deleteDriver(driverId){ if(confirm(`Delete driver ${driverId}?`)) await deleteByPath(`/admin/drivers/${driverId}`, driverFormStatus, 'Driver deleted'); }
-async function deleteAdmin(adminId){ if(confirm(`Delete admin ${adminId}?`)) await deleteByPath(`/admin/admins/${adminId}`, adminFormStatus, 'Admin deleted'); }
-async function deleteRouteAdminAssignment(id){ if(confirm(`Delete assignment ${id}?`)) await deleteByPath(`/admin/route-admins/${id}`, routeAdminFormStatus, 'Assignment deleted'); }
+function chip(v) {
+  if (!v) return '<span class="text-muted">—</span>';
+  const s = String(v);
+  const display = s.length > 12 ? s.slice(0,10)+'…' : s;
+  return `<span class="id-chip" title="${esc(s)}">${esc(display)}</span>`;
+}
 
-async function loadDashboard() {
-  apiStatus.textContent = 'Loading...';
+function fmtDate(d) {
+  if (!d) return '—';
+  try { return new Date(d).toLocaleString('th-TH', { dateStyle:'short', timeStyle:'short' }); }
+  catch { return String(d); }
+}
+
+function roleBadge(v) {
+  const map = {
+    passenger:  '<span class="badge b-blue">👤 ผู้โดยสาร</span>',
+    driver:     '<span class="badge b-green">🚌 คนขับ</span>',
+    admin:      '<span class="badge b-purple">👤 Admin</span>',
+    superadmin: '<span class="badge b-red">⭐ Super Admin</span>',
+    super_admin:'<span class="badge b-red">⭐ Super Admin</span>',
+  };
+  return map[v] || `<span class="badge b-gray">${esc(v ?? '—')}</span>`;
+}
+
+function adminTypeBadge(v) {
+  const map = {
+    super_admin: '<span class="badge b-red">⭐ Super Admin</span>',
+    route_admin: '<span class="badge b-purple">🛣️ Route Admin</span>',
+  };
+  return map[v] || `<span class="badge b-gray">${esc(v ?? '—')}</span>`;
+}
+
+function statusBadge(v) {
+  if (!v) return '<span class="badge b-gray">—</span>';
+  const map = {
+    active:      '<span class="badge b-green">✅ ใช้งาน</span>',
+    inactive:    '<span class="badge b-gray">⛔ ไม่ใช้งาน</span>',
+    suspended:   '<span class="badge b-red">🚫 ระงับ</span>',
+    on_duty:     '<span class="badge b-green">🟢 ปฏิบัติงาน</span>',
+    off_duty:    '<span class="badge b-gray">⚫ ไม่ปฏิบัติ</span>',
+    on:          '<span class="badge b-green">🟢 ให้บริการ</span>',
+    off:         '<span class="badge b-gray">⚫ ไม่ได้ใช้งาน</span>',
+    maintenance: '<span class="badge b-orange">🔧 ซ่อมบำรุง</span>',
+    waiting:     '<span class="badge b-yellow">⏳ รอรับ</span>',
+    picked_up:   '<span class="badge b-teal">✅ รับแล้ว</span>',
+    cancelled:   '<span class="badge b-red">❌ ยกเลิก</span>',
+    online:      '<span class="badge b-green">🟢 Online</span>',
+    offline:     '<span class="badge b-red">🔴 Offline</span>',
+  };
+  return map[String(v).toLowerCase()] || `<span class="badge b-gray">${esc(v)}</span>`;
+}
+
+/* =====================================================
+   TOAST
+   ===================================================== */
+function toast(msg, type = 'info') {
+  const icons = { success:'✅', error:'❌', warning:'⚠️', info:'ℹ️' };
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.innerHTML = `<span class="toast-icon">${icons[type] || 'ℹ️'}</span><span>${esc(msg)}</span>`;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(() => { el.style.animation = 'toastOut .3s ease forwards'; setTimeout(() => el.remove(), 300); }, 3800);
+}
+
+/* =====================================================
+   NAVIGATION
+   ===================================================== */
+function navigate(section) {
+  state.section = section;
+  document.querySelectorAll('.nav-item').forEach(el =>
+    el.classList.toggle('active', el.dataset.section === section)
+  );
+  const cfg = SECTIONS[section];
+  document.getElementById('pageTitle').textContent    = `${cfg.icon} ${cfg.title}`;
+  document.getElementById('pageSubtitle').textContent = cfg.subtitle;
+  loadSection(section);
+}
+
+/* =====================================================
+   LOAD SECTION
+   ===================================================== */
+async function loadSection(section) {
+  const content = document.getElementById('mainContent');
+
+  if (section === 'dashboard') { renderDashboard(); return; }
+  if (section === 'settings')  { renderSettings();  return; }
+
+  const cfg = SECTIONS[section];
+  content.innerHTML = `<div class="card"><div class="loading"><div class="spinner"></div> กำลังโหลดข้อมูล...</div></div>`;
+
   try {
-    const [health, summary, routes, buses, waiting, users, drivers, admins, routeAdmins] = await Promise.all([
-      apiFetch('/health'),
-      apiFetch('/admin/summary', {}, true).catch(() => ({ data: {} })),
-      apiFetch('/admin/routes', {}, true).catch(() => apiFetch('/routes')),
-      apiFetch('/admin/buses', {}, true).catch(() => apiFetch('/buses/live')),
-      apiFetch('/admin/waiting', {}, true).catch(() => apiFetch('/waiting')),
-      apiFetch('/admin/users', {}, true).catch(() => ({ data: [] })),
-      apiFetch('/admin/drivers', {}, true).catch(() => ({ data: [] })),
-      apiFetch('/admin/admins', {}, true).catch(() => ({ data: [] })),
-      apiFetch('/admin/route-admins', {}, true).catch(() => ({ data: [] })),
-    ]);
-
-    apiStatus.textContent = JSON.stringify(health, null, 2);
-    routesCount.textContent = routes.data?.length ?? 0;
-    busesCount.textContent = buses.data?.length ?? 0;
-    waitingCount.textContent = waiting.data?.length ?? 0;
-    renderSummary(summary.data || {});
-    renderRoutes(routes.data || []);
-    renderBuses(buses.data || []);
-    renderWaiting(waiting.data || []);
-    renderManagedList(usersList, users.data || [], 'user', (u) => `<div class="title">${u.full_name || u.username || u.email || u.id}</div><div class="meta">Role: ${u.role} | Status: ${u.status}</div><div class="meta">ID: ${u.id}</div>`);
-    renderManagedList(driversList, drivers.data || [], 'driver', (d) => `<div class="title">Driver ${d.employee_code || d.id}</div><div class="meta">User: ${d.user_id}</div><div class="meta">Route: ${d.assigned_route_id || '-'} | Bus: ${d.assigned_bus_id || '-'}</div>`);
-    renderManagedList(adminsList, admins.data || [], 'admin', (a) => `<div class="title">Admin ${a.id}</div><div class="meta">Type: ${a.admin_type}</div><div class="meta">User: ${a.user_id}</div>`);
-    renderManagedList(routeAdminsList, routeAdmins.data || [], 'route-admin', (r) => `<div class="title">Assignment ${r.id}</div><div class="meta">Route: ${r.route_id}</div><div class="meta">Admin: ${r.admin_id}</div>`);
-  } catch (error) {
-    apiStatus.textContent = `Failed to load API\n${error.message}`;
+    const raw   = await apiFetch(cfg.listPath);
+    const items = extractList(raw);
+    state.cache[section] = items;
+    renderTable(section, items);
+  } catch (err) {
+    content.innerHTML = errCard(section, err.message);
   }
 }
 
-saveApiBtn.addEventListener('click', () => { localStorage.setItem(storageKey, getApiBase()); loadDashboard(); });
-refreshBtn.addEventListener('click', loadDashboard);
-adminLoginBtn.addEventListener('click', loginAdmin);
-adminLogoutBtn.addEventListener('click', () => { setToken(''); updateAuthStatus('Logged out'); });
-reloadRoutesBtn.addEventListener('click', loadDashboard);
-reloadWaitingBtn.addEventListener('click', loadDashboard);
-reloadBusesBtn.addEventListener('click', loadDashboard);
-reloadUsersBtn.addEventListener('click', loadDashboard);
-reloadDriversBtn.addEventListener('click', loadDashboard);
-reloadAdminsBtn.addEventListener('click', loadDashboard);
-reloadRouteAdminsBtn.addEventListener('click', loadDashboard);
-createRouteBtn.addEventListener('click', createRoute);
-updateRouteBtn.addEventListener('click', updateRoute);
-clearRouteBtn.addEventListener('click', clearRouteForm);
-createBusBtn.addEventListener('click', createBus);
-updateBusBtn.addEventListener('click', updateBus);
-clearBusBtn.addEventListener('click', clearBusForm);
-createUserBtn.addEventListener('click', createUser);
-updateUserBtn.addEventListener('click', updateUser);
-clearUserBtn.addEventListener('click', clearUserForm);
-createDriverBtn.addEventListener('click', createDriver);
-updateDriverBtn.addEventListener('click', updateDriver);
-clearDriverBtn.addEventListener('click', clearDriverForm);
-createAdminBtn.addEventListener('click', createAdminUser);
-updateAdminBtn.addEventListener('click', updateAdminUser);
-clearAdminBtn.addEventListener('click', clearAdminForm);
-createRouteAdminBtn.addEventListener('click', createRouteAdmin);
-deleteRouteAdminBtn.addEventListener('click', () => routeAdminIdInput.value.trim() && deleteRouteAdminAssignment(routeAdminIdInput.value.trim()));
-clearRouteAdminBtn.addEventListener('click', clearRouteAdminForm);
+function errCard(section, msg) {
+  return `<div class="card"><div class="card-body">
+    <div class="empty-state">
+      <div class="ei">⚠️</div>
+      <h3>โหลดข้อมูลไม่ได้</h3>
+      <p>${esc(msg)}</p>
+      <button class="btn btn-primary" style="margin-top:14px" onclick="loadSection('${section}')">🔄 ลองอีกครั้ง</button>
+    </div>
+  </div></div>`;
+}
 
-document.addEventListener('click', (event) => {
-  const target = event.target;
-  if (!(target instanceof HTMLElement)) return;
-  if (target.classList.contains('delete-route-btn')) deleteRoute(target.dataset.routeId);
-  if (target.classList.contains('delete-bus-btn')) deleteBus(target.dataset.busId);
-  if (target.classList.contains('delete-user-btn')) deleteUser(target.dataset.id);
-  if (target.classList.contains('delete-driver-btn')) deleteDriver(target.dataset.id);
-  if (target.classList.contains('delete-admin-btn')) deleteAdmin(target.dataset.id);
-  if (target.classList.contains('delete-route-admin-btn')) deleteRouteAdminAssignment(target.dataset.id);
-  if (target.classList.contains('edit-route-btn')) fillRouteForm(JSON.parse(target.dataset.route.replace(/&apos;/g, "'")));
-  if (target.classList.contains('edit-bus-btn')) fillBusForm(JSON.parse(target.dataset.bus.replace(/&apos;/g, "'")));
-  if (target.classList.contains('edit-user-btn')) fillUserForm(JSON.parse(target.dataset.item.replace(/&apos;/g, "'")));
-  if (target.classList.contains('edit-driver-btn')) fillDriverForm(JSON.parse(target.dataset.item.replace(/&apos;/g, "'")));
-  if (target.classList.contains('edit-admin-btn')) fillAdminForm(JSON.parse(target.dataset.item.replace(/&apos;/g, "'")));
-  if (target.classList.contains('edit-route-admin-btn')) fillRouteAdminForm(JSON.parse(target.dataset.item.replace(/&apos;/g, "'")));
+/* =====================================================
+   RENDER TABLE
+   ===================================================== */
+function renderTable(section, items) {
+  const content = document.getElementById('mainContent');
+  const cfg   = SECTIONS[section];
+  const ro    = !!cfg.readOnly;
+  const noEdit = !!cfg.noEdit;
+  const colCount = cfg.columns.length + (ro ? 0 : 1);
+
+  let rows = '';
+  if (!items.length) {
+    rows = `<tr><td colspan="${colCount}" style="text-align:center;padding:44px;color:var(--muted)">
+      <div style="font-size:34px;margin-bottom:10px">📭</div>ยังไม่มีข้อมูล
+    </td></tr>`;
+  } else {
+    rows = items.map(item => {
+      const id = item[cfg.idField];
+      let cells = cfg.columns.map(col => {
+        const v = item[col.key];
+        const html = col.r ? col.r(v, item) : (v != null ? esc(String(v)) : '—');
+        return `<td>${col.bold ? `<strong>${html}</strong>` : html}</td>`;
+      }).join('');
+      if (!ro) {
+        cells += `<td><div class="td-actions">
+          ${!noEdit ? `<button class="btn btn-warning btn-icon btn-sm" title="แก้ไข" onclick="openEdit('${section}','${esc(String(id))}')">✏️</button>` : ''}
+          <button class="btn btn-danger btn-icon btn-sm" title="ลบ" onclick="askDelete('${section}','${esc(String(id))}')">🗑️</button>
+        </div></td>`;
+      }
+      return `<tr>${cells}</tr>`;
+    }).join('');
+  }
+
+  content.innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">
+          ${cfg.icon} ${cfg.title}
+          <span class="badge b-gray" style="margin-left:6px">${items.length} รายการ</span>
+        </div>
+        <div class="toolbar">
+          <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input id="searchInput" type="text" class="form-control"
+              placeholder="ค้นหา..." oninput="filterTable()" autocomplete="off">
+          </div>
+          ${!ro ? `<button class="btn btn-primary" onclick="openCreate('${section}')">＋ เพิ่มรายการ</button>` : ''}
+          <button class="btn btn-secondary btn-sm" onclick="loadSection('${section}')">🔄 รีเฟรช</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table id="dataTable">
+          <thead><tr>
+            ${cfg.columns.map(c => `<th>${c.label}</th>`).join('')}
+            ${!ro ? '<th style="width:90px">จัดการ</th>' : ''}
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+function filterTable() {
+  const q = (document.getElementById('searchInput')?.value || '').toLowerCase();
+  document.querySelectorAll('#dataTable tbody tr').forEach(tr => {
+    tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+/* =====================================================
+   DASHBOARD
+   ===================================================== */
+async function renderDashboard() {
+  const content = document.getElementById('mainContent');
+  content.innerHTML = `<div class="card"><div class="loading"><div class="spinner"></div> กำลังโหลด Dashboard...</div></div>`;
+
+  try {
+    const raw = await apiFetch('/admin/summary');
+    const s   = raw?.data || raw || {};
+
+    const cards = [
+      { icon:'🛣️', cls:'si-blue',   val: s.total_routes   ?? s.totalRoutes   ?? '—', label:'เส้นทางทั้งหมด'    },
+      { icon:'🚍', cls:'si-green',  val: s.total_buses    ?? s.totalBuses    ?? '—', label:'รถโดยสารทั้งหมด'  },
+      { icon:'🟢', cls:'si-yellow', val: s.active_buses   ?? s.activeBuses   ?? '—', label:'รถที่ออกให้บริการ' },
+      { icon:'🚌', cls:'si-purple', val: s.total_drivers  ?? s.totalDrivers  ?? '—', label:'คนขับทั้งหมด'      },
+      { icon:'👥', cls:'si-indigo', val: s.total_users    ?? s.totalUsers    ?? '—', label:'ผู้ใช้งานทั้งหมด'  },
+      { icon:'⏳', cls:'si-red',    val: s.waiting_count  ?? s.waitingCount  ?? s.total_waiting ?? '—', label:'รายการรอรับ' },
+      { icon:'👤', cls:'si-teal',   val: s.total_admins   ?? s.totalAdmins   ?? '—', label:'Admin ทั้งหมด'     },
+    ];
+
+    content.innerHTML = `
+      <div class="stats-grid">
+        ${cards.map(c => `
+          <div class="stat-card">
+            <div class="stat-icon ${c.cls}">${c.icon}</div>
+            <div>
+              <div class="stat-value">${c.val}</div>
+              <div class="stat-label">${c.label}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">📋 Summary (Raw JSON)</div>
+          <button class="btn btn-secondary btn-sm" onclick="renderDashboard()">🔄 รีเฟรช</button>
+        </div>
+        <div class="card-body">
+          <pre>${esc(JSON.stringify(s, null, 2))}</pre>
+        </div>
+      </div>`;
+  } catch (err) {
+    content.innerHTML = errCard('dashboard', err.message);
+  }
+}
+
+/* =====================================================
+   SETTINGS
+   ===================================================== */
+function renderSettings() {
+  const content = document.getElementById('mainContent');
+  const current = getApiBase();
+  content.innerHTML = `
+    <div class="card" style="max-width:560px">
+      <div class="card-header">
+        <div class="card-title">⚙️ การตั้งค่า API</div>
+      </div>
+      <div class="card-body">
+        <div class="form-group">
+          <label class="form-label">API Base URL</label>
+          <input type="url" id="apiUrlInput" class="form-control"
+            value="${esc(current)}" placeholder="https://your-api.workers.dev">
+          <div style="font-size:12px;color:var(--muted);margin-top:5px">
+            ค่าปัจจุบัน: <code>${esc(current)}</code>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:4px">
+          <button class="btn btn-primary" onclick="saveApiUrl()">💾 บันทึก</button>
+          <button class="btn btn-secondary" onclick="resetApiUrl()">🔄 Reset เป็นค่าเริ่มต้น</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="max-width:560px;margin-top:16px">
+      <div class="card-header">
+        <div class="card-title">🔍 Health Check</div>
+        <button class="btn btn-secondary btn-sm" onclick="runHealthCheck()">ตรวจสอบ</button>
+      </div>
+      <div class="card-body">
+        <pre id="healthResult">กดปุ่ม "ตรวจสอบ" เพื่อดูสถานะ</pre>
+      </div>
+    </div>`;
+}
+
+function saveApiUrl() {
+  const v = document.getElementById('apiUrlInput')?.value.trim();
+  if (!v) { toast('กรุณากรอก URL', 'warning'); return; }
+  localStorage.setItem(API_KEY, v);
+  toast('บันทึก API URL สำเร็จ', 'success');
+  renderSettings();
+}
+
+function resetApiUrl() {
+  localStorage.removeItem(API_KEY);
+  toast('Reset URL เป็นค่าเริ่มต้นแล้ว', 'info');
+  renderSettings();
+}
+
+async function runHealthCheck() {
+  const el = document.getElementById('healthResult');
+  if (!el) return;
+  el.textContent = 'กำลังตรวจสอบ...';
+  try {
+    const [h, hdb] = await Promise.all([
+      apiFetch('/health', {}, false),
+      apiFetch('/health/db', {}, false).catch(e => ({ error: e.message })),
+    ]);
+    el.textContent = JSON.stringify({ health: h, db: hdb }, null, 2);
+  } catch (e) {
+    el.textContent = `Error: ${e.message}`;
+  }
+}
+
+/* =====================================================
+   CRUD MODAL
+   ===================================================== */
+const modal = {
+  section: null, mode: null, editId: null,
+  el:        () => document.getElementById('crudModal'),
+  form:      () => document.getElementById('modalForm'),
+  titleEl:   () => document.getElementById('modalTitle'),
+  bodyEl:    () => document.getElementById('modalBody'),
+  submitBtn: () => document.getElementById('modalSubmitBtn'),
+};
+
+function openCreate(section) {
+  const cfg = SECTIONS[section];
+  modal.section = section; modal.mode = 'create'; modal.editId = null;
+  modal.titleEl().textContent = `➕ เพิ่ม${cfg.title}`;
+  modal.bodyEl().innerHTML    = buildForm(cfg.formFields, null, 'create');
+  modal.submitBtn().textContent = '💾 บันทึก';
+  modal.el().classList.remove('hidden');
+}
+
+async function openEdit(section, id) {
+  const cfg = SECTIONS[section];
+  modal.section = section; modal.mode = 'edit'; modal.editId = id;
+  modal.titleEl().textContent   = `✏️ แก้ไข${cfg.title}`;
+  modal.bodyEl().innerHTML      = `<div class="loading"><div class="spinner"></div></div>`;
+  modal.submitBtn().textContent = '💾 บันทึกการแก้ไข';
+  modal.el().classList.remove('hidden');
+
+  try {
+    let item = state.cache[section]?.find(x => String(x[cfg.idField]) === String(id));
+    if (!item) {
+      const r = await apiFetch(`${cfg.listPath}/${id}`);
+      item = r?.data || r;
+    }
+    modal.bodyEl().innerHTML = buildForm(cfg.formFields, item, 'edit');
+  } catch (err) {
+    modal.bodyEl().innerHTML = `<p style="color:var(--danger);padding:8px">⚠️ ${esc(err.message)}</p>`;
+  }
+}
+
+function closeModal() {
+  modal.el().classList.add('hidden');
+  modal.section = null; modal.mode = null; modal.editId = null;
+}
+
+async function submitModal() {
+  const { section, mode, editId } = modal;
+  const cfg = SECTIONS[section];
+  const form = modal.form();
+  if (!form.reportValidity()) return;
+
+  const fd = new FormData(form);
+  const body = {};
+  fd.forEach((v, k) => { if (v !== '') body[k] = v; });
+  if (mode === 'create' && cfg.extraCreate) Object.assign(body, cfg.extraCreate);
+
+  const btn = modal.submitBtn();
+  btn.disabled = true; btn.textContent = '⏳ กำลังบันทึก...';
+
+  try {
+    if (mode === 'create') {
+      await apiFetch(cfg.createPath, { method:'POST', body: JSON.stringify(body) });
+      toast(`เพิ่ม${cfg.title}สำเร็จ ✅`, 'success');
+    } else {
+      await apiFetch(cfg.updatePath(editId), { method:'PUT', body: JSON.stringify(body) });
+      toast(`แก้ไข${cfg.title}สำเร็จ ✅`, 'success');
+    }
+    closeModal();
+    loadSection(section);
+  } catch (err) {
+    toast(`❌ ${err.message}`, 'error');
+    btn.disabled = false;
+    btn.textContent = mode === 'create' ? '💾 บันทึก' : '💾 บันทึกการแก้ไข';
+  }
+}
+
+function buildForm(fields, data, mode) {
+  return fields
+    .filter(f => !(mode === 'edit' && f.createOnly))
+    .map(f => {
+      const val = (f.rk && data) ? (data[f.rk] ?? '') : '';
+      const req = f.req ? '<span class="req">*</span>' : '';
+      const hint = f.hint ? `<div style="font-size:11px;color:var(--muted);margin-top:3px">${esc(f.hint)}</div>` : '';
+
+      if (f.type === 'select') {
+        const opts = (f.options || []).map(o =>
+          `<option value="${esc(o.v)}" ${String(val) === o.v ? 'selected' : ''}>${o.l}</option>`
+        ).join('');
+        return `<div class="form-group">
+          <label class="form-label">${esc(f.label)}${req}</label>
+          <select name="${esc(f.n)}" class="form-control" ${f.req ? 'required' : ''}>
+            <option value="">— เลือก —</option>${opts}
+          </select>${hint}</div>`;
+      }
+      return `<div class="form-group">
+        <label class="form-label">${esc(f.label)}${req}</label>
+        <input type="${f.type}" name="${esc(f.n)}" class="form-control"
+          value="${esc(String(val))}" placeholder="${esc(f.label)}" ${f.req ? 'required' : ''}>
+        ${hint}</div>`;
+    }).join('');
+}
+
+/* =====================================================
+   CONFIRM DELETE
+   ===================================================== */
+const del = { section: null, id: null };
+
+function askDelete(section, id) {
+  del.section = section; del.id = id;
+  const cfg = SECTIONS[section];
+  document.getElementById('confirmText').textContent =
+    `คุณต้องการลบ "${cfg.title}" (ID: ${id.slice(0,10)}…) ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้`;
+  const btn = document.getElementById('confirmDeleteBtn');
+  btn.disabled = false; btn.textContent = '🗑️ ยืนยันการลบ';
+  document.getElementById('confirmModal').classList.remove('hidden');
+}
+
+function closeConfirm() {
+  document.getElementById('confirmModal').classList.add('hidden');
+  del.section = null; del.id = null;
+}
+
+async function executeDelete() {
+  const cfg = SECTIONS[del.section];
+  const btn = document.getElementById('confirmDeleteBtn');
+  btn.disabled = true; btn.textContent = '⏳ กำลังลบ...';
+  try {
+    await apiFetch(cfg.deletePath(del.id), { method:'DELETE' });
+    toast(`ลบ${cfg.title}สำเร็จ`, 'success');
+    closeConfirm();
+    loadSection(del.section);
+  } catch (err) {
+    toast(`❌ ลบไม่สำเร็จ: ${err.message}`, 'error');
+    btn.disabled = false; btn.textContent = '🗑️ ยืนยันการลบ';
+  }
+}
+
+// Close on backdrop click
+document.addEventListener('click', e => {
+  if (e.target.id === 'crudModal')    closeModal();
+  if (e.target.id === 'confirmModal') closeConfirm();
 });
 
-updateAuthStatus();
-loadDashboard();
+/* =====================================================
+   HEALTH CHECK
+   ===================================================== */
+async function checkHealth() {
+  try {
+    await apiFetch('/health', {}, false);
+    document.getElementById('healthBadge').style.display = 'flex';
+  } catch {
+    const hb = document.getElementById('healthBadge');
+    hb.style.display = 'flex';
+    hb.innerHTML = `<span class="health-dot" style="background:var(--danger);animation:none"></span> ออฟไลน์`;
+    hb.style.cssText += 'background:#fef2f2;border-color:#fca5a5;color:#991b1b';
+  }
+}
+
+/* =====================================================
+   LOGOUT
+   ===================================================== */
+function logout() {
+  if (!confirm('ต้องการออกจากระบบ?')) return;
+  clearAuth();
+  window.location.replace('login.html');
+}
+
+/* =====================================================
+   INIT
+   ===================================================== */
+async function init() {
+  if (!getToken()) { window.location.replace('login.html'); return; }
+
+  // Try to restore user from localStorage first (instant)
+  const saved = localStorage.getItem(USER_KEY);
+  if (saved) {
+    try {
+      const u = JSON.parse(saved);
+      setUserUI(u);
+    } catch {}
+  }
+
+  // Fetch live user info
+  try {
+    const r = await apiFetch('/auth/me');
+    const u = r?.data || r?.user || r;
+    state.user = u;
+    setUserUI(u);
+    if (u) localStorage.setItem(USER_KEY, JSON.stringify(u));
+  } catch {
+    document.getElementById('userName').textContent = 'Admin';
+    document.getElementById('userAvatar').textContent = 'A';
+  }
+
+  checkHealth();
+  navigate('dashboard');
+}
+
+function setUserUI(u) {
+  if (!u) return;
+  const name = u.username || u.full_name || u.email || 'Admin';
+  document.getElementById('userName').textContent  = name;
+  document.getElementById('userAvatar').textContent = name.charAt(0).toUpperCase();
+  document.getElementById('userRole').textContent   = u.role || 'admin';
+}
+
+window.addEventListener('DOMContentLoaded', init);
+
+/* =====================================================
+   EXPOSE GLOBALS (required for inline onclick in HTML
+   when loaded as type="module")
+   ===================================================== */
+window.navigate       = navigate;
+window.logout         = logout;
+window.openCreate     = openCreate;
+window.openEdit       = openEdit;
+window.askDelete      = askDelete;
+window.closeModal     = closeModal;
+window.submitModal    = submitModal;
+window.closeConfirm   = closeConfirm;
+window.executeDelete  = executeDelete;
+window.filterTable    = filterTable;
+window.saveApiUrl     = saveApiUrl;
+window.resetApiUrl    = resetApiUrl;
+window.runHealthCheck = runHealthCheck;
+window.loadSection    = loadSection;
+window.renderDashboard = renderDashboard;

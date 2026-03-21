@@ -1,251 +1,149 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="th">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BUS TRACKING SYSTEM - Admin Dashboard</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — Bus Tracking System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="layout">
-    <aside class="sidebar">
-      <h1>BUS TRACKING</h1>
-      <nav>
-        <a href="#overview">Dashboard</a>
-        <a href="#auth">Admin Auth</a>
-        <a href="#route-form">Route Form</a>
-        <a href="#bus-form">Bus Form</a>
-        <a href="#user-form">User Form</a>
-        <a href="#driver-form">Driver Form</a>
-        <a href="#admin-form">Admin Form</a>
-        <a href="#route-admin-form">Route Admin Form</a>
-        <a href="#user-management">Management Lists</a>
-        <a href="#routes">Routes</a>
-        <a href="#buses">Buses</a>
-        <a href="#waiting">Waiting</a>
-        <a href="#api">API Config</a>
-      </nav>
-    </aside>
 
-    <main class="content">
-      <header class="topbar">
-        <div>
-          <h2>Admin Dashboard</h2>
-          <p>Operational admin panel for BUS TRACKING SYSTEM</p>
+<div class="layout">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar" id="sidebar">
+
+    <div class="sidebar-logo">
+      <div class="logo-icon">🚌</div>
+      <div>
+        <div class="logo-text">Bus Tracking</div>
+        <div class="logo-sub">Admin Dashboard</div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+
+      <div class="nav-group">
+        <div class="nav-group-label">ภาพรวม</div>
+        <button class="nav-item active" data-section="dashboard" onclick="navigate('dashboard')">
+          <span class="nav-icon">📊</span><span>Dashboard</span>
+        </button>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">บัญชีผู้ใช้</div>
+        <button class="nav-item" data-section="users" onclick="navigate('users')">
+          <span class="nav-icon">👥</span><span>ผู้ใช้งาน</span>
+        </button>
+        <button class="nav-item" data-section="drivers" onclick="navigate('drivers')">
+          <span class="nav-icon">🚌</span><span>คนขับรถ</span>
+        </button>
+        <button class="nav-item" data-section="admins" onclick="navigate('admins')">
+          <span class="nav-icon">👤</span><span>ผู้ดูแลระบบ</span>
+        </button>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">การเดินรถ</div>
+        <button class="nav-item" data-section="routes" onclick="navigate('routes')">
+          <span class="nav-icon">🛣️</span><span>เส้นทางรถ</span>
+        </button>
+        <button class="nav-item" data-section="buses" onclick="navigate('buses')">
+          <span class="nav-icon">🚍</span><span>รถโดยสาร</span>
+        </button>
+        <button class="nav-item" data-section="waiting" onclick="navigate('waiting')">
+          <span class="nav-icon">⏳</span><span>รายการรอรับ</span>
+        </button>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">การตั้งค่า</div>
+        <button class="nav-item" data-section="routeAdmins" onclick="navigate('routeAdmins')">
+          <span class="nav-icon">🔗</span><span>มอบหมายเส้นทาง</span>
+        </button>
+        <button class="nav-item" data-section="settings" onclick="navigate('settings')">
+          <span class="nav-icon">⚙️</span><span>การตั้งค่า API</span>
+        </button>
+      </div>
+
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="user-avatar" id="userAvatar">A</div>
+        <div class="user-info">
+          <div class="user-name" id="userName">Admin</div>
+          <div class="user-role" id="userRole">admin</div>
         </div>
-        <div class="toolbar">
-          <input id="apiBase" placeholder="API Base URL เช่น https://api.example.workers.dev" />
-          <button id="saveApiBtn">Save API</button>
-          <button id="refreshBtn">Refresh</button>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <div class="main">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div>
+        <div class="page-title" id="pageTitle">📊 Dashboard</div>
+        <div class="page-subtitle" id="pageSubtitle">ภาพรวมระบบ Bus Tracking</div>
+      </div>
+      <div class="topbar-right">
+        <div class="health-badge" id="healthBadge" style="display:none">
+          <span class="health-dot"></span> ระบบออนไลน์
         </div>
-      </header>
+        <button class="btn-logout" onclick="logout()">🚪 ออกจากระบบ</button>
+      </div>
+    </header>
 
-      <section class="cards" id="overview">
-        <div class="card"><span>Active Routes</span><strong id="routesCount">-</strong></div>
-        <div class="card"><span>Buses ON Duty</span><strong id="busesCount">-</strong></div>
-        <div class="card"><span>Waiting Points</span><strong id="waitingCount">-</strong></div>
-      </section>
-
-      <section class="panel" id="auth">
-        <h3>Admin Login</h3>
-        <div class="auth-grid">
-          <input id="adminUsername" placeholder="Username" />
-          <input id="adminPassword" type="password" placeholder="Password" />
-          <button id="adminLoginBtn">Login</button>
-          <button id="adminLogoutBtn" class="secondary">Logout</button>
-        </div>
-        <div id="authStatus" class="auth-status">Not logged in</div>
-      </section>
-
-      <section class="grid-2 forms-grid">
-        <section class="panel" id="route-form">
-          <div class="panel-header"><h3>Create / Edit Route</h3></div>
-          <div class="form-grid">
-            <input id="routeEditIdInput" placeholder="Route ID (for edit)" />
-            <input id="routeCodeInput" placeholder="Route Code" />
-            <input id="routeNameInput" placeholder="Route Name" />
-            <input id="routeStartInput" placeholder="Start Location" />
-            <input id="routeEndInput" placeholder="End Location" />
-            <div class="button-row">
-              <button id="createRouteBtn">Create Route</button>
-              <button id="updateRouteBtn" class="secondary">Update Route</button>
-              <button id="clearRouteBtn" class="ghost">Clear</button>
-            </div>
-          </div>
-          <div id="routeFormStatus" class="form-status">Ready</div>
-        </section>
-
-        <section class="panel" id="bus-form">
-          <div class="panel-header"><h3>Create / Edit Bus</h3></div>
-          <div class="form-grid">
-            <input id="busEditIdInput" placeholder="Bus ID (for edit)" />
-            <input id="busPlateInput" placeholder="Plate Number" />
-            <input id="busRouteIdInput" placeholder="Route ID" />
-            <input id="busDriverIdInput" placeholder="Driver ID (optional)" />
-            <input id="busStatusInput" placeholder="Status: off/on/maintenance" />
-            <div class="button-row">
-              <button id="createBusBtn">Create Bus</button>
-              <button id="updateBusBtn" class="secondary">Update Bus</button>
-              <button id="clearBusBtn" class="ghost">Clear</button>
-            </div>
-          </div>
-          <div id="busFormStatus" class="form-status">Ready</div>
-        </section>
-      </section>
-
-      <section class="grid-2 forms-grid">
-        <section class="panel" id="user-form">
-          <div class="panel-header"><h3>Create / Edit User</h3></div>
-          <div class="form-grid">
-            <input id="userEditIdInput" placeholder="User ID (for edit)" />
-            <input id="userUsernameInput" placeholder="Username" />
-            <input id="userEmailInput" placeholder="Email" />
-            <input id="userFullNameInput" placeholder="Full Name" />
-            <input id="userRoleInput" placeholder="Role: passenger/driver/admin" />
-            <input id="userStatusInput" placeholder="Status: active/inactive/suspended" />
-            <div class="button-row">
-              <button id="createUserBtn">Create User</button>
-              <button id="updateUserBtn" class="secondary">Update User</button>
-              <button id="clearUserBtn" class="ghost">Clear</button>
-            </div>
-          </div>
-          <div id="userFormStatus" class="form-status">Ready</div>
-        </section>
-
-        <section class="panel" id="driver-form">
-          <div class="panel-header"><h3>Create / Edit Driver</h3></div>
-          <div class="form-grid">
-            <input id="driverEditIdInput" placeholder="Driver ID (for edit)" />
-            <input id="driverUserIdInput" placeholder="User ID" />
-            <input id="driverEmployeeCodeInput" placeholder="Employee Code" />
-            <input id="driverLicenseInput" placeholder="License No" />
-            <input id="driverAssignedBusInput" placeholder="Assigned Bus ID" />
-            <input id="driverAssignedRouteInput" placeholder="Assigned Route ID" />
-            <input id="driverStatusInput" placeholder="Status: active/inactive" />
-            <div class="button-row">
-              <button id="createDriverBtn">Create Driver</button>
-              <button id="updateDriverBtn" class="secondary">Update Driver</button>
-              <button id="clearDriverBtn" class="ghost">Clear</button>
-            </div>
-          </div>
-          <div id="driverFormStatus" class="form-status">Ready</div>
-        </section>
-      </section>
-
-      <section class="grid-2 forms-grid">
-        <section class="panel" id="admin-form">
-          <div class="panel-header"><h3>Create / Edit Admin</h3></div>
-          <div class="form-grid">
-            <input id="adminEditIdInput" placeholder="Admin ID (for edit)" />
-            <input id="adminUserIdInput" placeholder="User ID" />
-            <input id="adminTypeInput" placeholder="Admin Type: super_admin/route_admin" />
-            <input id="adminStatusInput" placeholder="Status: active/inactive" />
-            <div class="button-row">
-              <button id="createAdminBtn">Create Admin</button>
-              <button id="updateAdminBtn" class="secondary">Update Admin</button>
-              <button id="clearAdminBtn" class="ghost">Clear</button>
-            </div>
-          </div>
-          <div id="adminFormStatus" class="form-status">Ready</div>
-        </section>
-
-        <section class="panel" id="route-admin-form">
-          <div class="panel-header"><h3>Route Admin Assignment</h3></div>
-          <div class="form-grid">
-            <input id="routeAdminIdInput" placeholder="Assignment ID (view/delete)" />
-            <input id="routeAdminRouteIdInput" placeholder="Route ID" />
-            <input id="routeAdminAdminIdInput" placeholder="Admin ID" />
-            <div class="button-row">
-              <button id="createRouteAdminBtn">Assign Route Admin</button>
-              <button id="deleteRouteAdminBtn" class="danger">Delete Assignment</button>
-              <button id="clearRouteAdminBtn" class="ghost">Clear</button>
-            </div>
-          </div>
-          <div id="routeAdminFormStatus" class="form-status">Ready</div>
-        </section>
-      </section>
-
-      <section class="panel" id="summary">
-        <h3>System Summary</h3>
-        <div class="summary-grid">
-          <div class="stack-item"><div class="title">Routes</div><div class="meta" id="summaryRoutes">-</div></div>
-          <div class="stack-item"><div class="title">Buses</div><div class="meta" id="summaryBuses">-</div></div>
-          <div class="stack-item"><div class="title">Drivers</div><div class="meta" id="summaryDrivers">-</div></div>
-          <div class="stack-item"><div class="title">Users</div><div class="meta" id="summaryUsers">-</div></div>
-          <div class="stack-item"><div class="title">Active Buses</div><div class="meta" id="summaryActiveBuses">-</div></div>
-        </div>
-      </section>
-
-      <section class="grid-2" id="user-management">
-        <section class="panel">
-          <div class="panel-header"><h3>Users</h3><button id="reloadUsersBtn" class="secondary">Reload</button></div>
-          <div id="usersList" class="stack-list"></div>
-        </section>
-        <section class="panel">
-          <div class="panel-header"><h3>Drivers</h3><button id="reloadDriversBtn" class="secondary">Reload</button></div>
-          <div id="driversList" class="stack-list"></div>
-        </section>
-      </section>
-
-      <section class="grid-2">
-        <section class="panel">
-          <div class="panel-header"><h3>Admins</h3><button id="reloadAdminsBtn" class="secondary">Reload</button></div>
-          <div id="adminsList" class="stack-list"></div>
-        </section>
-        <section class="panel">
-          <div class="panel-header"><h3>Route Admin Assignments</h3><button id="reloadRouteAdminsBtn" class="secondary">Reload</button></div>
-          <div id="routeAdminsList" class="stack-list"></div>
-        </section>
-      </section>
-
-      <section class="grid-2">
-        <section class="panel" id="routes">
-          <div class="panel-header">
-            <h3>Routes</h3>
-            <button id="reloadRoutesBtn" class="secondary">Reload Routes</button>
-          </div>
-          <div id="routesList" class="stack-list"></div>
-        </section>
-        <section class="panel" id="waiting">
-          <div class="panel-header">
-            <h3>Waiting Passengers</h3>
-            <button id="reloadWaitingBtn" class="secondary">Reload Waiting</button>
-          </div>
-          <div id="waitingList" class="stack-list"></div>
-        </section>
-      </section>
-
-      <section class="panel">
-        <h3>Live Map Placeholder</h3>
-        <div class="map-placeholder">Google Maps will be integrated here</div>
-      </section>
-
-      <section class="panel" id="buses">
-        <div class="panel-header">
-          <h3>Buses</h3>
-          <button id="reloadBusesBtn" class="secondary">Reload Buses</button>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Plate</th>
-              <th>Route</th>
-              <th>Status</th>
-              <th>Coordinates</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="bus-table"></tbody>
-        </table>
-      </section>
-
-      <section class="panel" id="api">
-        <h3>API Status</h3>
-        <pre id="apiStatus">Not loaded</pre>
-      </section>
+    <!-- Content -->
+    <main class="content" id="mainContent">
+      <div class="loading"><div class="spinner"></div> กำลังโหลด...</div>
     </main>
-  </div>
 
-  <script type="module" src="script.js"></script>
+  </div><!-- end .main -->
+</div><!-- end .layout -->
+
+<!-- ===== CRUD MODAL ===== -->
+<div class="modal-overlay hidden" id="crudModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">เพิ่มรายการ</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="modalForm" onsubmit="return false">
+        <div id="modalBody"></div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">ยกเลิก</button>
+      <button class="btn btn-primary" id="modalSubmitBtn" onclick="submitModal()">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CONFIRM DELETE MODAL ===== -->
+<div class="modal-overlay hidden" id="confirmModal">
+  <div class="modal modal-sm">
+    <div class="confirm-body">
+      <div class="confirm-icon">🗑️</div>
+      <h3>ยืนยันการลบ</h3>
+      <p id="confirmText">คุณต้องการลบรายการนี้ใช่หรือไม่?</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeConfirm()">ยกเลิก</button>
+      <button class="btn btn-danger" id="confirmDeleteBtn" onclick="executeDelete()">🗑️ ยืนยันการลบ</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TOAST ===== -->
+<div id="toastContainer"></div>
+
+<script type="module" src="script.js"></script>
 </body>
 </html>

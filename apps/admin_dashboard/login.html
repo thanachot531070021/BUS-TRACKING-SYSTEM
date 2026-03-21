@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เข้าสู่ระบบ — Bus Tracking Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      overflow: hidden;
+    }
+
+    body::before, body::after {
+      content: '';
+      position: fixed;
+      border-radius: 50%;
+      pointer-events: none;
+      opacity: 0.08;
+    }
+    body::before {
+      width: 600px; height: 600px;
+      background: #3b82f6;
+      top: -200px; left: -200px;
+    }
+    body::after {
+      width: 500px; height: 500px;
+      background: #6366f1;
+      bottom: -200px; right: -150px;
+    }
+
+    .login-card {
+      background: rgba(255,255,255,0.97);
+      border-radius: 20px;
+      box-shadow: 0 30px 60px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.15);
+      width: 100%; max-width: 420px;
+      overflow: hidden;
+      position: relative; z-index: 1;
+      animation: cardIn 0.45s cubic-bezier(0.34,1.56,0.64,1);
+    }
+
+    @keyframes cardIn {
+      from { transform: translateY(40px) scale(0.95); opacity: 0; }
+      to   { transform: translateY(0) scale(1);       opacity: 1; }
+    }
+
+    .login-header {
+      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+      padding: 36px 32px 44px;
+      text-align: center;
+      position: relative;
+    }
+
+    .login-header::after {
+      content: '';
+      position: absolute;
+      bottom: -1px; left: 0; right: 0;
+      height: 40px;
+      background: rgba(255,255,255,0.97);
+      border-radius: 50% 50% 0 0;
+    }
+
+    .logo-wrap {
+      width: 76px; height: 76px;
+      background: rgba(255,255,255,0.2);
+      border: 2px solid rgba(255,255,255,0.35);
+      border-radius: 22px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 38px;
+      margin: 0 auto 16px;
+      backdrop-filter: blur(4px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    }
+
+    .login-header h1 {
+      color: #fff;
+      font-size: 21px; font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 5px;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+
+    .login-header p { color: rgba(255,255,255,0.78); font-size: 13px; }
+
+    .login-body { padding: 12px 32px 28px; }
+
+    .section-title {
+      font-size: 14px; font-weight: 700; color: #1e293b;
+      text-align: center; margin-bottom: 22px;
+    }
+
+    .error-msg {
+      display: none;
+      background: #fef2f2;
+      border: 1px solid #fca5a5;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px; color: #dc2626;
+      margin-bottom: 16px;
+      align-items: center; gap: 8px;
+    }
+    .error-msg.show { display: flex; animation: shake 0.4s ease; }
+
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%,60%  { transform: translateX(-6px); }
+      40%,80%  { transform: translateX(6px); }
+    }
+
+    .form-group { margin-bottom: 15px; }
+
+    .form-label {
+      display: block;
+      font-size: 12.5px; font-weight: 600;
+      color: #374151; margin-bottom: 6px;
+    }
+
+    .input-wrap { position: relative; }
+    .input-icon {
+      position: absolute; left: 12px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 16px; pointer-events: none;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 11px 12px 11px 40px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 11px;
+      font-size: 14px; color: #1f2937;
+      background: #f9fafb;
+      outline: none; font-family: inherit;
+      transition: all 0.15s;
+    }
+    .form-input:focus {
+      border-color: #3b82f6;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.13);
+    }
+    .form-input.has-toggle { padding-right: 42px; }
+
+    .toggle-pw {
+      position: absolute; right: 12px; top: 50%;
+      transform: translateY(-50%);
+      background: none; border: none;
+      cursor: pointer; font-size: 16px; color: #9ca3af;
+      padding: 4px; transition: color 0.15s; font-family: inherit;
+    }
+    .toggle-pw:hover { color: #6b7280; }
+
+    .btn-login {
+      width: 100%;
+      padding: 13px;
+      background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+      color: #fff; border: none; border-radius: 11px;
+      font-size: 15px; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+      transition: all 0.2s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      margin-top: 6px;
+      box-shadow: 0 4px 14px rgba(59,130,246,0.38);
+    }
+    .btn-login:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 7px 20px rgba(59,130,246,0.46);
+    }
+    .btn-login:disabled { opacity: 0.65; cursor: not-allowed; transform: none; }
+
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2.5px solid rgba(255,255,255,0.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      display: none;
+    }
+    .spinner.show { display: block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .login-footer {
+      text-align: center;
+      padding: 0 32px 24px;
+      font-size: 12px; color: #9ca3af;
+    }
+    .login-footer strong { color: #6b7280; }
+  </style>
+</head>
+<body>
+
+  <div class="login-card">
+    <div class="login-header">
+      <div class="logo-wrap">🚌</div>
+      <h1>Bus Tracking System</h1>
+      <p>Admin Portal — ระบบจัดการผู้ดูแล</p>
+    </div>
+
+    <div class="login-body">
+      <p class="section-title">🔐 เข้าสู่ระบบผู้ดูแล</p>
+
+      <div class="error-msg" id="errorMsg">
+        <span>⚠️</span><span id="errorText"></span>
+      </div>
+
+      <form id="loginForm" onsubmit="doLogin(event)" novalidate>
+        <div class="form-group">
+          <label class="form-label">ชื่อผู้ใช้ / Username</label>
+          <div class="input-wrap">
+            <span class="input-icon">👤</span>
+            <input type="text" id="identifier" class="form-input"
+              placeholder="username หรือ email" required autocomplete="username">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">รหัสผ่าน</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input type="password" id="password" class="form-input has-toggle"
+              placeholder="••••••••" required autocomplete="current-password">
+            <button type="button" class="toggle-pw" onclick="togglePw()">👁️</button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-login" id="loginBtn">
+          <div class="spinner" id="spinner"></div>
+          <span id="btnText">เข้าสู่ระบบ →</span>
+        </button>
+      </form>
+    </div>
+
+    <div class="login-footer">
+      <strong>Bus Tracking Admin Dashboard</strong><br>
+      เฉพาะผู้ดูแลระบบที่ได้รับอนุญาตเท่านั้น
+    </div>
+  </div>
+
+  <script>
+    const API = 'https://bus-tracking-worker.thanachot-jo888.workers.dev';
+    const TOKEN_KEY = 'bus-tracking-admin-token';
+
+    // Redirect if already logged in
+    if (localStorage.getItem(TOKEN_KEY)) window.location.replace('index.html');
+
+    function togglePw() {
+      const el = document.getElementById('password');
+      const btn = document.querySelector('.toggle-pw');
+      el.type = el.type === 'password' ? 'text' : 'password';
+      btn.textContent = el.type === 'password' ? '👁️' : '🙈';
+    }
+
+    function showErr(msg) {
+      document.getElementById('errorText').textContent = msg;
+      document.getElementById('errorMsg').classList.add('show');
+    }
+
+    function setLoading(on) {
+      document.getElementById('loginBtn').disabled = on;
+      document.getElementById('spinner').classList.toggle('show', on);
+      document.getElementById('btnText').textContent = on ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ →';
+    }
+
+    async function doLogin(e) {
+      e.preventDefault();
+      document.getElementById('errorMsg').classList.remove('show');
+
+      const identifier = document.getElementById('identifier').value.trim();
+      const password   = document.getElementById('password').value;
+
+      if (!identifier || !password) { showErr('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน'); return; }
+
+      setLoading(true);
+      try {
+        const res = await fetch(`${API}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier, password, expectedRole: 'admin' })
+        });
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          showErr(data?.message || data?.error || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+          setLoading(false); return;
+        }
+
+        const token = data?.token || data?.data?.token || data?.accessToken || data?.data?.accessToken;
+        if (!token) { showErr('ไม่ได้รับ token กรุณาตรวจสอบสิทธิ์บัญชี'); setLoading(false); return; }
+
+        localStorage.setItem(TOKEN_KEY, token);
+        const user = data?.user || data?.data?.user || data?.profile;
+        if (user) localStorage.setItem('bus-tracking-admin-user', JSON.stringify(user));
+
+        window.location.replace('index.html');
+      } catch {
+        showErr('เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ต');
+        setLoading(false);
+      }
+    }
+
+    document.getElementById('identifier').focus();
+  </script>
+</body>
+</html>
