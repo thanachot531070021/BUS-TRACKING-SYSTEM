@@ -13,19 +13,31 @@ const mockDrivers: DriverProfile[] = [
   },
 ];
 
-export async function listDrivers(env: Env) {
+/** List drivers, optionally scoped to a set of route IDs (for zone_admin) */
+export async function listDrivers(env: Env, routeIds?: string[]) {
   if (!usingSupabase(env)) return mockDrivers;
-  return supabaseFetch<DriverProfile[]>(env, 'drivers?select=*&order=created_at.desc');
+
+  // Join users so full_name/username is returned alongside driver profile
+  let query = 'drivers?select=*,user:users(id,full_name,username,email,phone_number)&order=created_at.desc';
+
+  if (routeIds && routeIds.length > 0) {
+    query += `&assigned_route_id=in.(${routeIds.join(',')})`;
+  } else if (routeIds && routeIds.length === 0) {
+    // zone_admin with no routes → return empty
+    return [];
+  }
+
+  return supabaseFetch<JsonRecord[]>(env, query);
 }
 
 export async function getDriverById(env: Env, driverId: string) {
-  if (!usingSupabase(env)) return mockDrivers.find((driver) => driver.id === driverId) ?? null;
-  const rows = await supabaseFetch<DriverProfile[]>(env, `drivers?select=*&id=eq.${driverId}&limit=1`);
+  if (!usingSupabase(env)) return mockDrivers.find((d) => d.id === driverId) ?? null;
+  const rows = await supabaseFetch<JsonRecord[]>(env, `drivers?select=*,user:users(id,full_name,username,email)&id=eq.${driverId}&limit=1`);
   return rows[0] ?? null;
 }
 
 export async function findDriverByUserId(env: Env, userId: string) {
-  if (!usingSupabase(env)) return mockDrivers.find((driver) => driver.user_id === userId) ?? null;
+  if (!usingSupabase(env)) return mockDrivers.find((d) => d.user_id === userId) ?? null;
   const rows = await supabaseFetch<DriverProfile[]>(env, `drivers?select=*&user_id=eq.${userId}&limit=1`);
   return rows[0] ?? null;
 }

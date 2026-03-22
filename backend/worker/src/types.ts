@@ -9,7 +9,7 @@ export type JsonRecord = Record<string, unknown>;
 
 export type UserRole = 'passenger' | 'driver' | 'admin';
 export type AuthProvider = 'guest' | 'phone' | 'google' | 'email';
-export type AdminType = 'super_admin' | 'route_admin';
+export type AdminType = 'super_admin' | 'zone_admin' | 'route_admin'; // route_admin kept for backward compat
 
 export type AuthContext = {
   token: string;
@@ -18,8 +18,28 @@ export type AuthContext = {
   provider?: AuthProvider;
   adminType?: AdminType;
   adminId?: string;
+  zoneId?: string;
   routeIds?: string[];
 };
+
+export type Zone = {
+  id: string;
+  zone_code?: string | null;
+  zone_name: string;
+  description?: string | null;
+  status: 'active' | 'inactive';
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type CreateZoneBody = {
+  zoneCode?: string | null;
+  zoneName: string;
+  description?: string | null;
+  status?: 'active' | 'inactive';
+};
+
+export type UpdateZoneBody = Partial<CreateZoneBody>;
 
 export type UserProfile = {
   id: string;

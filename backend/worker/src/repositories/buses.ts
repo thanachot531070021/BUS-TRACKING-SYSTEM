@@ -25,9 +25,12 @@ export async function getBusById(env: Env, busId: string) {
   return rows[0] ?? null;
 }
 
-export async function listAdminBuses(env: Env) {
+export async function listAdminBuses(env: Env, routeIds?: string[]) {
   if (!usingSupabase(env)) return sampleBuses;
-  return supabaseFetch<JsonRecord[]>(env, 'buses?select=*&order=created_at.desc');
+  if (routeIds && routeIds.length === 0) return [];
+  let query = 'buses?select=*&order=created_at.desc';
+  if (routeIds && routeIds.length > 0) query += `&route_id=in.(${routeIds.join(',')})`;
+  return supabaseFetch<JsonRecord[]>(env, query);
 }
 
 export async function createBus(env: Env, body: CreateBusBody) {

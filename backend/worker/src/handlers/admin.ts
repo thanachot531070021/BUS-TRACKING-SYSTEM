@@ -5,7 +5,7 @@ import { createRouteService, deleteRouteService, getRouteByIdService, listRoutes
 import { getWaitingSummaryService, listWaitingService } from '../services/waiting.service';
 import { listDriversService } from '../services/drivers.service';
 import { listUsersService } from '../services/users.service';
-import type { Env, UpdateBusBody, UpdateRouteBody } from '../types';
+import type { AuthContext, Env, UpdateBusBody, UpdateRouteBody } from '../types';
 import { validateCreateBusBody } from '../schemas/bus.schema';
 import { validateCreateRouteBody } from '../schemas/route.schema';
 
@@ -15,14 +15,15 @@ export async function handleAdminLogin(env: Env, request: Request) {
   return json({ message: 'Admin login success', data: await adminLoginService(env, body.username, body.password) });
 }
 
-export async function handleAdminDashboardSummary(env: Env) {
+export async function handleAdminDashboardSummary(env: Env, auth?: AuthContext) {
+  const zoneId   = auth?.adminType === 'zone_admin' ? auth.zoneId : undefined;
+  const routeIds = auth?.adminType === 'zone_admin' ? (auth.routeIds ?? []) : undefined;
   const [routes, buses, drivers, users] = await Promise.all([
-    listRoutesService(env),
-    listAdminBusesService(env),
-    listDriversService(env),
+    listRoutesService(env, zoneId),
+    listAdminBusesService(env, routeIds),
+    listDriversService(env, routeIds),
     listUsersService(env),
   ]);
-
   return json({
     data: {
       total_routes: routes.length,
@@ -34,8 +35,9 @@ export async function handleAdminDashboardSummary(env: Env) {
   });
 }
 
-export async function handleAdminListRoutes(env: Env) {
-  return json({ data: await listRoutesService(env) });
+export async function handleAdminListRoutes(env: Env, auth?: AuthContext) {
+  const zoneId = auth?.adminType === 'zone_admin' ? auth.zoneId : undefined;
+  return json({ data: await listRoutesService(env, zoneId) });
 }
 
 export async function handleAdminGetRouteById(env: Env, routeId: string) {
@@ -71,8 +73,9 @@ export async function handleAdminRouteWaitingSummary(env: Env, routeId: string) 
   return json({ data: await getWaitingSummaryService(env, routeId) });
 }
 
-export async function handleAdminListBuses(env: Env) {
-  return json({ data: await listAdminBusesService(env) });
+export async function handleAdminListBuses(env: Env, auth?: AuthContext) {
+  const routeIds = auth?.adminType === 'zone_admin' ? (auth.routeIds ?? []) : undefined;
+  return json({ data: await listAdminBusesService(env, routeIds) });
 }
 
 export async function handleAdminGetBusById(env: Env, busId: string) {

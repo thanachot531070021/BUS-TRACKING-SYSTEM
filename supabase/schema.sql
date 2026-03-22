@@ -218,3 +218,32 @@ create index if not exists idx_analytics_source_created_at on analytics_events(s
 create index if not exists idx_analytics_event_type_created_at on analytics_events(event_type, created_at desc);
 create index if not exists idx_analytics_user_id on analytics_events(user_id);
 create index if not exists idx_analytics_created_at on analytics_events(created_at desc);
+
+-- ===== ZONES =====
+create table if not exists zones (
+  id          uuid primary key default gen_random_uuid(),
+  zone_code   text unique,
+  zone_name   text not null,
+  description text,
+  status      text not null default 'active' check (status in ('active', 'inactive')),
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+
+drop trigger if exists trg_zones_set_updated_at on zones;
+create trigger trg_zones_set_updated_at
+before update on zones
+for each row execute function set_updated_at();
+
+-- Add zone_id to routes (a route belongs to a zone)
+alter table routes add column if not exists zone_id uuid references zones(id) on delete set null;
+create index if not exists idx_routes_zone_id on routes(zone_id);
+
+-- Add zone_id to admins (a zone_admin manages one zone)
+alter table admins add column if not exists zone_id uuid references zones(id) on delete set null;
+
+-- Update admin_type constraint: route_admin → zone_admin
+-- Run this only if migrating from old schema:
+-- alter table admins drop constraint if exists admins_admin_type_check;
+-- alter table admins add constraint admins_admin_type_check
+--   check (admin_type in ('super_admin', 'zone_admin'));

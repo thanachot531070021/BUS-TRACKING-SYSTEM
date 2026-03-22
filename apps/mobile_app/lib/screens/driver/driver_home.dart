@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/driver_provider.dart';
 import '../../screens/auth/login_screen.dart';
-import '../../services/analytics_service.dart';
 import 'waiting_list.dart';
 
 class DriverHome extends StatefulWidget {
@@ -19,7 +18,6 @@ class _DriverHomeState extends State<DriverHome> {
     super.initState();
     Future.microtask(() {
       context.read<DriverProvider>().loadProfile();
-      analyticsService.logEvent('page_view', page: 'driver_home');
     });
   }
 

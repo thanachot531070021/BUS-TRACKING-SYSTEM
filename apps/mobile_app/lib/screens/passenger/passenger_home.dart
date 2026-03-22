@@ -4,7 +4,6 @@ import '../../providers/auth_provider.dart';
 import '../../providers/route_provider.dart';
 import '../../models/route_model.dart';
 import '../../screens/auth/login_screen.dart';
-import '../../services/analytics_service.dart';
 import 'route_detail.dart';
 
 class PassengerHome extends StatefulWidget {
@@ -20,7 +19,6 @@ class _PassengerHomeState extends State<PassengerHome> {
     super.initState();
     Future.microtask(() {
       context.read<RouteProvider>().loadRoutes();
-      analyticsService.logEvent('page_view', page: 'passenger_home');
     });
   }
 

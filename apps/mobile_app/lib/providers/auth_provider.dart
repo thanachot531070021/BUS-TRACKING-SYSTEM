@@ -32,6 +32,9 @@ class AuthProvider extends ChangeNotifier {
       apiService.setToken(saved);
       try {
         _user = await _authService.getMe();
+        // Session ยังใช้ได้ — เช็คว่าวันนี้ track login แล้วหรือยัง
+        // ถ้าข้ามวันมา (login ค้างไว้) จะยิง event อีกครั้ง
+        analyticsService.logDailySession();
       } catch (_) {
         // Token expired or invalid — clear it
         await _clearSession(prefs);

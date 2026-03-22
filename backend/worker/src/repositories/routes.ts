@@ -2,14 +2,18 @@ import { sampleRoutes } from '../data/mock';
 import { supabaseFetch, usingSupabase } from '../lib/supabase';
 import type { CreateRouteBody, Env, JsonRecord, RouteSummary, UpdateRouteBody } from '../types';
 
-export async function listRoutes(env: Env) {
+export async function listRoutes(env: Env, zoneId?: string) {
   if (!usingSupabase(env)) return sampleRoutes;
-  return supabaseFetch<RouteSummary[]>(env, 'routes?select=id,route_code,route_name,start_location,end_location,route_polyline,status&order=route_code.asc');
+
+  let query = 'routes?select=id,route_code,route_name,start_location,end_location,route_polyline,status,zone_id&order=route_code.asc';
+  if (zoneId) query += `&zone_id=eq.${zoneId}`;
+
+  return supabaseFetch<RouteSummary[]>(env, query);
 }
 
 export async function getRouteById(env: Env, routeId: string) {
-  if (!usingSupabase(env)) return sampleRoutes.find((route) => route.id === routeId) ?? null;
-  const rows = await supabaseFetch<RouteSummary[]>(env, `routes?select=id,route_code,route_name,start_location,end_location,route_polyline,status&id=eq.${routeId}&limit=1`);
+  if (!usingSupabase(env)) return sampleRoutes.find((r) => r.id === routeId) ?? null;
+  const rows = await supabaseFetch<RouteSummary[]>(env, `routes?select=id,route_code,route_name,start_location,end_location,route_polyline,status,zone_id&id=eq.${routeId}&limit=1`);
   return rows[0] ?? null;
 }
 
@@ -34,6 +38,7 @@ export async function createRoute(env: Env, body: CreateRouteBody) {
       start_location: body.startLocation ?? null,
       end_location: body.endLocation ?? null,
       route_polyline: body.routePolyline ?? null,
+      zone_id: (body as any).zoneId ?? null,
       status: body.status ?? 'active',
     }]),
   });
@@ -42,9 +47,7 @@ export async function createRoute(env: Env, body: CreateRouteBody) {
 }
 
 export async function updateRoute(env: Env, routeId: string, body: UpdateRouteBody) {
-  if (!usingSupabase(env)) {
-    return { id: routeId, ...body };
-  }
+  if (!usingSupabase(env)) return { id: routeId, ...body };
 
   const updated = await supabaseFetch<JsonRecord[]>(env, `routes?id=eq.${routeId}`, {
     method: 'PATCH',
@@ -54,6 +57,7 @@ export async function updateRoute(env: Env, routeId: string, body: UpdateRouteBo
       start_location: body.startLocation,
       end_location: body.endLocation,
       route_polyline: body.routePolyline,
+      zone_id: (body as any).zoneId,
       status: body.status,
     }),
   });

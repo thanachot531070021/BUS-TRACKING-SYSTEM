@@ -1,22 +1,8 @@
 import { createAdmin, deleteAdmin, getAdminById, listAdmins, updateAdmin } from '../repositories/admins';
 import type { CreateAdminBody, Env, UpdateAdminBody } from '../types';
 
-export async function listAdminsService(env: Env) {
-  return listAdmins(env);
-}
-
-export async function getAdminByIdService(env: Env, adminId: string) {
-  return getAdminById(env, adminId);
-}
-
-export async function createAdminService(env: Env, body: CreateAdminBody) {
-  return createAdmin(env, body);
-}
-
-export async function updateAdminService(env: Env, adminId: string, body: UpdateAdminBody) {
-  return updateAdmin(env, adminId, body);
-}
-
-export async function deleteAdminService(env: Env, adminId: string) {
-  return deleteAdmin(env, adminId);
-}
+export const listAdminsService   = (env: Env, zoneId?: string) => listAdmins(env, zoneId);
+export const getAdminByIdService = (env: Env, id: string) => getAdminById(env, id);
+export const createAdminService  = (env: Env, body: CreateAdminBody) => createAdmin(env, body);
+export const updateAdminService  = (env: Env, id: string, body: UpdateAdminBody) => updateAdmin(env, id, body);
+export const deleteAdminService  = (env: Env, id: string) => deleteAdmin(env, id);

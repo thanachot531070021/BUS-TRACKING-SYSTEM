@@ -13,8 +13,8 @@ export async function getBusByIdService(env: Env, busId: string) {
   return getBusById(env, busId);
 }
 
-export async function listAdminBusesService(env: Env) {
-  return listAdminBuses(env);
+export async function listAdminBusesService(env: Env, routeIds?: string[]) {
+  return listAdminBuses(env, routeIds);
 }
 
 export async function createBusService(env: Env, body: CreateBusBody) {

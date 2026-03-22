@@ -33,7 +33,7 @@ function extractList(r) {
 }
 
 // ===== STATE =====
-const state = { section: 'dashboard', user: null, cache: {} };
+const state = { section: 'dashboard', user: null, adminType: null, zoneId: null, cache: {} };
 
 /* =====================================================
    SECTION CONFIGS
@@ -84,33 +84,52 @@ const SECTIONS = {
     extraCreate: { authProvider: 'email' },
   },
 
+  zones: {
+    title: 'โซน', icon: '🗺️',
+    subtitle: 'จัดการโซนพื้นที่การให้บริการ',
+    listPath:   '/admin/zones',
+    createPath: '/admin/zones',
+    updatePath: id => `/admin/zones/${id}`,
+    deletePath: id => `/admin/zones/${id}`,
+    idField: 'id',
+    columns: [
+      { key: 'zone_code', label: 'รหัสโซน',  bold: true },
+      { key: 'zone_name', label: 'ชื่อโซน'  },
+      { key: 'description', label: 'รายละเอียด', r: v => v ? esc(v) : '—' },
+      { key: 'status',    label: 'สถานะ',    r: statusBadge },
+    ],
+    formFields: [
+      { n: 'zoneCode', rk: 'zone_code', label: 'รหัสโซน',      type: 'text', req: false },
+      { n: 'zoneName', rk: 'zone_name', label: 'ชื่อโซน',       type: 'text', req: true  },
+      { n: 'description', rk: 'description', label: 'รายละเอียด', type: 'text', req: false },
+      { n: 'status', rk: 'status', label: 'สถานะ', type: 'select', req: false,
+        options: [{ v: 'active', l: '✅ ใช้งาน' }, { v: 'inactive', l: '⛔ ไม่ใช้งาน' }]
+      },
+    ],
+  },
+
   drivers: {
     title: 'คนขับรถ', icon: '🚌',
     subtitle: 'จัดการข้อมูลคนขับรถโดยสาร',
     listPath:   '/admin/drivers',
-    createPath: '/admin/drivers',
+    createPath: '/admin/drivers/with-user',
     updatePath: id => `/admin/drivers/${id}`,
     deletePath: id => `/admin/drivers/${id}`,
     idField: 'id',
+    withUserCreate: true,
     columns: [
-      { key: 'id',              label: 'ID',            r: chip },
-      { key: 'employee_code',   label: 'รหัสพนักงาน',   bold: true },
-      { key: 'license_no',      label: 'ใบขับขี่'        },
-      { key: 'user_id',         label: 'User ID',        r: chip },
-      { key: 'assigned_route_id', label: 'Route ID',     r: v => v ? chip(v) : '-' },
-      { key: 'status',          label: 'สถานะ',          r: statusBadge },
+      { key: 'user',          label: 'ชื่อ',          r: (v,row) => v ? `<strong>${esc(v.full_name||v.username||'—')}</strong><br><small style="color:var(--muted)">${esc(v.email||'')}</small>` : chip(row.user_id) },
+      { key: 'employee_code', label: 'รหัสพนักงาน',   bold: false },
+      { key: 'license_no',    label: 'ใบขับขี่'       },
+      { key: 'assigned_route_id', label: 'เส้นทาง',   r: v => v ? chip(v) : '—' },
+      { key: 'status',        label: 'สถานะ',          r: statusBadge },
     ],
     formFields: [
-      { n: 'userId',         rk: 'user_id',           label: 'User ID',              type: 'text', req: true  },
-      { n: 'employeeCode',   rk: 'employee_code',     label: 'รหัสพนักงาน',           type: 'text', req: false },
-      { n: 'licenseNo',      rk: 'license_no',        label: 'หมายเลขใบขับขี่',       type: 'text', req: false },
-      { n: 'assignedBusId',  rk: 'assigned_bus_id',   label: 'Bus ID ที่มอบหมาย',      type: 'text', req: false },
-      { n: 'assignedRouteId',rk: 'assigned_route_id', label: 'Route ID ที่มอบหมาย',   type: 'text', req: false },
-      { n: 'status',         rk: 'status',            label: 'สถานะ', type: 'select', req: false,
-        options: [
-          { v: 'active',   l: '✅ ใช้งาน'    },
-          { v: 'inactive', l: '⛔ ไม่ใช้งาน'  },
-        ]
+      { n: 'employeeCode',    rk: 'employee_code',    label: 'รหัสพนักงาน',     type: 'text', req: false },
+      { n: 'licenseNo',       rk: 'license_no',       label: 'หมายเลขใบขับขี่', type: 'text', req: false },
+      { n: 'assignedRouteId', rk: 'assigned_route_id',label: 'เส้นทาง (ID)',     type: 'text', req: false },
+      { n: 'status', rk: 'status', label: 'สถานะ', type: 'select', req: false,
+        options: [{ v: 'active', l: '✅ ใช้งาน' }, { v: 'inactive', l: '⛔ ไม่ใช้งาน' }]
       },
     ],
   },
@@ -119,31 +138,29 @@ const SECTIONS = {
     title: 'ผู้ดูแลระบบ', icon: '👤',
     subtitle: 'จัดการบัญชีผู้ดูแลระบบ',
     listPath:   '/admin/admins',
-    createPath: '/admin/admins',
+    createPath: '/admin/admins/with-user',
     updatePath: id => `/admin/admins/${id}`,
     deletePath: id => `/admin/admins/${id}`,
     idField: 'id',
+    withUserCreate: true,
     columns: [
-      { key: 'id',         label: 'ID',            r: chip },
-      { key: 'user_id',    label: 'User ID',        r: chip },
-      { key: 'admin_type', label: 'ประเภท',          r: adminTypeBadge },
-      { key: 'status',     label: 'สถานะ',           r: statusBadge },
+      { key: 'user',       label: 'ชื่อ',        r: (v,row) => v ? `<strong>${esc(v.full_name||v.username||'—')}</strong><br><small style="color:var(--muted)">${esc(v.email||'')}</small>` : chip(row.user_id) },
+      { key: 'admin_type', label: 'ประเภท',       r: adminTypeBadge },
+      { key: 'zone_id',    label: 'โซน',          r: v => v ? chip(v) : '—' },
+      { key: 'status',     label: 'สถานะ',         r: statusBadge },
     ],
     formFields: [
-      { n: 'userId',    rk: 'user_id',    label: 'User ID',      type: 'text',   req: true,
-        hint: 'กรอก ID ของ user ที่ต้องการยกระดับเป็น admin'
-      },
-      { n: 'adminType', rk: 'admin_type', label: 'ประเภท Admin',  type: 'select', req: true,
+      { n: 'adminType', rk: 'admin_type', label: 'ประเภท Admin', type: 'select', req: true,
         options: [
           { v: 'super_admin', l: '⭐ Super Admin' },
-          { v: 'route_admin', l: '🛣️ Route Admin' },
+          { v: 'zone_admin',  l: '🗺️ Zone Admin'  },
         ]
       },
+      { n: 'zoneId', rk: 'zone_id', label: 'โซน (ID)', type: 'text', req: false,
+        hint: 'กรอก Zone ID สำหรับ Zone Admin'
+      },
       { n: 'status', rk: 'status', label: 'สถานะ', type: 'select', req: false,
-        options: [
-          { v: 'active',   l: '✅ ใช้งาน'   },
-          { v: 'inactive', l: '⛔ ไม่ใช้งาน' },
-        ]
+        options: [{ v: 'active', l: '✅ ใช้งาน' }, { v: 'inactive', l: '⛔ ไม่ใช้งาน' }]
       },
     ],
   },
@@ -157,18 +174,19 @@ const SECTIONS = {
     deletePath: id => `/admin/routes/${id}`,
     idField: 'id',
     columns: [
-      { key: 'id',             label: 'ID',           r: chip },
       { key: 'route_code',     label: 'รหัสเส้นทาง',  bold: true },
       { key: 'route_name',     label: 'ชื่อเส้นทาง'  },
       { key: 'start_location', label: 'จุดเริ่มต้น'   },
       { key: 'end_location',   label: 'จุดสิ้นสุด'    },
-      { key: 'status',         label: 'สถานะ',         r: statusBadge },
+      { key: 'zone_id',        label: 'โซน',           r: v => v ? chip(v) : '—' },
+      { key: 'status',         label: 'สถานะ',          r: statusBadge },
     ],
     formFields: [
       { n: 'routeCode',     rk: 'route_code',     label: 'รหัสเส้นทาง',  type: 'text', req: true  },
       { n: 'routeName',     rk: 'route_name',     label: 'ชื่อเส้นทาง',   type: 'text', req: true  },
       { n: 'startLocation', rk: 'start_location', label: 'จุดเริ่มต้น',   type: 'text', req: false },
       { n: 'endLocation',   rk: 'end_location',   label: 'จุดสิ้นสุด',    type: 'text', req: false },
+      { n: 'zoneId',        rk: 'zone_id',        label: 'โซน (ID)',       type: 'text', req: false },
     ],
   },
 
@@ -181,16 +199,15 @@ const SECTIONS = {
     deletePath: id => `/admin/buses/${id}`,
     idField: 'id',
     columns: [
-      { key: 'id',           label: 'ID',           r: chip },
-      { key: 'plate_number', label: 'ทะเบียนรถ',    bold: true },
-      { key: 'route_id',     label: 'Route ID',      r: v => v ? chip(v) : '-' },
-      { key: 'driver_id',    label: 'Driver ID',     r: v => v ? chip(v) : '-' },
-      { key: 'status',       label: 'สถานะ',          r: statusBadge },
+      { key: 'plate_number', label: 'ทะเบียนรถ',  bold: true },
+      { key: 'route_id',     label: 'เส้นทาง',     r: v => v ? chip(v) : '—' },
+      { key: 'driver_id',    label: 'คนขับ',        r: v => v ? chip(v) : '—' },
+      { key: 'status',       label: 'สถานะ',         r: statusBadge },
     ],
     formFields: [
-      { n: 'plateNumber', rk: 'plate_number', label: 'ทะเบียนรถ', type: 'text', req: true },
-      { n: 'routeId',     rk: 'route_id',     label: 'Route ID',   type: 'text', req: false },
-      { n: 'driverId',    rk: 'driver_id',    label: 'Driver ID',  type: 'text', req: false },
+      { n: 'plateNumber', rk: 'plate_number', label: 'ทะเบียนรถ',  type: 'text', req: true },
+      { n: 'routeId',     rk: 'route_id',     label: 'เส้นทาง (ID)', type: 'text', req: false },
+      { n: 'driverId',    rk: 'driver_id',    label: 'คนขับ (ID)',    type: 'text', req: false },
       { n: 'status', rk: 'status', label: 'สถานะ', type: 'select', req: false,
         options: [
           { v: 'off',         l: '⚫ ไม่ได้ใช้งาน' },
@@ -201,23 +218,9 @@ const SECTIONS = {
     ],
   },
 
-  routeAdmins: {
-    title: 'มอบหมายเส้นทาง', icon: '🔗',
-    subtitle: 'กำหนด Admin ประจำเส้นทาง',
-    listPath:   '/admin/route-admins',
-    createPath: '/admin/route-admins',
-    deletePath: id => `/admin/route-admins/${id}`,
-    idField: 'id',
-    noEdit: true,
-    columns: [
-      { key: 'id',       label: 'ID',       r: chip },
-      { key: 'route_id', label: 'Route ID', r: chip },
-      { key: 'admin_id', label: 'Admin ID', r: chip },
-    ],
-    formFields: [
-      { n: 'routeId', rk: 'route_id', label: 'Route ID', type: 'text', req: true },
-      { n: 'adminId', rk: 'admin_id', label: 'Admin ID', type: 'text', req: true },
-    ],
+  busDriver: {
+    title: 'รถและคนขับ', icon: '🚌',
+    subtitle: 'จัดการรถโดยสารและคนขับรถ',
   },
 
   waiting: {
@@ -282,6 +285,7 @@ function roleBadge(v) {
 function adminTypeBadge(v) {
   const map = {
     super_admin: '<span class="badge b-red">⭐ Super Admin</span>',
+    zone_admin:  '<span class="badge b-purple">🗺️ Zone Admin</span>',
     route_admin: '<span class="badge b-purple">🛣️ Route Admin</span>',
   };
   return map[v] || `<span class="badge b-gray">${esc(v ?? '—')}</span>`;
@@ -352,7 +356,6 @@ function navigate(section) {
   document.getElementById('pageSubtitle').textContent = cfg.subtitle;
   // Auto-close sidebar on mobile after navigation
   if (window.innerWidth <= 900) closeSidebar();
-  trackEvent('page_view', section);
   loadSection(section);
 }
 
@@ -365,8 +368,10 @@ async function loadSection(section) {
   if (section === 'dashboard') { renderDashboard(); return; }
   if (section === 'analytics') { renderAnalytics(); return; }
   if (section === 'settings')  { renderSettings();  return; }
+  if (section === 'busDriver') { renderBusDriver('buses'); return; }
 
   const cfg = SECTIONS[section];
+  if (!cfg?.listPath) return;
   content.innerHTML = `<div class="card"><div class="loading"><div class="spinner"></div> กำลังโหลดข้อมูล...</div></div>`;
 
   try {
@@ -436,7 +441,9 @@ function renderTable(section, items) {
             <input id="searchInput" type="text" class="form-control"
               placeholder="ค้นหา..." oninput="filterTable()" autocomplete="off">
           </div>
-          ${!ro ? `<button class="btn btn-primary" onclick="openCreate('${section}')">＋ เพิ่มรายการ</button>` : ''}
+          ${!ro ? (cfg.withUserCreate
+            ? `<button class="btn btn-primary" onclick="openWithUserModal('${section}')">＋ เพิ่มรายการ</button>`
+            : `<button class="btn btn-primary" onclick="openCreate('${section}')">＋ เพิ่มรายการ</button>`) : ''}
           <button class="btn btn-secondary btn-sm" onclick="loadSection('${section}')">🔄 รีเฟรช</button>
         </div>
       </div>
@@ -534,15 +541,15 @@ async function renderAnalytics() {
 
     const totalToday  = d.total_today ?? 0;
     const totalWeek   = d.total_week  ?? 0;
-    const bySource    = d.by_source    || [];
-    const byEvent     = d.by_event_type || [];
-    const byPlatform  = d.by_platform  || [];
+    const bySource    = d.by_source      || [];
+    const byPlatform  = d.by_platform    || [];
     const byDevice    = d.by_device_type || [];
-    const daily       = d.daily_counts || [];
-    const recent      = d.recent       || [];
+    const daily       = d.daily_counts   || [];
+    const recent      = d.recent         || [];
 
     const webCount    = bySource.find(s => s.name === 'web_admin')?.count  ?? 0;
     const mobileCount = bySource.find(s => s.name === 'mobile_app')?.count ?? 0;
+    const uniqueUsers = new Set(recent.filter(e => e.user_id).map(e => e.user_id)).size;
 
     function sourceBadge(s) {
       return s === 'web_admin'
@@ -554,12 +561,12 @@ async function renderAnalytics() {
       <!-- Stat cards -->
       <div class="stats-grid" style="margin-bottom:20px">
         <div class="stat-card">
-          <div class="stat-icon si-blue">📅</div>
-          <div><div class="stat-value">${totalToday}</div><div class="stat-label">Events วันนี้</div></div>
+          <div class="stat-icon si-blue">🔑</div>
+          <div><div class="stat-value">${totalToday}</div><div class="stat-label">Login วันนี้</div></div>
         </div>
         <div class="stat-card">
           <div class="stat-icon si-indigo">📊</div>
-          <div><div class="stat-value">${totalWeek}</div><div class="stat-label">Events 7 วัน</div></div>
+          <div><div class="stat-value">${totalWeek}</div><div class="stat-label">Login 7 วัน</div></div>
         </div>
         <div class="stat-card">
           <div class="stat-icon si-purple">🌐</div>
@@ -575,7 +582,7 @@ async function renderAnalytics() {
       <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:16px">
         <div class="card">
           <div class="card-header">
-            <div class="card-title">📅 Events รายวัน (7 วัน)</div>
+            <div class="card-title">📅 Login รายวัน (7 วัน)</div>
             <button class="btn btn-secondary btn-sm" onclick="renderAnalytics()">🔄 รีเฟรช</button>
           </div>
           <div class="card-body" style="padding:16px">
@@ -599,34 +606,35 @@ async function renderAnalytics() {
           </div>
         </div>
         <div class="card">
-          <div class="card-header"><div class="card-title">🎯 ประเภท Event</div></div>
-          <div class="card-body" style="padding:16px">
-            <canvas id="chartEvent" height="160"></canvas>
+          <div class="card-header"><div class="card-title">📲 ประเภทอุปกรณ์</div></div>
+          <div class="card-body" style="display:flex;align-items:center;justify-content:center;padding:16px">
+            <canvas id="chartDevice" style="max-height:180px"></canvas>
           </div>
         </div>
       </div>
 
-      <!-- Recent events table -->
+      <!-- Recent logins table -->
       <div class="card">
-        <div class="card-header"><div class="card-title">🕐 Events ล่าสุด (20 รายการ)</div></div>
+        <div class="card-header">
+          <div class="card-title">🕐 Login ล่าสุด (1 ครั้ง/user/วัน)</div>
+        </div>
         <div class="table-wrap">
           <table>
             <thead><tr>
-              <th>เวลา</th><th>Channel</th><th>Event</th><th>หน้า/Screen</th><th>Platform</th><th>Device</th><th>User ID</th>
+              <th>เวลา</th><th>Channel</th><th>Platform</th><th>Device</th><th>User ID</th><th>IP</th>
             </tr></thead>
             <tbody>
               ${recent.length
                 ? recent.map(e => `<tr>
                     <td>${fmtDate(e.created_at)}</td>
                     <td>${sourceBadge(e.source)}</td>
-                    <td><span class="badge b-yellow">${esc(e.event_type)}</span></td>
-                    <td>${esc(e.page || '—')}</td>
                     <td>${esc(e.platform || '—')}</td>
                     <td>${esc(e.device_type || '—')}</td>
                     <td>${e.user_id ? chip(e.user_id) : '<span class="text-muted">—</span>'}</td>
+                    <td><code style="font-size:11px">${esc(e.ip_hint || '—')}</code></td>
                   </tr>`).join('')
-                : `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--muted)">
-                    <div style="font-size:36px;margin-bottom:10px">📭</div>ยังไม่มี events — สร้าง table ใน Supabase แล้วลอง navigate เมนูใดก็ได้
+                : `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted)">
+                    <div style="font-size:36px;margin-bottom:10px">📭</div>ยังไม่มีข้อมูล Login
                   </td></tr>`
               }
             </tbody>
@@ -645,10 +653,10 @@ async function renderAnalytics() {
       data: {
         labels: daily.map(d => d.date.slice(5)),
         datasets: [{
-          label: 'Events',
+          label: 'Login',
           data: daily.map(d => d.count),
           borderColor: '#3b82f6',
-          backgroundColor: 'rgba(59,130,246,0.1)',
+          backgroundColor: 'rgba(59,130,246,0.12)',
           borderWidth: 2.5,
           pointBackgroundColor: '#3b82f6',
           pointRadius: 4,
@@ -693,7 +701,7 @@ async function renderAnalytics() {
       data: {
         labels: byPlatform.map(p => p.name),
         datasets: [{
-          label: 'Events',
+          label: 'Login',
           data: byPlatform.map(p => p.count),
           backgroundColor: ['#8b5cf6','#a78bfa','#c4b5fd','#ddd6fe','#ede9fe'],
           borderRadius: 6,
@@ -711,15 +719,15 @@ async function renderAnalytics() {
       },
     });
 
-    // 4. Event types doughnut
-    const evColors = ['#f59e0b','#3b82f6','#10b981','#ef4444','#8b5cf6','#06b6d4'];
-    makeChart('chartEvent', {
+    // 4. Device doughnut
+    const devColors = ['#f59e0b','#06b6d4','#10b981'];
+    makeChart('chartDevice', {
       type: 'doughnut',
       data: {
-        labels: byEvent.map(e => e.name),
+        labels: byDevice.map(dv => dv.name),
         datasets: [{
-          data: byEvent.map(e => e.count),
-          backgroundColor: evColors,
+          data: byDevice.map(dv => dv.count),
+          backgroundColor: devColors,
           borderColor: '#fff',
           borderWidth: 3,
           hoverOffset: 6,
@@ -735,6 +743,21 @@ async function renderAnalytics() {
   } catch (err) {
     content.innerHTML = errCard('analytics', err.message);
   }
+}
+
+/* =====================================================
+   TRACK DAILY SESSION
+   เช็ค localStorage ก่อน — ถ้าวันนี้ยิงไปแล้วก็ไม่ยิงซ้ำ
+   ใช้สำหรับ session ที่ค้างข้ามวัน (ไม่ได้ login ใหม่)
+   ===================================================== */
+function trackDailySession() {
+  try {
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const stored = localStorage.getItem('analytics_day');
+    if (stored === today) return; // already tracked today — skip
+    trackEvent('login', 'session_resume');
+    localStorage.setItem('analytics_day', today);
+  } catch {}
 }
 
 /* =====================================================
@@ -973,6 +996,138 @@ document.addEventListener('click', e => {
 });
 
 /* =====================================================
+   RENDER NAV — show/hide super-admin-only items
+   ===================================================== */
+function renderNav() {
+  const isSuperAdmin = state.adminType === 'super_admin';
+  document.querySelectorAll('[data-super-admin-only]').forEach(el => {
+    el.style.display = isSuperAdmin ? '' : 'none';
+  });
+  // Update role badge in sidebar
+  const roleEl = document.getElementById('userRole');
+  if (roleEl && state.adminType) {
+    const labels = { super_admin: '⭐ Super Admin', zone_admin: '🗺️ Zone Admin' };
+    roleEl.textContent = labels[state.adminType] || state.adminType;
+  }
+}
+
+/* =====================================================
+   BUS + DRIVER — merged section with tabs
+   ===================================================== */
+async function renderBusDriver(tab = 'buses') {
+  const content = document.getElementById('mainContent');
+  const tabs = `
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button class="btn ${tab==='buses'?'btn-primary':'btn-secondary'}" onclick="renderBusDriver('buses')">🚍 รถโดยสาร</button>
+      <button class="btn ${tab==='drivers'?'btn-primary':'btn-secondary'}" onclick="renderBusDriver('drivers')">🧑‍✈️ คนขับรถ</button>
+    </div>`;
+  content.innerHTML = `<div class="loading"><div class="spinner"></div> กำลังโหลด...</div>`;
+  try {
+    const cfg = SECTIONS[tab];
+    const raw = await apiFetch(cfg.listPath);
+    const items = extractList(raw);
+    state.cache[tab] = items;
+    // inject tabs above the rendered table by wrapping
+    renderTable(tab, items);
+    const card = content.querySelector('.card');
+    if (card) card.insertAdjacentHTML('afterbegin', tabs);
+  } catch (err) {
+    content.innerHTML = tabs + errCard(tab, err.message);
+  }
+}
+
+/* =====================================================
+   2-STEP CREATE: Driver/Admin with User
+   ===================================================== */
+function openWithUserModal(section) {
+  const isDriver = section === 'drivers';
+  const title = isDriver ? '➕ เพิ่มคนขับรถ' : '➕ เพิ่มผู้ดูแลระบบ';
+  const step2Fields = isDriver ? `
+    <div class="form-group">
+      <label class="form-label">รหัสพนักงาน</label>
+      <input type="text" class="form-control" id="wu_employeeCode" placeholder="DRV001">
+    </div>
+    <div class="form-group">
+      <label class="form-label">หมายเลขใบขับขี่</label>
+      <input type="text" class="form-control" id="wu_licenseNo">
+    </div>
+    <div class="form-group">
+      <label class="form-label">เส้นทาง (Route ID)</label>
+      <input type="text" class="form-control" id="wu_routeId" placeholder="วาง ID เส้นทาง">
+    </div>` : `
+    <div class="form-group">
+      <label class="form-label">ประเภท Admin <span style="color:var(--danger)">*</span></label>
+      <select class="form-control" id="wu_adminType">
+        <option value="zone_admin">🗺️ Zone Admin</option>
+        <option value="super_admin">⭐ Super Admin</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">โซน (Zone ID)</label>
+      <input type="text" class="form-control" id="wu_zoneId" placeholder="วาง ID โซน (สำหรับ Zone Admin)">
+    </div>`;
+
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').innerHTML = `
+    <div style="background:var(--bg);border-radius:8px;padding:12px;margin-bottom:16px">
+      <div style="font-weight:600;margin-bottom:10px;color:var(--primary)">👤 ขั้นตอนที่ 1 — ข้อมูล User</div>
+      <div class="form-group">
+        <label class="form-label">ชื่อเต็ม</label>
+        <input type="text" class="form-control" id="wu_fullName" placeholder="ชื่อ-นามสกุล">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Username <span style="color:var(--danger)">*</span></label>
+        <input type="text" class="form-control" id="wu_username" placeholder="username">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input type="email" class="form-control" id="wu_email" placeholder="email@example.com">
+      </div>
+    </div>
+    <div style="background:var(--bg);border-radius:8px;padding:12px">
+      <div style="font-weight:600;margin-bottom:10px;color:var(--primary)">${isDriver ? '🚌 ขั้นตอนที่ 2 — ข้อมูลคนขับ' : '👤 ขั้นตอนที่ 2 — ข้อมูล Admin'}</div>
+      ${step2Fields}
+    </div>`;
+
+  document.getElementById('modalSubmitBtn').onclick = () => submitWithUser(section);
+  document.getElementById('crudModal').classList.remove('hidden');
+}
+
+async function submitWithUser(section) {
+  const isDriver = section === 'drivers';
+  const username = document.getElementById('wu_username')?.value?.trim();
+  if (!username) { toast('กรุณากรอก Username', 'error'); return; }
+
+  const body = {
+    fullName: document.getElementById('wu_fullName')?.value?.trim() || null,
+    username,
+    email: document.getElementById('wu_email')?.value?.trim() || null,
+    ...(isDriver ? {
+      employeeCode: document.getElementById('wu_employeeCode')?.value?.trim() || null,
+      licenseNo:    document.getElementById('wu_licenseNo')?.value?.trim() || null,
+      assignedRouteId: document.getElementById('wu_routeId')?.value?.trim() || null,
+    } : {
+      adminType: document.getElementById('wu_adminType')?.value || 'zone_admin',
+      zoneId:    document.getElementById('wu_zoneId')?.value?.trim() || null,
+    }),
+  };
+
+  const path = isDriver ? '/admin/drivers/with-user' : '/admin/admins/with-user';
+  try {
+    document.getElementById('modalSubmitBtn').disabled = true;
+    await apiFetch(path, { method: 'POST', body: JSON.stringify(body) });
+    toast(`${isDriver ? 'คนขับรถ' : 'ผู้ดูแลระบบ'}สร้างสำเร็จ ✅`, 'success');
+    closeModal();
+    if (section === 'drivers') renderBusDriver('drivers');
+    else loadSection('admins');
+  } catch (err) {
+    toast(err.message, 'error');
+  } finally {
+    document.getElementById('modalSubmitBtn').disabled = false;
+  }
+}
+
+/* =====================================================
    HEALTH CHECK
    ===================================================== */
 async function checkHealth() {
@@ -1018,11 +1173,26 @@ async function init() {
     state.user = u;
     setUserUI(u);
     if (u) localStorage.setItem(USER_KEY, JSON.stringify(u));
+    trackDailySession();
+
+    // Fetch admin type for role-based nav
+    if (u?.role === 'admin' || u?.id) {
+      try {
+        const ar = await apiFetch('/admin/admins');
+        const admins = extractList(ar);
+        const myAdmin = admins.find(a => a.user_id === u.id || a?.user?.id === u.id);
+        if (myAdmin) {
+          state.adminType = myAdmin.admin_type;
+          state.zoneId    = myAdmin.zone_id ?? null;
+        }
+      } catch {}
+    }
   } catch {
     document.getElementById('userName').textContent = 'Admin';
     document.getElementById('userAvatar').textContent = 'A';
   }
 
+  renderNav();
   checkHealth();
   navigate('dashboard');
 }

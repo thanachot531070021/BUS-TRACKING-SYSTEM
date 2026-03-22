@@ -1,7 +1,7 @@
 import { json } from '../lib/http';
 import { authFromJwtPayload, decodeJwtPayload, decodeMockToken, hasRequiredRole, parseBearerToken } from '../lib/auth';
 import { findAdminByUserId } from '../repositories/admins';
-import { listRouteIdsForAdmin } from '../repositories/route-admins';
+import { listRouteIdsByZone } from '../repositories/zones';
 import { getUserByAuthUserId } from '../repositories/users';
 import type { AuthContext, Env, UserRole } from '../types';
 
@@ -46,19 +46,24 @@ export async function requireRole(env: Env, request: Request, allowedRoles: User
 
 export async function enrichAdminScope(env: Env, auth: AuthContext) {
   if (auth.role !== 'admin') return auth;
-  if (auth.adminType && auth.routeIds) return auth;
+  if (auth.adminType && (auth.zoneId !== undefined || auth.routeIds)) return auth;
 
   const admin = await findAdminByUserId(env, auth.userId);
   if (!admin) return auth;
 
-  const routeIds = admin.admin_type === 'route_admin'
-    ? await listRouteIdsForAdmin(env, admin.id)
+  const zoneId = (admin as any).zone_id ?? undefined;
+
+  // zone_admin: scope to routes within their zone
+  // route_admin: legacy support — no zone_id, routeIds empty
+  const routeIds = (admin.admin_type === 'zone_admin' || admin.admin_type === 'route_admin') && zoneId
+    ? await listRouteIdsByZone(env, zoneId)
     : [];
 
   return {
     ...auth,
     adminId: admin.id,
     adminType: admin.admin_type,
+    zoneId,
     routeIds,
   };
 }
@@ -68,15 +73,14 @@ export async function requireAdminScope(env: Env, request: Request, routeId?: st
   if (auth instanceof Response) return auth;
 
   const enriched = await enrichAdminScope(env, auth);
+
+  // super_admin: unrestricted
   if (enriched.adminType === 'super_admin') return enriched;
 
-  if (enriched.adminType === 'route_admin') {
-    if (!routeId) {
-      return json({ error: 'Forbidden: routeId is required for route admin scope check' }, 403);
-    }
-
-    if (!enriched.routeIds?.includes(routeId)) {
-      return json({ error: 'Forbidden: route admin cannot access this route' }, 403);
+  // zone_admin / route_admin: must have a zone with routes
+  if (enriched.adminType === 'zone_admin' || enriched.adminType === 'route_admin') {
+    if (routeId && !enriched.routeIds?.includes(routeId)) {
+      return json({ error: 'Forbidden: you do not have access to this route' }, 403);
     }
   }
 

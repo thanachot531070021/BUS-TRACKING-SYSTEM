@@ -300,7 +300,7 @@
         const user = data?.user || data?.data?.user || data?.data?.profile || data?.profile;
         if (user) localStorage.setItem('bus-tracking-admin-user', JSON.stringify(user));
 
-        // Track login event (fire & forget)
+        // Track login event (fire & forget) + mark analytics_day so init() skips duplicate
         try {
           const ua = navigator.userAgent;
           const platform = /Windows/.test(ua)?'Windows':/Macintosh/.test(ua)?'macOS':/Linux/.test(ua)?'Linux':/iPhone|iPad/.test(ua)?'iOS':/Android/.test(ua)?'Android':'Unknown';
@@ -310,6 +310,8 @@
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify({ source: 'web_admin', eventType: 'login', page: 'login', platform, deviceType }),
           }).catch(() => {});
+          // Mark today so dashboard's trackDailySession() won't fire again same day
+          localStorage.setItem('analytics_day', new Date().toISOString().slice(0, 10));
         } catch {}
 
         window.location.replace('index.html');

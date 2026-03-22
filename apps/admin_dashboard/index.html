@@ -36,14 +36,19 @@
         </button>
       </div>
 
-      <div class="nav-group">
-        <div class="nav-group-label">บัญชีผู้ใช้</div>
+      <!-- Super Admin only group -->
+      <div class="nav-group" data-super-admin-only>
+        <div class="nav-group-label">การจัดการระบบ</div>
+        <button class="nav-item" data-section="zones" onclick="navigate('zones')">
+          <span class="nav-icon">🗺️</span><span>โซน</span>
+        </button>
         <button class="nav-item" data-section="users" onclick="navigate('users')">
           <span class="nav-icon">👥</span><span>ผู้ใช้งาน</span>
         </button>
-        <button class="nav-item" data-section="drivers" onclick="navigate('drivers')">
-          <span class="nav-icon">🚌</span><span>คนขับรถ</span>
-        </button>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">บัญชีผู้ดูแล</div>
         <button class="nav-item" data-section="admins" onclick="navigate('admins')">
           <span class="nav-icon">👤</span><span>ผู้ดูแลระบบ</span>
         </button>
@@ -54,8 +59,8 @@
         <button class="nav-item" data-section="routes" onclick="navigate('routes')">
           <span class="nav-icon">🛣️</span><span>เส้นทางรถ</span>
         </button>
-        <button class="nav-item" data-section="buses" onclick="navigate('buses')">
-          <span class="nav-icon">🚍</span><span>รถโดยสาร</span>
+        <button class="nav-item" data-section="busDriver" onclick="navigate('busDriver')">
+          <span class="nav-icon">🚌</span><span>รถและคนขับ</span>
         </button>
         <button class="nav-item" data-section="waiting" onclick="navigate('waiting')">
           <span class="nav-icon">⏳</span><span>รายการรอรับ</span>
@@ -64,9 +69,6 @@
 
       <div class="nav-group">
         <div class="nav-group-label">การตั้งค่า</div>
-        <button class="nav-item" data-section="routeAdmins" onclick="navigate('routeAdmins')">
-          <span class="nav-icon">🔗</span><span>มอบหมายเส้นทาง</span>
-        </button>
         <button class="nav-item" data-section="settings" onclick="navigate('settings')">
           <span class="nav-icon">⚙️</span><span>การตั้งค่า API</span>
         </button>
