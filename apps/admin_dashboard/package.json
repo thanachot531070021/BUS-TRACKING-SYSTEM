@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "devDependencies": {
-    "vite": "^7.1.3"
+    "@cloudflare/vite-plugin": "^1.36.4",
+    "vite": "^7.1.3",
+    "wrangler": "^4.90.1"
   }
 }

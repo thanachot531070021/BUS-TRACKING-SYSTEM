@@ -62,7 +62,7 @@ export async function adminRouter(request: Request, env: Env) {
   if (pathname === '/admin/drivers/with-user' && request.method === 'POST') {
     const auth = await requireAdminScope(env, request);
     if (auth instanceof Response) return auth;
-    return handleAdminCreateDriverWithUser(env, request);
+    return handleAdminCreateDriverWithUser(env, request, auth);
   }
   if (pathname === '/admin/drivers' && request.method === 'GET') {
     const auth = await requireAdminScope(env, request);
@@ -72,25 +72,29 @@ export async function adminRouter(request: Request, env: Env) {
   if (pathname === '/admin/drivers' && request.method === 'POST') {
     const auth = await requireAdminScope(env, request);
     if (auth instanceof Response) return auth;
-    return handleAdminCreateDriver(env, request);
+    return handleAdminCreateDriver(env, request, auth);
   }
-  if (pathname.startsWith('/admin/drivers/') && request.method === 'GET') return handleAdminGetDriverById(env, getIdFromPath(pathname, '/admin/drivers/') ?? '');
+  if (pathname.startsWith('/admin/drivers/') && request.method === 'GET') {
+    const auth = await requireAdminScope(env, request);
+    if (auth instanceof Response) return auth;
+    return handleAdminGetDriverById(env, getIdFromPath(pathname, '/admin/drivers/') ?? '', auth);
+  }
   if (pathname.startsWith('/admin/drivers/') && request.method === 'PUT') {
     const auth = await requireAdminScope(env, request);
     if (auth instanceof Response) return auth;
-    return handleAdminUpdateDriver(env, request, getIdFromPath(pathname, '/admin/drivers/') ?? '');
+    return handleAdminUpdateDriver(env, request, getIdFromPath(pathname, '/admin/drivers/') ?? '', auth);
   }
   if (pathname.startsWith('/admin/drivers/') && request.method === 'DELETE') {
     const auth = await requireAdminScope(env, request);
     if (auth instanceof Response) return auth;
-    return handleAdminDeleteDriver(env, getIdFromPath(pathname, '/admin/drivers/') ?? '');
+    return handleAdminDeleteDriver(env, getIdFromPath(pathname, '/admin/drivers/') ?? '', auth);
   }
 
   // ── Admins ───────────────────────────────────────────────────────────────
   if (pathname === '/admin/admins/with-user' && request.method === 'POST') {
     const auth = await requireAdminScope(env, request);
     if (auth instanceof Response) return auth;
-    return handleAdminCreateAdminWithUser(env, request);
+    return handleAdminCreateAdminWithUser(env, request, auth);
   }
   if (pathname === '/admin/admins' && request.method === 'GET') {
     const rawAuth = await requireRole(env, request, ['admin']);
@@ -102,18 +106,24 @@ export async function adminRouter(request: Request, env: Env) {
   if (pathname === '/admin/admins' && request.method === 'POST') {
     const auth = await requireAdminScope(env, request);
     if (auth instanceof Response) return auth;
-    return handleAdminCreateAdmin(env, request);
+    return handleAdminCreateAdmin(env, request, auth);
   }
-  if (pathname.startsWith('/admin/admins/') && request.method === 'GET') return handleAdminGetAdminById(env, getIdFromPath(pathname, '/admin/admins/') ?? '');
+  if (pathname.startsWith('/admin/admins/') && request.method === 'GET') {
+    const rawAuth = await requireRole(env, request, ['admin']);
+    if (rawAuth instanceof Response) return rawAuth;
+    const auth = await enrichAdminScope(env, rawAuth);
+    if (auth instanceof Response) return auth;
+    return handleAdminGetAdminById(env, getIdFromPath(pathname, '/admin/admins/') ?? '', auth);
+  }
   if (pathname.startsWith('/admin/admins/') && request.method === 'PUT') {
     const auth = await requireAdminScope(env, request);
     if (auth instanceof Response) return auth;
-    return handleAdminUpdateAdmin(env, request, getIdFromPath(pathname, '/admin/admins/') ?? '');
+    return handleAdminUpdateAdmin(env, request, getIdFromPath(pathname, '/admin/admins/') ?? '', auth);
   }
   if (pathname.startsWith('/admin/admins/') && request.method === 'DELETE') {
     const auth = await requireAdminScope(env, request);
     if (auth instanceof Response) return auth;
-    return handleAdminDeleteAdmin(env, getIdFromPath(pathname, '/admin/admins/') ?? '');
+    return handleAdminDeleteAdmin(env, getIdFromPath(pathname, '/admin/admins/') ?? '', auth);
   }
 
   // ── Route Admins (legacy) ────────────────────────────────────────────────

@@ -29,3 +29,7 @@ export function notFound() {
 export function badRequest(message: string) {
   return json({ error: message }, 400);
 }
+
+export function forbidden(message: string) {
+  return json({ error: message }, 403);
+}

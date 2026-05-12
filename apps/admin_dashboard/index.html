@@ -8,6 +8,66 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>
+    /* ===== SEARCHABLE SELECT (async) ===== */
+    .ss-container { position: relative; }
+    .ss-trigger {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 12px; border: 1.5px solid var(--border); border-radius: var(--radius);
+      background: #fff; cursor: pointer; user-select: none; min-height: 40px;
+      transition: border-color .2s, box-shadow .2s; font-size: 14px;
+    }
+    .ss-trigger:hover { border-color: var(--primary); }
+    .ss-container.open .ss-trigger { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,.12); }
+    .ss-trigger-label { flex: 1; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ss-trigger-label.ph { color: var(--muted); }
+    .ss-trigger-arrow { color: var(--muted); font-size: 11px; margin-left: 6px; transition: transform .2s; flex-shrink: 0; }
+    .ss-container.open .ss-trigger-arrow { transform: rotate(180deg); }
+    .ss-panel {
+      position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 9999;
+      background: #fff; border: 1.5px solid var(--primary); border-radius: var(--radius);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.13); display: none;
+    }
+    .ss-container.open .ss-panel { display: block; }
+    .ss-search-input {
+      width: 100%; padding: 8px 12px; border: none; border-bottom: 1px solid var(--border);
+      background: var(--bg); font-size: 13px; outline: none; box-sizing: border-box;
+      border-radius: var(--radius) var(--radius) 0 0;
+    }
+    .ss-options-list { max-height: 200px; overflow-y: auto; }
+    .ss-option {
+      padding: 8px 12px; font-size: 13px; cursor: pointer;
+      transition: background .12s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .ss-option:hover { background: #eff6ff; }
+    .ss-option.selected { background: #dbeafe; color: var(--primary); font-weight: 600; }
+    .ss-option.ss-hidden { display: none; }
+    .ss-no-results { padding: 12px; text-align: center; color: var(--muted); font-size: 13px; }
+    .ss-loading-opt { padding: 12px; text-align: center; color: var(--muted); font-size: 13px; }
+
+    /* ===== PAGINATION ===== */
+    .pg-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px; border-top: 1px solid var(--border);
+      background: var(--bg); flex-wrap: wrap; gap: 8px;
+      border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+    }
+    .pg-info { font-size: 13px; color: var(--muted); }
+    .pg-controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .pg-size {
+      padding: 4px 8px; border: 1.5px solid var(--border); border-radius: 6px;
+      background: #fff; font-size: 13px; cursor: pointer; outline: none;
+    }
+    .pg-size:focus { border-color: var(--primary); }
+    .pg-btn {
+      padding: 4px 10px; border: 1.5px solid var(--border); border-radius: 6px;
+      background: #fff; cursor: pointer; font-size: 13px; line-height: 1.4;
+      transition: background .15s, border-color .15s; color: var(--text);
+    }
+    .pg-btn:hover:not(:disabled) { background: #eff6ff; border-color: var(--primary); color: var(--primary); }
+    .pg-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .pg-cur { font-size: 13px; color: var(--text); font-weight: 500; padding: 0 4px; }
+  </style>
 </head>
 <body>
 

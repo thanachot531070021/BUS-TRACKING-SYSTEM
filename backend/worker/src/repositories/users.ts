@@ -48,12 +48,13 @@ const mockUsers: UserProfile[] = [
 
 export async function listUsers(env: Env) {
   if (!usingSupabase(env)) return mockUsers;
-  return supabaseFetch<UserProfile[]>(env, 'users?select=*&order=created_at.desc');
+  // Include admin profile so frontend can distinguish super_admin vs zone_admin
+  return supabaseFetch<UserProfile[]>(env, 'users?select=*,admin_profile:admins(admin_type,zone_id)&order=created_at.desc');
 }
 
 export async function getUserById(env: Env, userId: string) {
   if (!usingSupabase(env)) return mockUsers.find((user) => user.id === userId) ?? null;
-  const rows = await supabaseFetch<UserProfile[]>(env, `users?select=*&id=eq.${userId}&limit=1`);
+  const rows = await supabaseFetch<UserProfile[]>(env, `users?select=*,admin_profile:admins(admin_type,zone_id)&id=eq.${userId}&limit=1`);
   return rows[0] ?? null;
 }
 

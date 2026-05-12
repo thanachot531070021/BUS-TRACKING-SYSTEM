@@ -60,7 +60,7 @@ export function decodeMockToken(token: string): AuthContext | null {
   return null;
 }
 
-export function authFromJwtPayload(token: string, payload: Record<string, any>): AuthContext | null {
+export function authFromJwtPayload(token: string, payload: Record<string, any>): AuthContext & { authUserEmail?: string } | null {
   const authUserId = payload?.sub;
   if (!authUserId) return null;
 
@@ -69,6 +69,7 @@ export function authFromJwtPayload(token: string, payload: Record<string, any>):
     role: 'passenger',
     userId: authUserId,
     provider: 'email',
+    authUserEmail: payload?.email ?? undefined,
   };
 }
 

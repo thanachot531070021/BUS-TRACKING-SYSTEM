@@ -2,6 +2,29 @@
 
 Backend is organized by domain and is now documented as **online-first** for Supabase.
 
+## Role-Based Access Control (RBAC)
+
+| Role | Scope | Notes |
+|---|---|---|
+| `super_admin` | All zones, all data | No restrictions |
+| `zone_admin` | Own zone only | Cannot cross zones; cannot create/promote super_admin |
+| `driver` | Own route only | Zone implied via `assigned_route_id → routes.zone_id` |
+| `passenger` | Public data, all zones | Read-only |
+
+### Zone Isolation (zone_admin)
+- All list, get, create, update, delete operations are scoped to `zone_id`
+- Drivers are scoped via `routeIds` (routes in the zone)
+- Attempting to read/write data outside own zone returns `403 Forbidden`
+- Cannot set `adminType: super_admin` when creating or updating admins
+
+### Zone Hierarchy
+```
+Zone
+  └── Route[] (many routes per zone)
+        └── Bus[] (many buses per route)
+              └── Driver (one driver per bus)
+```
+
 ## Structure
 - `src/index.ts` — fetch entrypoint
 - `src/router.ts` — main router entry

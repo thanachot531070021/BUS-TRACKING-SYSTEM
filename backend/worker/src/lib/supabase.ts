@@ -53,6 +53,32 @@ export async function supabaseFetch<T>(env: Env, path: string, init?: RequestIni
   return response.json<T>();
 }
 
+/**
+ * Call Supabase Admin Auth API (requires service role key).
+ * e.g. POST /auth/v1/admin/users  to create a user with password.
+ */
+export async function supabaseAdminAuthFetch<T>(env: Env, path: string, init?: RequestInit): Promise<T> {
+  const baseUrl = getSupabaseBaseUrl(env);
+  const serviceKey = getSupabaseServiceRoleKey(env);
+
+  const response = await fetch(`${baseUrl}/auth/v1/${path}`, {
+    ...init,
+    headers: {
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+      'Content-Type': 'application/json',
+      ...(init?.headers || {}),
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Supabase admin auth request failed: ${response.status} ${text}`);
+  }
+
+  return response.json<T>();
+}
+
 export async function supabaseAuthFetch<T>(env: Env, path: string, init?: RequestInit): Promise<T> {
   const baseUrl = getSupabaseBaseUrl(env);
   const anonKey = getSupabaseAnonKey(env);

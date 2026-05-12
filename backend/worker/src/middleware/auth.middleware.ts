@@ -2,7 +2,7 @@ import { json } from '../lib/http';
 import { authFromJwtPayload, decodeJwtPayload, decodeMockToken, hasRequiredRole, parseBearerToken } from '../lib/auth';
 import { findAdminByUserId } from '../repositories/admins';
 import { listRouteIdsByZone } from '../repositories/zones';
-import { getUserByAuthUserId } from '../repositories/users';
+import { findUserByUsernameOrEmail, getUserByAuthUserId, updateUser } from '../repositories/users';
 import type { AuthContext, Env, UserRole } from '../types';
 
 export async function requireAuth(env: Env, request: Request): Promise<AuthContext | Response> {
@@ -20,7 +20,18 @@ export async function requireAuth(env: Env, request: Request): Promise<AuthConte
     return json({ error: 'Unauthorized: invalid token' }, 401);
   }
 
-  const profile = await getUserByAuthUserId(env, jwtAuth.userId);
+  // Primary lookup: by auth_user_id
+  let profile = await getUserByAuthUserId(env, jwtAuth.userId);
+
+  // Fallback: look up by email from JWT and auto-link auth_user_id
+  if (!profile && jwtAuth.authUserEmail) {
+    profile = await findUserByUsernameOrEmail(env, jwtAuth.authUserEmail);
+    if (profile) {
+      await updateUser(env, profile.id, { authUserId: jwtAuth.userId });
+      profile.auth_user_id = jwtAuth.userId;
+    }
+  }
+
   if (!profile) {
     return json({ error: 'Unauthorized: no linked user profile for auth account' }, 401);
   }

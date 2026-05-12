@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>โครงสร้างผู้ใช้งาน — Bus Tracking System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --primary:    #3b82f6;
+      --primary-dk: #1d4ed8;
+      --success:    #10b981;
+      --warning:    #f59e0b;
+      --danger:     #ef4444;
+      --purple:     #8b5cf6;
+      --indigo:     #6366f1;
+      --teal:       #14b8a6;
+      --bg:         #f8fafc;
+      --card:       #ffffff;
+      --border:     #e2e8f0;
+      --text:       #1e293b;
+      --muted:      #94a3b8;
+      --radius:     10px;
+      --shadow:     0 1px 3px rgba(0,0,0,0.08);
+      --shadow-md:  0 4px 16px rgba(0,0,0,0.10);
+    }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* HEADER */
+    .page-header {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%);
+      color: #fff; padding: 28px 24px 22px; text-align: center;
+    }
+    .page-header h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 6px; }
+    .page-header p  { font-size: 0.9rem; opacity: .85; }
+    .header-stats { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+    .hstat {
+      background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 20px; padding: 5px 14px; font-size: 12px; font-weight: 600;
+    }
+
+    /* LAYOUT */
+    .container { max-width: 1200px; margin: 0 auto; padding: 24px 16px; }
+
+    /* CONTROLS */
+    .controls { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center; }
+    .search-box {
+      flex: 1; min-width: 220px; display: flex; align-items: center; gap: 8px;
+      background: var(--card); border: 1.5px solid var(--border);
+      border-radius: var(--radius); padding: 8px 14px; box-shadow: var(--shadow);
+    }
+    .search-box input { border: none; outline: none; font-size: 14px; background: transparent; width: 100%; font-family: inherit; }
+    .tab-bar { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tab-btn {
+      padding: 8px 16px; border-radius: 20px; border: 1.5px solid var(--border);
+      background: var(--card); cursor: pointer; font-size: 13px; font-weight: 500;
+      font-family: inherit; transition: all .15s; color: var(--text);
+    }
+    .tab-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .tab-btn:hover:not(.active) { border-color: var(--primary); color: var(--primary); }
+    .btn {
+      padding: 9px 16px; border-radius: var(--radius); border: none; cursor: pointer;
+      font-size: 13px; font-weight: 500; font-family: inherit; transition: all .15s;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dk); }
+    .btn-ghost { background: var(--card); color: var(--text); border: 1.5px solid var(--border); }
+    .btn-ghost:hover { border-color: var(--primary); color: var(--primary); }
+
+    /* SUMMARY */
+    .summary-bar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .sum-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 12px 18px; display: flex; align-items: center; gap: 10px;
+      box-shadow: var(--shadow); flex: 1; min-width: 110px;
+    }
+    .sum-icon { font-size: 1.4rem; }
+    .sum-val  { font-size: 1.25rem; font-weight: 700; }
+    .sum-lbl  { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+    /* BADGES */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap;
+    }
+    .b-red    { background: #fee2e2; color: #b91c1c; }
+    .b-blue   { background: #dbeafe; color: #1d4ed8; }
+    .b-green  { background: #dcfce7; color: #15803d; }
+    .b-purple { background: #ede9fe; color: #6d28d9; }
+    .b-indigo { background: #e0e7ff; color: #4338ca; }
+    .b-gray   { background: #f1f5f9; color: #64748b; }
+    .b-orange { background: #ffedd5; color: #c2410c; }
+    .b-teal   { background: #ccfbf1; color: #0f766e; }
+
+    /* TREE */
+    .tree { display: flex; flex-direction: column; gap: 16px; }
+
+    /* ZONE CARD */
+    .zone-card {
+      background: var(--card); border: 2px solid #e0e7ff;
+      border-radius: 12px; overflow: hidden; box-shadow: var(--shadow);
+    }
+    .zone-card.open { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,.1), var(--shadow-md); }
+
+    .zone-head {
+      display: flex; align-items: center; gap: 12px; padding: 16px 18px;
+      cursor: pointer; user-select: none; background: linear-gradient(to right, #f0f4ff, #fff);
+      transition: background .15s;
+    }
+    .zone-head:hover { background: #e8edff; }
+    .zone-icon { font-size: 1.5rem; flex-shrink: 0; }
+    .zone-info { flex: 1; }
+    .zone-name { font-weight: 700; font-size: 1rem; }
+    .zone-meta-row { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; align-items: center; }
+    .zone-actions { display: flex; gap: 6px; flex-shrink: 0; align-items: center; }
+    .chevron { color: var(--muted); font-size: 12px; transition: transform .2s; }
+    .zone-card.open .chevron { transform: rotate(180deg); }
+
+    .zone-body { display: none; border-top: 1px solid #e0e7ff; }
+    .zone-card.open .zone-body { display: block; }
+
+    /* ZONE BODY COLUMNS */
+    .zone-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+    .zone-col { padding: 14px 16px; }
+    .zone-col:first-child { border-right: 1px solid var(--border); }
+    .col-title {
+      font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .5px;
+      text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+    }
+
+    /* USER CHIP */
+    .user-chip {
+      display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+      border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px;
+      cursor: pointer; transition: all .15s; background: var(--bg);
+    }
+    .user-chip:hover { border-color: var(--primary); background: #eff6ff; box-shadow: var(--shadow-md); }
+    .user-chip.hl { border-color: var(--primary); background: #eff6ff; }
+    .avatar {
+      width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0; color: #fff;
+    }
+    .av-red    { background: #ef4444; }
+    .av-purple { background: #8b5cf6; }
+    .av-blue   { background: #3b82f6; }
+    .av-green  { background: #10b981; }
+    .av-indigo { background: #6366f1; }
+    .av-gray   { background: #94a3b8; }
+    .user-chip-info { flex: 1; min-width: 0; }
+    .user-chip-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-chip-sub  { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+    .user-chip-badge { flex-shrink: 0; }
+
+    /* ROUTE INSIDE ZONE */
+    .route-section { padding: 12px 16px; border-top: 1px solid var(--border); }
+    .route-section-title {
+      font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .5px;
+      text-transform: uppercase; margin-bottom: 10px;
+    }
+    .route-row {
+      border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 8px;
+    }
+    .route-row.open { border-color: #93c5fd; }
+    .route-head {
+      display: flex; align-items: center; gap: 8px; padding: 9px 12px;
+      cursor: pointer; background: #f8fafc; transition: background .15s;
+    }
+    .route-head:hover { background: #eff6ff; }
+    .route-head-info { flex: 1; }
+    .route-head-name { font-size: 13px; font-weight: 600; }
+    .route-head-sub  { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .route-body { display: none; padding: 10px 12px; border-top: 1px solid #dbeafe; background: #fff; }
+    .route-row.open .route-body { display: block; }
+
+    /* PASSENGER SECTION */
+    .section-card {
+      background: var(--card); border: 2px solid var(--border);
+      border-radius: 12px; overflow: hidden; box-shadow: var(--shadow);
+    }
+    .section-head {
+      display: flex; align-items: center; gap: 12px; padding: 16px 18px;
+      cursor: pointer; user-select: none; background: linear-gradient(to right, #f0fdf4, #fff);
+      border-bottom: 1px solid var(--border); transition: background .15s;
+    }
+    .section-head:hover { background: #dcfce7; }
+    .section-body { padding: 14px 16px; }
+    .passenger-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr)); gap: 8px; }
+
+    /* SUPER ADMIN SECTION */
+    .super-section-head { background: linear-gradient(to right, #fef2f2, #fff) !important; }
+    .super-section-head:hover { background: #fee2e2 !important; }
+
+    /* EMPTY */
+    .empty { text-align: center; padding: 20px; color: var(--muted); font-size: 13px; }
+
+    /* SEARCH HIGHLIGHT */
+    .hidden-item { display: none !important; }
+
+    /* DRAWER */
+    .drawer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 100; }
+    .drawer-overlay.open { display: block; }
+    .drawer {
+      position: fixed; right: 0; top: 0; bottom: 0; width: 420px; max-width: 96vw;
+      background: var(--card); box-shadow: -4px 0 24px rgba(0,0,0,.15); z-index: 101;
+      display: flex; flex-direction: column; transform: translateX(100%); transition: transform .25s ease;
+    }
+    .drawer.open { transform: translateX(0); }
+    .drawer-header {
+      padding: 18px 20px 14px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: flex-start; gap: 12px;
+    }
+    .drawer-avatar { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 20px; color: #fff; flex-shrink: 0; }
+    .drawer-title { flex: 1; }
+    .drawer-title h3 { font-size: 1.05rem; font-weight: 700; }
+    .drawer-title p  { font-size: 12px; color: var(--muted); margin-top: 3px; }
+    .drawer-close { background: none; border: none; font-size: 18px; cursor: pointer; color: var(--muted); padding: 2px 6px; border-radius: 6px; }
+    .drawer-close:hover { background: var(--bg); color: var(--text); }
+    .drawer-body { flex: 1; overflow-y: auto; padding: 18px 20px; }
+    .detail-sec { margin-bottom: 20px; }
+    .detail-sec-title {
+      font-size: 11px; font-weight: 700; color: var(--muted); letter-spacing: .5px;
+      text-transform: uppercase; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
+    }
+    .detail-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 9px; gap: 8px; }
+    .detail-key { font-size: 13px; color: var(--muted); flex-shrink: 0; }
+    .detail-val { font-size: 13px; font-weight: 500; text-align: right; word-break: break-all; }
+    .detail-val code { font-family: monospace; font-size: 11px; background: var(--bg); padding: 2px 6px; border-radius: 4px; display: inline-block; }
+
+    /* COPY BUTTON */
+    .copy-btn {
+      background: none; border: none; cursor: pointer; font-size: 14px;
+      padding: 3px 5px; border-radius: 6px; opacity: 0; transition: opacity .15s, background .15s;
+      flex-shrink: 0; line-height: 1;
+    }
+    .user-chip:hover .copy-btn { opacity: 1; }
+    .copy-btn:hover { background: #dbeafe; }
+    .copy-btn.copied { opacity: 1; }
+
+    /* TOAST */
+    .toast-container { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 200; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
+    .toast {
+      background: #1e293b; color: #fff; padding: 10px 18px; border-radius: 20px;
+      font-size: 13px; font-weight: 500; box-shadow: 0 4px 16px rgba(0,0,0,.2);
+      animation: toastIn .2s ease; pointer-events: none;
+    }
+    @keyframes toastIn { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+    @keyframes toastOut { to { opacity:0; transform: translateY(10px); } }
+
+    /* LOADING */
+    .page-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px 20px; gap: 14px; color: var(--muted); }
+    .spinner { width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin .7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 700px) {
+      .zone-columns { grid-template-columns: 1fr; }
+      .zone-col:first-child { border-right: none; border-bottom: 1px solid var(--border); }
+      .drawer { width: 100vw; }
+      .passenger-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1>👥 โครงสร้างผู้ใช้งาน</h1>
+  <p>แสดงการเชื่อมโยง Zone → Admin / Route → Driver → Passenger — ไม่ต้องเข้าสู่ระบบ</p>
+  <div class="header-stats">
+    <span class="hstat" id="hbZones">⏳ กำลังโหลด...</span>
+    <span class="hstat" id="hbAdmins"></span>
+    <span class="hstat" id="hbDrivers"></span>
+    <span class="hstat" id="hbPassengers"></span>
+  </div>
+</header>
+
+<div class="container">
+  <!-- Controls -->
+  <div class="controls">
+    <div class="search-box">
+      <span>🔍</span>
+      <input type="text" id="searchInput" placeholder="ค้นหาชื่อ, email, username, รหัส..." oninput="applySearch()">
+    </div>
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="setView('all')" id="tab_all">ทั้งหมด</button>
+      <button class="tab-btn" onclick="setView('zone')" id="tab_zone">⭐ Super Admin</button>
+      <button class="tab-btn" onclick="setView('admin')" id="tab_admin">🗺️ Zone Admin</button>
+      <button class="tab-btn" onclick="setView('driver')" id="tab_driver">🚌 Driver</button>
+      <button class="tab-btn" onclick="setView('passenger')" id="tab_passenger">👤 Passenger</button>
+    </div>
+    <button class="btn btn-primary" onclick="loadData()">🔄 รีเฟรช</button>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary-bar" id="summaryBar" style="display:none">
+    <div class="sum-card" style="border-color:#fecaca">
+      <div class="sum-icon">⭐</div>
+      <div><div class="sum-val" id="sumSuperAdmins" style="color:#ef4444">—</div><div class="sum-lbl">Super Admin</div></div>
+    </div>
+    <div class="sum-card" style="border-color:#c7d2fe">
+      <div class="sum-icon">🗺️</div>
+      <div><div class="sum-val" id="sumZones" style="color:#6366f1">—</div><div class="sum-lbl">Zone Admin</div></div>
+    </div>
+    <div class="sum-card" style="border-color:#a5f3fc">
+      <div class="sum-icon">🚌</div>
+      <div><div class="sum-val" id="sumDrivers" style="color:#0891b2">—</div><div class="sum-lbl">Driver</div></div>
+    </div>
+    <div class="sum-card" style="border-color:#bbf7d0">
+      <div class="sum-icon">👤</div>
+      <div><div class="sum-val" id="sumPassengers" style="color:#15803d">—</div><div class="sum-lbl">Passenger</div></div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-icon">👥</div>
+      <div><div class="sum-val" id="sumTotal">—</div><div class="sum-lbl">ทั้งหมด</div></div>
+    </div>
+  </div>
+
+  <!-- Tree -->
+  <div id="treeContainer">
+    <div class="page-loading"><div class="spinner"></div><div>กำลังโหลดข้อมูล...</div></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Drawer -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div class="drawer-avatar" id="drawerAvatar">?</div>
+    <div class="drawer-title">
+      <h3 id="drawerName">—</h3>
+      <p id="drawerSub">—</p>
+    </div>
+    <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div style="padding:10px 20px 0;border-bottom:1px solid var(--border)">
+    <button onclick="copyDrawerUser()" style="width:100%;padding:8px;border-radius:8px;border:1.5px solid var(--border);background:var(--bg);cursor:pointer;font-size:13px;font-weight:500;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s" onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text)'" id="drawerCopyBtn">
+      📋 คัดลอก Email
+    </button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+</aside>
+
+<script>
+'use strict';
+
+const API_BASE = 'https://bus-tracking-worker.thanachot-jo888.workers.dev';
+let _data = null;
+let _currentView = 'all';
+
+async function apiFetch(path) {
+  const res = await fetch(`${API_BASE}${path}`);
+  const d = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(d.error || `HTTP ${res.status}`);
+  return d;
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  try { return new Date(d).toLocaleString('th-TH', { dateStyle:'short', timeStyle:'short' }); }
+  catch { return String(d); }
+}
+
+// ===== AVATAR COLOR =====
+function avatarColor(role, adminType) {
+  if (adminType === 'super_admin') return 'av-red';
+  if (adminType === 'zone_admin')  return 'av-purple';
+  if (role === 'driver')           return 'av-blue';
+  if (role === 'passenger')        return 'av-green';
+  return 'av-gray';
+}
+
+function avatarLetter(u) {
+  const name = u?.full_name || u?.username || u?.email || '?';
+  return name.charAt(0).toUpperCase();
+}
+
+// ===== LOAD =====
+async function loadData() {
+  document.getElementById('treeContainer').innerHTML = `<div class="page-loading"><div class="spinner"></div><div>กำลังโหลดข้อมูล...</div></div>`;
+  document.getElementById('summaryBar').style.display = 'none';
+  document.getElementById('hbZones').textContent = '⏳ กำลังโหลด...';
+
+  try {
+    const raw = await apiFetch('/structure');
+    _data = raw.data;
+    updateSummary();
+    renderTree();
+  } catch (err) {
+    document.getElementById('treeContainer').innerHTML = `
+      <div style="text-align:center;padding:60px;color:var(--muted)">
+        <div style="font-size:2.5rem;margin-bottom:12px">⚠️</div>
+        <h3>โหลดข้อมูลไม่ได้</h3>
+        <p style="margin-top:8px;font-size:13px">${esc(err.message)}</p>
+        <button class="btn btn-primary" style="margin-top:16px" onclick="loadData()">🔄 ลองอีกครั้ง</button>
+      </div>`;
+    document.getElementById('hbZones').textContent = '⚠️ โหลดไม่ได้';
+  }
+}
+
+function updateSummary() {
+  if (!_data) return;
+  const t = _data.total;
+  const zoneAdmins = _data.zones.reduce((n, z) => n + (z.admins?.length || 0), 0);
+  const total = (_data.super_admins?.length || 0) + zoneAdmins + t.drivers + t.passengers;
+
+  document.getElementById('sumSuperAdmins').textContent = _data.super_admins?.length || 0;
+  document.getElementById('sumZones').textContent        = zoneAdmins;
+  document.getElementById('sumDrivers').textContent      = t.drivers;
+  document.getElementById('sumPassengers').textContent   = t.passengers;
+  document.getElementById('sumTotal').textContent        = total;
+  document.getElementById('summaryBar').style.display   = 'flex';
+
+  document.getElementById('hbZones').textContent      = `🗺️ ${t.zones} โซน`;
+  document.getElementById('hbAdmins').textContent     = `👤 ${t.admins} Admin`;
+  document.getElementById('hbDrivers').textContent    = `🚌 ${t.drivers} Driver`;
+  document.getElementById('hbPassengers').textContent = `👤 ${t.passengers} Passenger`;
+}
+
+// ===== RENDER =====
+function renderTree() {
+  if (!_data) return;
+  const container = document.getElementById('treeContainer');
+  const v = _currentView;
+  let html = '';
+
+  // Super Admins
+  if (v === 'all' || v === 'zone') {
+    html += renderSuperAdminSection(_data.super_admins || []);
+  }
+
+  // Zones (zone admins + routes + drivers)
+  if (v === 'all' || v === 'admin' || v === 'driver') {
+    (_data.zones || []).forEach(zone => {
+      html += renderZoneCard(zone, v);
+    });
+    if (!_data.zones?.length) {
+      html += `<div class="section-card" style="padding:24px;text-align:center;color:var(--muted)">📭 ยังไม่มีโซน</div>`;
+    }
+  }
+
+  // Passengers
+  if (v === 'all' || v === 'passenger') {
+    html += renderPassengerSection(_data.passengers || []);
+  }
+
+  container.innerHTML = `<div class="tree">${html}</div>`;
+}
+
+function renderSuperAdminSection(admins) {
+  return `
+  <div class="section-card" id="sec_super">
+    <div class="section-head super-section-head" onclick="toggleSection('super')">
+      <div class="sum-icon">⭐</div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:.95rem">Super Admin</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">เข้าถึงได้ทุกโซน ทุกข้อมูล · ${admins.length} คน</div>
+      </div>
+      <span class="badge b-red">${admins.length} คน</span>
+      <span class="chevron" id="chev_super">▼</span>
+    </div>
+    <div id="body_super" style="display:none;padding:14px 16px">
+      ${admins.length
+        ? `<div class="passenger-grid">${admins.map(a => userChip(a.user, 'admin', 'super_admin', a)).join('')}</div>`
+        : `<div class="empty">📭 ยังไม่มี Super Admin</div>`}
+    </div>
+  </div>`;
+}
+
+function renderZoneCard(zone, view) {
+  const zAdmins  = zone.admins  || [];
+  const zRoutes  = zone.routes  || [];
+  const driverCount = zRoutes.reduce((n, r) => n + (r.drivers?.length || 0), 0);
+
+  const showAdmins  = view === 'all' || view === 'admin';
+  const showDrivers = view === 'all' || view === 'driver';
+
+  return `
+  <div class="zone-card" id="zone_${esc(zone.id)}">
+    <div class="zone-head" onclick="toggleZone('${esc(zone.id)}')">
+      <div class="zone-icon">🗺️</div>
+      <div class="zone-info">
+        <div class="zone-name">${esc(zone.zone_name || 'ไม่ระบุชื่อ')}</div>
+        <div class="zone-meta-row">
+          ${zone.zone_code ? `<span class="badge b-indigo">${esc(zone.zone_code)}</span>` : ''}
+          <span class="badge ${zone.status === 'active' ? 'b-green' : 'b-gray'}">${zone.status === 'active' ? '✅ เปิด' : '⛔ ปิด'}</span>
+          <span style="font-size:12px;color:var(--muted)">${zAdmins.length} Admin · ${zRoutes.length} เส้นทาง · ${driverCount} Driver</span>
+        </div>
+      </div>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="zone-body">
+      ${showAdmins ? `
+      <div class="zone-columns">
+        <div class="zone-col">
+          <div class="col-title">🗺️ Zone Admin (${zAdmins.length})</div>
+          ${zAdmins.length
+            ? zAdmins.map(a => userChip(a.user, 'admin', 'zone_admin', a)).join('')
+            : `<div class="empty">📭 ยังไม่มี Admin</div>`}
+        </div>
+        <div class="zone-col">
+          ${zone.description ? `<div style="font-size:12px;color:var(--muted);margin-bottom:10px">ℹ️ ${esc(zone.description)}</div>` : ''}
+          <div class="col-title">📊 ข้อมูลโซน</div>
+          ${dRow('รหัสโซน', zone.zone_code ? `<code>${esc(zone.zone_code)}</code>` : '—')}
+          ${dRow('เส้นทาง', zRoutes.length + ' เส้นทาง')}
+          ${dRow('Driver', driverCount + ' คน')}
+          ${dRow('ID', `<code style="font-size:10px">${esc(zone.id)}</code>`)}
+        </div>
+      </div>` : ''}
+      ${showDrivers ? `
+      <div class="route-section">
+        <div class="route-section-title">🛣️ เส้นทางและคนขับ (${zRoutes.length} เส้นทาง)</div>
+        ${zRoutes.length
+          ? zRoutes.map(r => renderRouteRow(r)).join('')
+          : `<div class="empty">📭 ยังไม่มีเส้นทาง</div>`}
+      </div>` : ''}
+    </div>
+  </div>`;
+}
+
+function renderRouteRow(route) {
+  const drivers = route.drivers || [];
+  return `
+  <div class="route-row" id="route_${esc(route.id)}">
+    <div class="route-head" onclick="toggleRoute('${esc(route.id)}')">
+      <span style="font-size:1.1rem">🛣️</span>
+      <div class="route-head-info">
+        <div class="route-head-name">${route.route_code ? `<span style="font-family:monospace;color:var(--primary)">${esc(route.route_code)}</span> — ` : ''}${esc(route.route_name || '—')}</div>
+        <div class="route-head-sub">${esc(route.start_location || '')}${route.start_location && route.end_location ? ' → ' : ''}${esc(route.end_location || '')}</div>
+      </div>
+      <span class="badge ${route.status === 'active' ? 'b-blue' : 'b-gray'}" style="margin-right:6px">${route.status === 'active' ? '🟢' : '⛔'} ${drivers.length} Driver</span>
+      <span class="chevron" id="chev_route_${esc(route.id)}">▼</span>
+    </div>
+    <div class="route-body" id="rbody_${esc(route.id)}">
+      ${drivers.length
+        ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">${drivers.map(d => userChip(d.user, 'driver', null, d)).join('')}</div>`
+        : `<div class="empty">📭 ยังไม่มีคนขับในเส้นทางนี้</div>`}
+    </div>
+  </div>`;
+}
+
+function renderPassengerSection(passengers) {
+  return `
+  <div class="section-card" id="sec_passenger">
+    <div class="section-head" onclick="toggleSection('passenger')">
+      <div class="sum-icon">👤</div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:.95rem">Passenger (ผู้โดยสาร)</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px">ผู้ใช้งานทั่วไป เข้าดูทุกโซนได้ · ${passengers.length} คน</div>
+      </div>
+      <span class="badge b-green">${passengers.length} คน</span>
+      <span class="chevron" id="chev_passenger">▼</span>
+    </div>
+    <div id="body_passenger" style="display:none;padding:14px 16px">
+      ${passengers.length
+        ? `<div class="passenger-grid">${passengers.map(u => userChip(u, 'passenger', null, null)).join('')}</div>`
+        : `<div class="empty">📭 ยังไม่มีผู้โดยสาร</div>`}
+    </div>
+  </div>`;
+}
+
+function userChip(user, role, adminType, profile) {
+  if (!user && !profile) return '';
+  const u = user || {};
+  const avCls  = avatarColor(role, adminType);
+  const letter = avatarLetter(u);
+  const name   = u.full_name || u.username || u.email || '—';
+  const sub    = u.email || u.username || '';
+  const uid    = u.id || profile?.id || '';
+
+  let badge = '';
+  if (adminType === 'super_admin') badge = `<span class="badge b-red">⭐</span>`;
+  else if (adminType === 'zone_admin') badge = `<span class="badge b-purple">🗺️</span>`;
+  else if (role === 'driver') badge = `<span class="badge b-blue">🚌</span>`;
+  else badge = `<span class="badge b-green">👤</span>`;
+
+  const statusDot = u.status === 'active' ? '🟢' : '🔴';
+
+  return `<div class="user-chip" onclick="openUserDetail('${esc(uid)}','${esc(role)}','${esc(adminType||'')}')">
+    <div class="avatar ${avCls}">${esc(letter)}</div>
+    <div class="user-chip-info">
+      <div class="user-chip-name">${statusDot} ${esc(name)}</div>
+      <div class="user-chip-sub">${esc(sub)}</div>
+    </div>
+    <div class="user-chip-badge">${badge}</div>
+    <button class="copy-btn" title="คัดลอกข้อมูล" onclick="event.stopPropagation();copyUser('${esc(uid)}','${esc(role)}','${esc(adminType||'')}')">📋</button>
+  </div>`;
+}
+
+function dRow(k, v) {
+  return `<div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:12px">
+    <span style="color:var(--muted)">${esc(k)}</span>
+    <span style="font-weight:500">${v}</span>
+  </div>`;
+}
+
+// ===== TOGGLE =====
+function toggleZone(zoneId) {
+  const card = document.getElementById(`zone_${zoneId}`);
+  if (card) card.classList.toggle('open');
+}
+
+function toggleRoute(routeId) {
+  const row   = document.getElementById(`route_${routeId}`);
+  const body  = document.getElementById(`rbody_${routeId}`);
+  const chev  = document.getElementById(`chev_route_${routeId}`);
+  if (!row) return;
+  const isOpen = row.classList.toggle('open');
+  if (body) body.style.display = isOpen ? 'block' : 'none';
+  if (chev) chev.style.transform = isOpen ? 'rotate(180deg)' : '';
+}
+
+function toggleSection(id) {
+  const body = document.getElementById(`body_${id}`);
+  const chev = document.getElementById(`chev_${id}`);
+  if (!body) return;
+  const isOpen = body.style.display !== 'block';
+  body.style.display = isOpen ? 'block' : 'none';
+  if (chev) chev.style.transform = isOpen ? 'rotate(180deg)' : '';
+}
+
+// ===== USER DETAIL DRAWER =====
+function openUserDetail(userId, role, adminType) {
+  if (!_data) return;
+  _drawerUserId = userId; _drawerRole = role; _drawerAdminType = adminType;
+
+  // Find user across all collections
+  let user = null, profile = null, zoneName = null, routeName = null;
+
+  if (adminType === 'super_admin') {
+    profile = _data.super_admins?.find(a => a.user?.id === userId);
+    user = profile?.user;
+  }
+  if (!user) {
+    for (const zone of _data.zones || []) {
+      const a = (zone.admins || []).find(a => a.user?.id === userId);
+      if (a) { profile = a; user = a.user; zoneName = zone.zone_name; break; }
+      for (const route of zone.routes || []) {
+        const d = (route.drivers || []).find(d => d.user?.id === userId);
+        if (d) { profile = d; user = d.user; routeName = route.route_name || route.route_code; zoneName = zone.zone_name; break; }
+      }
+      if (user) break;
+    }
+  }
+  if (!user) {
+    user = _data.passengers?.find(u => u.id === userId);
+  }
+  if (!user) return;
+
+  // Avatar
+  const avCls  = avatarColor(role, adminType);
+  const avColors = { 'av-red':'#ef4444','av-purple':'#8b5cf6','av-blue':'#3b82f6','av-green':'#10b981','av-gray':'#94a3b8','av-indigo':'#6366f1' };
+  const avEl = document.getElementById('drawerAvatar');
+  avEl.textContent = avatarLetter(user);
+  avEl.style.background = avColors[avCls] || '#94a3b8';
+
+  document.getElementById('drawerName').textContent = user.full_name || user.username || user.email || '—';
+
+  // Role label
+  const roleLabel = adminType === 'super_admin' ? '⭐ Super Admin'
+    : adminType === 'zone_admin' ? `🗺️ Zone Admin${zoneName ? ` — ${zoneName}` : ''}`
+    : role === 'driver' ? `🚌 Driver${routeName ? ` — ${routeName}` : ''}`
+    : '👤 Passenger';
+  document.getElementById('drawerSub').textContent = roleLabel;
+
+  // Build content
+  let html = `
+  <div class="detail-sec">
+    <div class="detail-sec-title">ข้อมูลส่วนตัว</div>
+    ${dr('ชื่อ-นามสกุล',  user.full_name      || '—')}
+    ${dr('Username',       user.username       ? `<code>${esc(user.username)}</code>` : '—')}
+    ${dr('Email',          user.email          ? `<code>${esc(user.email)}</code>` : '—')}
+    ${dr('เบอร์โทร',       user.phone_number   || '—')}
+    ${dr('วิธีเข้าสู่ระบบ', providerBadge(user.auth_provider))}
+    ${dr('สถานะ',           statusBadge(user.status))}
+    ${dr('User ID',        `<code style="font-size:10px">${esc(user.id)}</code>`)}
+    ${dr('สร้างเมื่อ',      fmtDate(user.created_at))}
+    ${dr('Login ล่าสุด',   fmtDate(user.last_login_at))}
+  </div>`;
+
+  // Role-specific
+  if (adminType === 'super_admin' || adminType === 'zone_admin') {
+    html += `<div class="detail-sec">
+      <div class="detail-sec-title">ข้อมูล Admin</div>
+      ${dr('ประเภท', adminType === 'super_admin' ? '<span class="badge b-red">⭐ Super Admin</span>' : '<span class="badge b-purple">🗺️ Zone Admin</span>')}
+      ${zoneName ? dr('โซน', `<strong>${esc(zoneName)}</strong>`) : ''}
+      ${profile ? dr('Admin ID', `<code style="font-size:10px">${esc(profile.id)}</code>`) : ''}
+      ${profile ? dr('Admin Status', statusBadge(profile.status)) : ''}
+    </div>`;
+  }
+
+  if (role === 'driver' && profile) {
+    html += `<div class="detail-sec">
+      <div class="detail-sec-title">ข้อมูลคนขับ</div>
+      ${dr('รหัสพนักงาน',    profile.employee_code  || '—')}
+      ${dr('หมายเลขใบขับขี่', profile.license_no    || '—')}
+      ${routeName ? dr('เส้นทาง', `<strong>${esc(routeName)}</strong>`) : ''}
+      ${zoneName  ? dr('โซน',    `<strong>${esc(zoneName)}</strong>`) : ''}
+      ${dr('Driver ID', `<code style="font-size:10px">${esc(profile.id)}</code>`)}
+      ${dr('สถานะ', statusBadge(profile.status))}
+    </div>`;
+  }
+
+  document.getElementById('drawerBody').innerHTML = html;
+
+  // Highlight chip
+  document.querySelectorAll('.user-chip.hl').forEach(c => c.classList.remove('hl'));
+  document.querySelectorAll(`.user-chip[onclick*="${userId}"]`).forEach(c => c.classList.add('hl'));
+
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawerOverlay').classList.add('open');
+}
+
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('open');
+  document.querySelectorAll('.user-chip.hl').forEach(c => c.classList.remove('hl'));
+}
+
+function dr(k, v) {
+  return `<div class="detail-row"><span class="detail-key">${esc(k)}</span><span class="detail-val">${v}</span></div>`;
+}
+
+function providerBadge(p) {
+  const map = { email: '<span class="badge b-blue">📧 Email</span>', google: '<span class="badge b-orange">🔵 Google</span>', phone: '<span class="badge b-teal">📱 Phone</span>', guest: '<span class="badge b-gray">👻 Guest</span>' };
+  return map[p] || `<span class="badge b-gray">${esc(p||'—')}</span>`;
+}
+
+function statusBadge(s) {
+  const map = { active: '<span class="badge b-green">✅ ใช้งาน</span>', inactive: '<span class="badge b-gray">⛔ ไม่ใช้งาน</span>', suspended: '<span class="badge b-red">🚫 ระงับ</span>' };
+  return map[s] || `<span class="badge b-gray">${esc(s||'—')}</span>`;
+}
+
+// ===== VIEW TABS =====
+function setView(v) {
+  _currentView = v;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.id === `tab_${v}`));
+  if (_data) renderTree();
+}
+
+// ===== SEARCH =====
+function applySearch() {
+  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  document.querySelectorAll('.user-chip').forEach(chip => {
+    const text = chip.textContent.toLowerCase();
+    chip.classList.toggle('hidden-item', !!q && !text.includes(q));
+  });
+  // Auto-expand zones/routes that have visible chips
+  document.querySelectorAll('.route-row').forEach(row => {
+    const visible = [...row.querySelectorAll('.user-chip')].some(c => !c.classList.contains('hidden-item'));
+    if (q && visible && !row.classList.contains('open')) {
+      row.classList.add('open');
+      const id = row.id.replace('route_', '');
+      const body = document.getElementById(`rbody_${id}`);
+      if (body) body.style.display = 'block';
+    }
+  });
+  document.querySelectorAll('.zone-card').forEach(card => {
+    const visible = [...card.querySelectorAll('.user-chip')].some(c => !c.classList.contains('hidden-item'));
+    if (q && visible) card.classList.add('open');
+  });
+}
+
+// ===== COPY =====
+let _drawerUserId = null, _drawerRole = null, _drawerAdminType = null;
+
+function findUser(userId, adminType) {
+  if (!_data) return null;
+  if (adminType === 'super_admin') {
+    const a = _data.super_admins?.find(a => a.user?.id === userId);
+    if (a) return a.user;
+  }
+  for (const zone of _data.zones || []) {
+    const a = (zone.admins || []).find(a => a.user?.id === userId);
+    if (a) return a.user;
+    for (const route of zone.routes || []) {
+      const d = (route.drivers || []).find(d => d.user?.id === userId);
+      if (d) return d.user;
+    }
+  }
+  return _data.passengers?.find(u => u.id === userId) || null;
+}
+
+function copyUser(userId, role, adminType) {
+  const user = findUser(userId, adminType);
+  const email = user?.email || user?.username || '';
+  if (!email) { showToast('⚠️ ไม่มี Email'); return; }
+  navigator.clipboard.writeText(email).then(() => {
+    showToast(`📋 คัดลอก: ${email}`);
+    const btns = document.querySelectorAll(`.copy-btn[onclick*="${userId}"]`);
+    btns.forEach(b => { b.textContent = '✅'; b.classList.add('copied'); setTimeout(() => { b.textContent = '📋'; b.classList.remove('copied'); }, 1500); });
+  }).catch(() => showToast('⚠️ คัดลอกไม่ได้'));
+}
+
+function copyDrawerUser() {
+  if (!_drawerUserId) return;
+  const user = findUser(_drawerUserId, _drawerAdminType);
+  const email = user?.email || user?.username || '';
+  if (!email) { showToast('⚠️ ไม่มี Email'); return; }
+  navigator.clipboard.writeText(email).then(() => {
+    const btn = document.getElementById('drawerCopyBtn');
+    if (btn) { btn.textContent = '✅ คัดลอกแล้ว!'; setTimeout(() => { btn.innerHTML = '📋 คัดลอก Email'; }, 1500); }
+    showToast(`📋 คัดลอก: ${email}`);
+  }).catch(() => showToast('⚠️ คัดลอกไม่ได้'));
+}
+
+function showToast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(() => { el.style.animation = 'toastOut .2s ease forwards'; setTimeout(() => el.remove(), 200); }, 2000);
+}
+
+// ===== INIT =====
+loadData();
+</script>
+</body>
+</html>

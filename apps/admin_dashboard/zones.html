@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>โครงสร้างโซนและเส้นทาง — Bus Tracking System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary:    #3b82f6;
+      --primary-dk: #1d4ed8;
+      --success:    #10b981;
+      --warning:    #f59e0b;
+      --danger:     #ef4444;
+      --purple:     #8b5cf6;
+      --bg:         #f8fafc;
+      --card:       #ffffff;
+      --border:     #e2e8f0;
+      --text:       #1e293b;
+      --muted:      #94a3b8;
+      --radius:     10px;
+      --shadow:     0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md:  0 4px 16px rgba(0,0,0,0.10);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ===== HEADER ===== */
+    .page-header {
+      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 60%, #06b6d4 100%);
+      color: #fff;
+      padding: 28px 24px 24px;
+      text-align: center;
+    }
+    .page-header h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 6px; }
+    .page-header p  { font-size: 0.9rem; opacity: .85; }
+    .header-badges  { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+    .hbadge {
+      background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 20px; padding: 4px 14px; font-size: 12px; font-weight: 500;
+    }
+
+    /* ===== LAYOUT ===== */
+    .container { max-width: 1100px; margin: 0 auto; padding: 24px 16px; }
+
+    /* ===== SEARCH & CONTROLS ===== */
+    .controls {
+      display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;
+    }
+    .search-box {
+      flex: 1; min-width: 220px;
+      display: flex; align-items: center; gap: 8px;
+      background: var(--card); border: 1.5px solid var(--border);
+      border-radius: var(--radius); padding: 8px 14px;
+      box-shadow: var(--shadow);
+    }
+    .search-box input {
+      border: none; outline: none; font-size: 14px; background: transparent;
+      width: 100%; font-family: inherit; color: var(--text);
+    }
+    .btn {
+      padding: 9px 16px; border-radius: var(--radius); border: none; cursor: pointer;
+      font-size: 13px; font-weight: 500; font-family: inherit; transition: all .15s;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dk); }
+    .btn-ghost { background: var(--card); color: var(--text); border: 1.5px solid var(--border); }
+    .btn-ghost:hover { border-color: var(--primary); color: var(--primary); }
+
+    /* ===== SUMMARY BAR ===== */
+    .summary-bar {
+      display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
+    }
+    .sum-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 12px 18px; display: flex; align-items: center; gap: 10px;
+      box-shadow: var(--shadow); flex: 1; min-width: 130px;
+    }
+    .sum-icon { font-size: 1.5rem; }
+    .sum-val  { font-size: 1.3rem; font-weight: 700; color: var(--primary); }
+    .sum-lbl  { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+    /* ===== ZONE CARD ===== */
+    .zone-list { display: flex; flex-direction: column; gap: 14px; }
+
+    .zone-card {
+      background: var(--card); border: 1.5px solid var(--border);
+      border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
+    }
+    .zone-card.active { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(59,130,246,.12), var(--shadow-md); }
+
+    .zone-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px 18px; cursor: pointer; user-select: none;
+      transition: background .15s;
+    }
+    .zone-header:hover { background: #f0f7ff; }
+    .zone-icon { font-size: 1.4rem; flex-shrink: 0; }
+    .zone-info { flex: 1; }
+    .zone-name { font-weight: 700; font-size: 1rem; }
+    .zone-code { font-size: 11px; color: var(--muted); margin-top: 2px; font-family: monospace; }
+    .zone-meta { display: flex; gap: 8px; align-items: center; flex-shrink: 0; flex-wrap: wrap; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+    }
+    .b-blue   { background: #dbeafe; color: #1d4ed8; }
+    .b-green  { background: #dcfce7; color: #15803d; }
+    .b-gray   { background: #f1f5f9; color: #64748b; }
+    .b-orange { background: #ffedd5; color: #c2410c; }
+    .b-purple { background: #ede9fe; color: #6d28d9; }
+    .chevron  { color: var(--muted); font-size: 13px; transition: transform .2s; flex-shrink: 0; }
+    .zone-card.open .chevron { transform: rotate(180deg); }
+
+    /* ===== ROUTES ===== */
+    .zone-body { display: none; border-top: 1px solid var(--border); }
+    .zone-card.open .zone-body { display: block; }
+
+    .route-list { padding: 12px 16px; display: flex; flex-direction: column; gap: 8px; }
+
+    .route-item {
+      border: 1.5px solid var(--border); border-radius: 8px; overflow: hidden;
+      transition: border-color .15s;
+    }
+    .route-item.open { border-color: var(--primary); }
+
+    .route-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 11px 14px; cursor: pointer; background: var(--bg);
+      transition: background .15s;
+    }
+    .route-header:hover { background: #eff6ff; }
+    .route-icon { font-size: 1.1rem; flex-shrink: 0; }
+    .route-info { flex: 1; }
+    .route-name { font-weight: 600; font-size: 0.88rem; }
+    .route-sub  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .route-meta { display: flex; gap: 6px; align-items: center; flex-shrink: 0; flex-wrap: wrap; }
+
+    /* ===== BUSES & DRIVERS ===== */
+    .route-body { display: none; padding: 0 14px 12px; }
+    .route-item.open .route-body { display: block; }
+
+    .bus-loading { padding: 14px; text-align: center; color: var(--muted); font-size: 13px; }
+
+    .bus-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; margin-top: 10px; }
+
+    .bus-card {
+      border: 1.5px solid var(--border); border-radius: 8px; padding: 12px 14px;
+      background: #fff; cursor: pointer; transition: all .15s;
+    }
+    .bus-card:hover { border-color: var(--primary); box-shadow: var(--shadow-md); transform: translateY(-1px); }
+    .bus-card.sel   { border-color: var(--primary); background: #eff6ff; }
+
+    .bus-plate { font-size: 1rem; font-weight: 700; letter-spacing: .5px; }
+    .bus-driver { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .bus-loc    { font-size: 11px; color: var(--muted); margin-top: 3px; font-family: monospace; }
+    .bus-status { margin-top: 8px; }
+
+    .no-buses { padding: 18px; text-align: center; color: var(--muted); font-size: 13px; }
+
+    /* ===== DETAIL DRAWER ===== */
+    .drawer-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 100;
+    }
+    .drawer-overlay.open { display: block; }
+
+    .drawer {
+      position: fixed; right: 0; top: 0; bottom: 0; width: 380px; max-width: 96vw;
+      background: var(--card); box-shadow: -4px 0 24px rgba(0,0,0,.15); z-index: 101;
+      display: flex; flex-direction: column; transform: translateX(100%);
+      transition: transform .25s ease;
+    }
+    .drawer.open { transform: translateX(0); }
+
+    .drawer-header {
+      padding: 18px 20px 14px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: flex-start; gap: 12px;
+    }
+    .drawer-title { flex: 1; }
+    .drawer-title h3 { font-size: 1rem; font-weight: 700; }
+    .drawer-title p  { font-size: 12px; color: var(--muted); margin-top: 3px; }
+    .drawer-close {
+      background: none; border: none; font-size: 18px; cursor: pointer;
+      color: var(--muted); padding: 2px 6px; border-radius: 6px; line-height: 1;
+    }
+    .drawer-close:hover { background: var(--bg); color: var(--text); }
+    .drawer-body { flex: 1; overflow-y: auto; padding: 18px 20px; }
+
+    .detail-section { margin-bottom: 18px; }
+    .detail-section-title {
+      font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: .5px;
+      text-transform: uppercase; margin-bottom: 10px; padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .detail-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 8px; }
+    .detail-key { font-size: 13px; color: var(--muted); flex-shrink: 0; }
+    .detail-val { font-size: 13px; font-weight: 500; text-align: right; word-break: break-all; }
+    .detail-val code { font-family: monospace; font-size: 11px; background: var(--bg); padding: 2px 6px; border-radius: 4px; }
+
+    /* ===== LOADING / EMPTY ===== */
+    .page-loading {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 80px 20px; gap: 14px; color: var(--muted);
+    }
+    .spinner {
+      width: 36px; height: 36px; border: 3px solid var(--border);
+      border-top-color: var(--primary); border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-state { text-align: center; padding: 40px; color: var(--muted); }
+    .empty-state .ei { font-size: 2.5rem; margin-bottom: 10px; }
+
+    /* ===== MISC ===== */
+    .status-dot {
+      display: inline-block; width: 8px; height: 8px;
+      border-radius: 50%; margin-right: 5px; flex-shrink: 0;
+    }
+    .dot-green  { background: #10b981; box-shadow: 0 0 6px #10b98180; }
+    .dot-gray   { background: #94a3b8; }
+    .dot-orange { background: #f59e0b; }
+
+    .hidden-zone { display: none !important; }
+
+    @media (max-width: 600px) {
+      .page-header h1 { font-size: 1.3rem; }
+      .drawer { width: 100vw; }
+      .bus-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="page-header">
+  <h1>🗺️ โครงสร้างโซนและเส้นทาง</h1>
+  <p>ดูข้อมูลโซน เส้นทาง และรถโดยสาร — ไม่ต้องเข้าสู่ระบบ</p>
+  <div class="header-badges">
+    <span class="hbadge" id="hbZones">⏳ กำลังโหลด...</span>
+    <span class="hbadge" id="hbRoutes"></span>
+    <span class="hbadge" id="hbLastUpdate"></span>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Controls -->
+  <div class="controls">
+    <div class="search-box">
+      <span>🔍</span>
+      <input type="text" id="searchInput" placeholder="ค้นหาโซน เส้นทาง รหัส..." oninput="applySearch()">
+    </div>
+    <button class="btn btn-ghost" onclick="expandAll()">📂 เปิดทั้งหมด</button>
+    <button class="btn btn-ghost" onclick="collapseAll()">📁 ปิดทั้งหมด</button>
+    <button class="btn btn-primary" onclick="loadData()">🔄 รีเฟรช</button>
+  </div>
+
+  <!-- Summary -->
+  <div class="summary-bar" id="summaryBar" style="display:none">
+    <div class="sum-card">
+      <div class="sum-icon">🗺️</div>
+      <div>
+        <div class="sum-val" id="sumZones">—</div>
+        <div class="sum-lbl">โซน</div>
+      </div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-icon">🛣️</div>
+      <div>
+        <div class="sum-val" id="sumRoutes">—</div>
+        <div class="sum-lbl">เส้นทาง</div>
+      </div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-icon">🚍</div>
+      <div>
+        <div class="sum-val" id="sumBuses">—</div>
+        <div class="sum-lbl">รถโดยสาร</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Zone List -->
+  <div id="zoneList" class="zone-list">
+    <div class="page-loading">
+      <div class="spinner"></div>
+      <div>กำลังโหลดข้อมูล...</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Detail Drawer -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div class="drawer-title">
+      <h3 id="drawerTitle">รายละเอียด</h3>
+      <p id="drawerSub"></p>
+    </div>
+    <button class="drawer-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="drawer-body" id="drawerBody"></div>
+</aside>
+
+<script>
+'use strict';
+
+const API_BASE = 'https://bus-tracking-worker.thanachot-jo888.workers.dev';
+
+// ===== STATE =====
+let _zones  = [];
+let _routes = [];
+let _busCache = {}; // routeId → buses[]
+
+async function apiFetch(path) {
+  const res = await fetch(`${API_BASE}${path}`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+function extractList(r) {
+  if (Array.isArray(r)) return r;
+  const keys = ['data','zones','routes','buses','items','list','results'];
+  for (const k of keys) if (Array.isArray(r?.[k])) return r[k];
+  return [];
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ===== LOAD DATA =====
+async function loadData() {
+  document.getElementById('zoneList').innerHTML = `
+    <div class="page-loading"><div class="spinner"></div><div>กำลังโหลดข้อมูล...</div></div>`;
+  document.getElementById('summaryBar').style.display = 'none';
+  document.getElementById('hbZones').textContent = '⏳ กำลังโหลด...';
+  document.getElementById('hbRoutes').textContent = '';
+
+  try {
+    const [zoneRaw, routeRaw] = await Promise.all([
+      apiFetch('/zones'),
+      apiFetch('/routes'),
+    ]);
+    _zones  = extractList(zoneRaw);
+    _routes = extractList(routeRaw);
+    _busCache = {};
+
+    updateSummary();
+    renderZones(_zones, _routes);
+  } catch (err) {
+    document.getElementById('zoneList').innerHTML = `
+      <div class="empty-state">
+        <div class="ei">⚠️</div>
+        <h3>โหลดข้อมูลไม่ได้</h3>
+        <p style="margin-top:6px;font-size:13px">${esc(err.message)}</p>
+        <button class="btn btn-primary" style="margin-top:16px" onclick="loadData()">🔄 ลองอีกครั้ง</button>
+      </div>`;
+    document.getElementById('hbZones').textContent = '⚠️ โหลดไม่ได้';
+  }
+}
+
+function updateSummary() {
+  const totalBuses = Object.values(_busCache).reduce((a, b) => a + b.length, 0);
+  document.getElementById('sumZones').textContent  = _zones.length;
+  document.getElementById('sumRoutes').textContent = _routes.length;
+  document.getElementById('sumBuses').textContent  = totalBuses;
+  document.getElementById('summaryBar').style.display = 'flex';
+  document.getElementById('hbZones').textContent  = `🗺️ ${_zones.length} โซน`;
+  document.getElementById('hbRoutes').textContent = `🛣️ ${_routes.length} เส้นทาง`;
+  document.getElementById('hbLastUpdate').textContent =
+    `🕐 ${new Date().toLocaleTimeString('th-TH', { hour:'2-digit', minute:'2-digit' })}`;
+}
+
+// ===== RENDER ZONES =====
+function renderZones(zones, routes) {
+  const container = document.getElementById('zoneList');
+
+  // Group routes by zone_id
+  const routesByZone = {};
+  routes.forEach(r => {
+    const zid = r.zone_id || '__none__';
+    if (!routesByZone[zid]) routesByZone[zid] = [];
+    routesByZone[zid].push(r);
+  });
+
+  // Zones that have no zone record (orphan routes)
+  const knownZoneIds = new Set(zones.map(z => z.id));
+  const orphanRoutes = routes.filter(r => r.zone_id && !knownZoneIds.has(r.zone_id));
+
+  if (!zones.length && !routes.length) {
+    container.innerHTML = `<div class="empty-state"><div class="ei">📭</div><h3>ยังไม่มีข้อมูล</h3></div>`;
+    return;
+  }
+
+  container.innerHTML = zones.map(zone => {
+    const zRoutes = routesByZone[zone.id] || [];
+    const isActive = zone.status === 'active';
+    return `
+    <div class="zone-card" id="zone_${esc(zone.id)}" data-zone-name="${esc((zone.zone_name||'').toLowerCase())}" data-zone-code="${esc((zone.zone_code||'').toLowerCase())}">
+      <div class="zone-header" onclick="toggleZone('${esc(zone.id)}')">
+        <div class="zone-icon">🗺️</div>
+        <div class="zone-info">
+          <div class="zone-name">${esc(zone.zone_name || 'ไม่ระบุชื่อ')}</div>
+          <div class="zone-code">${zone.zone_code ? `[${esc(zone.zone_code)}]` : ''} · ${zRoutes.length} เส้นทาง</div>
+        </div>
+        <div class="zone-meta">
+          <span class="badge ${isActive ? 'b-green' : 'b-gray'}">${isActive ? '✅ เปิดให้บริการ' : '⛔ ปิด'}</span>
+          <button class="btn btn-ghost" style="padding:4px 10px;font-size:12px" onclick="event.stopPropagation();openZoneDetail('${esc(zone.id)}')">ℹ️ รายละเอียด</button>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="zone-body">
+        <div class="route-list" id="routes_${esc(zone.id)}">
+          ${renderRouteItems(zRoutes, zone)}
+        </div>
+      </div>
+    </div>`;
+  }).join('') + (orphanRoutes.length ? `
+    <div class="zone-card" id="zone___orphan__">
+      <div class="zone-header" onclick="toggleZone('__orphan__')">
+        <div class="zone-icon">📂</div>
+        <div class="zone-info">
+          <div class="zone-name">เส้นทางที่ไม่ระบุโซน</div>
+          <div class="zone-code">${orphanRoutes.length} เส้นทาง</div>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="zone-body">
+        <div class="route-list" id="routes___orphan__">
+          ${renderRouteItems(orphanRoutes, null)}
+        </div>
+      </div>
+    </div>` : '');
+}
+
+function renderRouteItems(routes, zone) {
+  if (!routes.length) {
+    return `<div class="empty-state" style="padding:20px"><div class="ei">📭</div><p style="font-size:13px">ยังไม่มีเส้นทางในโซนนี้</p></div>`;
+  }
+  return routes.map(r => `
+    <div class="route-item" id="route_${esc(r.id)}">
+      <div class="route-header" onclick="toggleRoute('${esc(r.id)}')">
+        <div class="route-icon">🛣️</div>
+        <div class="route-info">
+          <div class="route-name">${r.route_code ? `<span style="font-family:monospace;color:var(--primary)">${esc(r.route_code)}</span> — ` : ''}${esc(r.route_name || 'ไม่ระบุ')}</div>
+          <div class="route-sub">${esc(r.start_location || '')}${r.start_location && r.end_location ? ' → ' : ''}${esc(r.end_location || '')}</div>
+        </div>
+        <div class="route-meta">
+          <span class="badge ${r.status === 'active' ? 'b-blue' : 'b-gray'}">${r.status === 'active' ? '🟢 เปิด' : '⛔ ปิด'}</span>
+          <button class="btn btn-ghost" style="padding:4px 10px;font-size:12px" onclick="event.stopPropagation();openRouteDetail('${esc(r.id)}')">ℹ️</button>
+        </div>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="route-body" id="buses_${esc(r.id)}">
+        <div class="bus-loading">⏳ คลิกเพื่อดูรถโดยสาร</div>
+      </div>
+    </div>`).join('');
+}
+
+// ===== TOGGLE ZONE =====
+function toggleZone(zoneId) {
+  const card = document.getElementById(`zone_${zoneId}`);
+  if (!card) return;
+  card.classList.toggle('open');
+  card.classList.toggle('active', card.classList.contains('open'));
+}
+
+// ===== TOGGLE ROUTE (lazy-load buses) =====
+async function toggleRoute(routeId) {
+  const item = document.getElementById(`route_${routeId}`);
+  if (!item) return;
+  const wasOpen = item.classList.contains('open');
+  item.classList.toggle('open');
+  if (item.classList.contains('open') && !_busCache[routeId]) {
+    await loadBuses(routeId);
+  }
+}
+
+async function loadBuses(routeId) {
+  const body = document.getElementById(`buses_${routeId}`);
+  if (!body) return;
+  body.innerHTML = `<div class="bus-loading"><div class="spinner" style="width:20px;height:20px;border-width:2px;margin:0 auto 8px"></div>กำลังโหลดรถโดยสาร...</div>`;
+  try {
+    const raw = await apiFetch(`/buses/live?routeId=${encodeURIComponent(routeId)}`);
+    const buses = extractList(raw);
+    _busCache[routeId] = buses;
+    updateSummary();
+    renderBusCards(routeId, buses);
+  } catch {
+    body.innerHTML = `<div class="no-buses">⚠️ โหลดข้อมูลรถไม่ได้</div>`;
+  }
+}
+
+function renderBusCards(routeId, buses) {
+  const body = document.getElementById(`buses_${routeId}`);
+  if (!body) return;
+  if (!buses.length) {
+    body.innerHTML = `<div class="no-buses">📭 ยังไม่มีรถโดยสารในเส้นทางนี้</div>`;
+    return;
+  }
+  body.innerHTML = `<div class="bus-grid">${buses.map(b => {
+    const isOn = b.status === 'on' || b.status === 'on_duty';
+    const isMaintenance = b.status === 'maintenance';
+    const dotCls = isOn ? 'dot-green' : (isMaintenance ? 'dot-orange' : 'dot-gray');
+    const hasLoc = b.current_lat && b.current_lng;
+    return `
+    <div class="bus-card" onclick="openBusDetail('${esc(b.id)}','${esc(routeId)}')">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span class="status-dot ${dotCls}"></span>
+        <span class="bus-plate">🚍 ${esc(b.plate_number || '—')}</span>
+      </div>
+      <div class="bus-driver">👤 ${esc(b.driver_name || b.driver_id || '— ไม่มีคนขับ')}</div>
+      ${hasLoc ? `<div class="bus-loc">📍 ${b.current_lat?.toFixed(5)}, ${b.current_lng?.toFixed(5)}</div>` : ''}
+      <div class="bus-status" style="margin-top:8px">
+        ${b.status === 'on' ? '<span class="badge b-green">🟢 ให้บริการ</span>'
+          : b.status === 'maintenance' ? '<span class="badge b-orange">🔧 ซ่อมบำรุง</span>'
+          : '<span class="badge b-gray">⚫ ไม่ได้ใช้งาน</span>'}
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+// ===== DETAIL DRAWER =====
+function openDrawer(title, sub, html) {
+  document.getElementById('drawerTitle').textContent = title;
+  document.getElementById('drawerSub').textContent   = sub;
+  document.getElementById('drawerBody').innerHTML    = html;
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawerOverlay').classList.add('open');
+}
+
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('open');
+  document.querySelectorAll('.bus-card.sel').forEach(c => c.classList.remove('sel'));
+}
+
+function openZoneDetail(zoneId) {
+  const zone = _zones.find(z => z.id === zoneId);
+  if (!zone) return;
+  const zRoutes = _routes.filter(r => r.zone_id === zoneId);
+  openDrawer(
+    `🗺️ ${zone.zone_name || 'โซน'}`,
+    zone.zone_code ? `รหัสโซน: ${zone.zone_code}` : '',
+    `<div class="detail-section">
+      <div class="detail-section-title">ข้อมูลโซน</div>
+      ${row('ชื่อโซน', zone.zone_name)}
+      ${row('รหัสโซน', zone.zone_code ? `<code>${esc(zone.zone_code)}</code>` : '—')}
+      ${row('สถานะ', zone.status === 'active' ? '<span class="badge b-green">✅ เปิดให้บริการ</span>' : '<span class="badge b-gray">⛔ ปิด</span>')}
+      ${zone.description ? row('รายละเอียด', zone.description) : ''}
+      ${row('ID', `<code>${esc(zone.id)}</code>`)}
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">เส้นทางในโซนนี้ (${zRoutes.length})</div>
+      ${zRoutes.map(r => `
+        <div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <div>
+            <div style="font-size:13px;font-weight:600">${esc(r.route_name || '—')}</div>
+            <div style="font-size:11px;color:var(--muted)">${esc(r.route_code || '')}</div>
+          </div>
+          <span class="badge ${r.status === 'active' ? 'b-blue' : 'b-gray'}">${r.status === 'active' ? '🟢 เปิด' : '⛔ ปิด'}</span>
+        </div>`).join('') || '<div style="color:var(--muted);font-size:13px;padding:8px 0">ยังไม่มีเส้นทาง</div>'}
+    </div>`
+  );
+}
+
+function openRouteDetail(routeId) {
+  const route = _routes.find(r => r.id === routeId);
+  if (!route) return;
+  const zone  = _zones.find(z => z.id === route.zone_id);
+  const buses = _busCache[routeId] || [];
+  const activeBuses = buses.filter(b => b.status === 'on' || b.status === 'on_duty');
+  openDrawer(
+    `🛣️ ${route.route_name || 'เส้นทาง'}`,
+    route.route_code ? `รหัส: ${route.route_code}` : '',
+    `<div class="detail-section">
+      <div class="detail-section-title">ข้อมูลเส้นทาง</div>
+      ${row('ชื่อเส้นทาง', route.route_name)}
+      ${row('รหัส', route.route_code ? `<code>${esc(route.route_code)}</code>` : '—')}
+      ${row('โซน', zone ? esc(zone.zone_name) : (route.zone_id ? `<code>${esc(route.zone_id)}</code>` : '—'))}
+      ${row('จุดเริ่มต้น', route.start_location || '—')}
+      ${row('จุดสิ้นสุด', route.end_location || '—')}
+      ${row('สถานะ', route.status === 'active' ? '<span class="badge b-green">✅ เปิด</span>' : '<span class="badge b-gray">⛔ ปิด</span>')}
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">รถโดยสาร${buses.length ? ` (${activeBuses.length}/${buses.length} ให้บริการ)` : ''}</div>
+      ${buses.length
+        ? buses.map(b => `
+          <div style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <div>
+              <div style="font-size:13px;font-weight:700">🚍 ${esc(b.plate_number || '—')}</div>
+              <div style="font-size:11px;color:var(--muted)">👤 ${esc(b.driver_name || b.driver_id || 'ไม่มีคนขับ')}</div>
+            </div>
+            ${b.status === 'on' ? '<span class="badge b-green">🟢</span>'
+              : b.status === 'maintenance' ? '<span class="badge b-orange">🔧</span>'
+              : '<span class="badge b-gray">⚫</span>'}
+          </div>`).join('')
+        : '<div style="color:var(--muted);font-size:13px;padding:8px 0">ยังไม่มีข้อมูลรถ (คลิกเส้นทางในรายการเพื่อโหลด)</div>'}
+    </div>`
+  );
+}
+
+function openBusDetail(busId, routeId) {
+  const buses = _busCache[routeId] || [];
+  const bus   = buses.find(b => b.id === busId);
+  if (!bus) return;
+
+  document.querySelectorAll('.bus-card.sel').forEach(c => c.classList.remove('sel'));
+  const card = document.querySelector(`.bus-card[onclick*="${busId}"]`);
+  if (card) card.classList.add('sel');
+
+  const route = _routes.find(r => r.id === routeId);
+  const lastSeen = bus.last_seen_at ? new Date(bus.last_seen_at).toLocaleString('th-TH', {dateStyle:'short',timeStyle:'short'}) : '—';
+
+  openDrawer(
+    `🚍 ${bus.plate_number || 'รถโดยสาร'}`,
+    route ? `เส้นทาง: ${route.route_name || route.route_code || ''}` : '',
+    `<div class="detail-section">
+      <div class="detail-section-title">ข้อมูลรถ</div>
+      ${row('ทะเบียนรถ', `<strong>${esc(bus.plate_number || '—')}</strong>`)}
+      ${row('สถานะ', bus.status === 'on' ? '<span class="badge b-green">🟢 ให้บริการ</span>'
+        : bus.status === 'maintenance' ? '<span class="badge b-orange">🔧 ซ่อมบำรุง</span>'
+        : '<span class="badge b-gray">⚫ ไม่ได้ใช้งาน</span>')}
+      ${row('เส้นทาง', route ? esc(route.route_name || route.route_code || '—') : '—')}
+      ${row('อัปเดตล่าสุด', lastSeen)}
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">คนขับ</div>
+      ${row('ชื่อ', bus.driver_name || bus.driver_id || '— ไม่มีคนขับ')}
+    </div>
+    ${(bus.current_lat && bus.current_lng) ? `
+    <div class="detail-section">
+      <div class="detail-section-title">ตำแหน่งล่าสุด</div>
+      ${row('Latitude',  bus.current_lat?.toFixed(6))}
+      ${row('Longitude', bus.current_lng?.toFixed(6))}
+      ${bus.current_speed != null ? row('ความเร็ว', `${bus.current_speed} km/h`) : ''}
+      <div style="margin-top:10px">
+        <a href="https://www.google.com/maps?q=${bus.current_lat},${bus.current_lng}" target="_blank" rel="noopener"
+          class="btn btn-primary" style="display:inline-flex;align-items:center;gap:6px;font-size:13px">
+          🗺️ ดูใน Google Maps
+        </a>
+      </div>
+    </div>` : ''}
+    `
+  );
+}
+
+function row(key, val) {
+  return `<div class="detail-row">
+    <span class="detail-key">${esc(key)}</span>
+    <span class="detail-val">${val}</span>
+  </div>`;
+}
+
+// ===== EXPAND / COLLAPSE ALL =====
+function expandAll() {
+  document.querySelectorAll('.zone-card').forEach(el => {
+    el.classList.add('open','active');
+  });
+}
+
+function collapseAll() {
+  document.querySelectorAll('.zone-card,.route-item').forEach(el => {
+    el.classList.remove('open','active');
+  });
+}
+
+// ===== SEARCH =====
+function applySearch() {
+  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  document.querySelectorAll('.zone-card').forEach(zoneEl => {
+    const zName = zoneEl.dataset.zoneName || '';
+    const zCode = zoneEl.dataset.zoneCode || '';
+    const routeItems = zoneEl.querySelectorAll('.route-item');
+    let anyRouteMatch = false;
+
+    routeItems.forEach(routeEl => {
+      const text = routeEl.textContent.toLowerCase();
+      const match = !q || text.includes(q);
+      routeEl.style.display = match ? '' : 'none';
+      if (match) anyRouteMatch = true;
+    });
+
+    const zoneMatch = !q || zName.includes(q) || zCode.includes(q) || anyRouteMatch;
+    zoneEl.classList.toggle('hidden-zone', !zoneMatch);
+    if (q && zoneMatch) { zoneEl.classList.add('open','active'); }
+  });
+}
+
+// ===== INIT =====
+loadData();
+</script>
+</body>
+</html>

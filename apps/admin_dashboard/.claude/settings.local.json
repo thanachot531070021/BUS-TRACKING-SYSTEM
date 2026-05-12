@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs wc:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node_modules/.bin/tsc --noEmit)",
+      "Bash(npm run:*)",
+      "Bash(npx wrangler:*)",
+      "Bash(curl:*)",
+      "Bash(grep -o \".\\\\{0,30\\\\}openAssignAdminModal.\\\\{0,30\\\\}\" \"C:/Web Source/apps/admin_dashboard/dist/assets/main-D53NERfc.js\")",
+      "Bash(grep -o \".\\\\{0,50\\\\}openCreate=.\\\\{0,50\\\\}\" \"C:/Web Source/apps/admin_dashboard/dist/assets/main-D53NERfc.js\")",
+      "Bash(xargs grep:*)",
+      "Bash(grep:*)"
+    ]
+  }
+}

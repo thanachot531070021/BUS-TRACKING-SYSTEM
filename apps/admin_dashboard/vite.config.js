@@ -11,6 +11,8 @@ export default defineConfig({
       input: {
         main:  resolve(__dirname, 'index.html'),
         login: resolve(__dirname, 'login.html'),
+        zones: resolve(__dirname, 'zones.html'),
+        users: resolve(__dirname, 'users.html'),
       },
     },
   },

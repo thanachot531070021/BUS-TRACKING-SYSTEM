@@ -14,36 +14,52 @@ It is designed to:
 
 ## 2. User Roles
 
-### Passenger
+There are 4 roles in the system. Zone isolation is enforced at the API level — no role (except super_admin) can view or manage data outside its own zone.
+
+### Passenger (User)
+Access scope: **all zones** (read-only on public data)
+
 Main responsibilities:
-- browse available routes
+- browse all available routes across all zones
 - view live buses on a map
-- mark "waiting for bus"
+- mark "waiting for bus" on any route
 - cancel waiting status
 
 ### Driver
+Access scope: **own zone only** (implicitly via assigned route → zone)
+
 Main responsibilities:
 - log in to the system
 - switch duty ON/OFF
 - send GPS updates every 5–10 seconds
 - view assigned route
-- view waiting passengers
+- view waiting passengers on assigned route
 - mark waiting passengers as picked up
 
-### Route Admin
-Main responsibilities:
-- manage only assigned routes
-- monitor buses and waiting passengers in assigned routes
-- handle route-scoped operations
+A driver belongs to a zone through their `assigned_route_id → routes.zone_id`. They have no direct `zone_id` field.
 
-### Super Admin
+### Zone Admin (admin_type: zone_admin)
+Access scope: **own zone only** (enforced on all CRUD operations)
+
 Main responsibilities:
-- manage all routes
-- manage buses
-- manage users
-- manage drivers
-- manage admins
-- manage route-admin assignments
+- manage routes within their zone only
+- manage buses on routes within their zone only
+- manage drivers assigned to routes in their zone only
+- manage other zone_admins within their zone only
+- monitor waiting passengers and buses within their zone
+
+Restrictions:
+- cannot view or manage data in other zones
+- cannot create or promote anyone to super_admin
+- cannot assign drivers to routes outside their zone
+
+### Super Admin (admin_type: super_admin)
+Access scope: **all zones, no restrictions**
+
+Main responsibilities:
+- manage all zones (create, update, delete)
+- manage all routes, buses, drivers, admins across all zones
+- manage all user accounts
 - monitor whole-system operations
 
 ---
@@ -55,14 +71,20 @@ Must support:
 - login
 - register
 - current user (`/auth/me`)
-- role-based access control
-- route-admin scope control
-- future Google login support
+- role-based access control (RBAC)
+- zone-scoped access control for zone_admin
+- Google login support
 
 Purpose:
 - identify users securely
 - separate system roles and permissions
 - connect Supabase Auth with internal business profiles
+
+RBAC rules enforced at API middleware level:
+- `super_admin` → unrestricted
+- `zone_admin` → all reads/writes scoped to own zone; cannot cross zones or create super_admin
+- `driver` → scoped to own assigned route (zone implied)
+- `passenger` → read-only public data across all zones
 
 ### B. Route Management
 Must support:
