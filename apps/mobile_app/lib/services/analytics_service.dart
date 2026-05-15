@@ -50,13 +50,13 @@ class AnalyticsService {
       final deviceType =
           Platform.isIOS || Platform.isAndroid ? 'mobile' : 'desktop';
 
-      await _api.post('/analytics/event', {
+      await _api.post('/analytics/event', body: {
         'source': 'mobile_app',
         'eventType': eventType,
         'page': page,
         'platform': platform,
         'deviceType': deviceType,
-      }, auth: false);
+      });
 
       // Mark today so we don't fire again this day
       if (eventType == 'login') {

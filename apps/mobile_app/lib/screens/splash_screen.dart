@@ -4,6 +4,7 @@ import '../providers/auth_provider.dart';
 import 'auth/login_screen.dart';
 import 'passenger/passenger_home.dart';
 import 'driver/driver_home.dart';
+import 'admin_info_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -33,6 +34,8 @@ class _SplashScreenState extends State<SplashScreen> {
     final role = auth.user?.role ?? 'passenger';
     if (role == 'driver') {
       _go(const DriverHome());
+    } else if (role == 'admin' || role == 'super_admin') {
+      _go(const AdminInfoScreen());
     } else {
       _go(const PassengerHome());
     }
@@ -56,7 +59,7 @@ class _SplashScreenState extends State<SplashScreen> {
               width: 90,
               height: 90,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: const Icon(Icons.directions_bus,
@@ -76,7 +79,7 @@ class _SplashScreenState extends State<SplashScreen> {
             Text(
               'SYSTEM',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.75),
+                color: Colors.white.withValues(alpha: 0.75),
                 fontSize: 14,
                 letterSpacing: 4,
               ),

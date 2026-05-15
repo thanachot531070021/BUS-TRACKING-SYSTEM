@@ -17,7 +17,8 @@ class _PassengerHomeState extends State<PassengerHome> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       context.read<RouteProvider>().loadRoutes();
     });
   }
@@ -37,7 +38,7 @@ class _PassengerHomeState extends State<PassengerHome> {
         elevation: 0,
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.only(right: 4),
             child: IconButton(
               icon: const Icon(Icons.refresh),
               onPressed: () => rp.loadRoutes(),
@@ -47,7 +48,7 @@ class _PassengerHomeState extends State<PassengerHome> {
             padding: const EdgeInsets.only(right: 8),
             child: PopupMenuButton<String>(
               icon: CircleAvatar(
-                backgroundColor: Colors.white.withOpacity(0.25),
+                backgroundColor: Colors.white.withValues(alpha:0.25),
                 child: Text(
                   (auth.user?.displayName ?? 'U')[0].toUpperCase(),
                   style: const TextStyle(
@@ -56,9 +57,10 @@ class _PassengerHomeState extends State<PassengerHome> {
               ),
               onSelected: (v) async {
                 if (v == 'logout') {
+                  final navigator = Navigator.of(context);
                   await auth.logout();
                   if (!mounted) return;
-                  Navigator.of(context).pushReplacement(
+                  navigator.pushReplacement(
                     MaterialPageRoute(builder: (_) => const LoginScreen()),
                   );
                 }
@@ -70,48 +72,62 @@ class _PassengerHomeState extends State<PassengerHome> {
                       style: const TextStyle(fontWeight: FontWeight.w600)),
                 ),
                 const PopupMenuDivider(),
-                const PopupMenuItem(value: 'logout', child: Text('ออกจากระบบ')),
+                const PopupMenuItem(
+                    value: 'logout', child: Text('ออกจากระบบ')),
               ],
             ),
           ),
         ],
       ),
-      body: rp.loading
-          ? const Center(child: CircularProgressIndicator())
-          : rp.error != null
-              ? _errorView(rp)
-              : rp.routes.isEmpty
-                  ? _emptyView()
-                  : RefreshIndicator(
-                      onRefresh: () => rp.loadRoutes(),
-                      child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: rp.routes.length,
-                        itemBuilder: (_, i) => _RouteCard(route: rp.routes[i]),
-                      ),
-                    ),
+      body: Column(
+        children: [
+          // Route list
+          Expanded(
+            child: rp.loading
+                ? const Center(child: CircularProgressIndicator())
+                : rp.error != null
+                    ? _errorView(rp)
+                    : rp.routes.isEmpty
+                        ? _emptyView()
+                        : RefreshIndicator(
+                            onRefresh: () => rp.loadRoutes(),
+                            child: ListView.builder(
+                              padding: const EdgeInsets.all(16),
+                              itemCount: rp.routes.length,
+                              itemBuilder: (_, i) =>
+                                  _RouteCard(route: rp.routes[i]),
+                            ),
+                          ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _errorView(RouteProvider rp) => Center(
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          const Icon(Icons.wifi_off, size: 52, color: Colors.grey),
-          const SizedBox(height: 12),
-          Text(rp.error ?? 'เกิดข้อผิดพลาด',
-              style: const TextStyle(color: Colors.grey)),
-          const SizedBox(height: 16),
-          ElevatedButton(
-              onPressed: () => rp.loadRoutes(),
-              child: const Text('ลองอีกครั้ง')),
-        ]),
+        child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.wifi_off, size: 52, color: Colors.grey),
+              const SizedBox(height: 12),
+              Text(rp.error ?? 'เกิดข้อผิดพลาด',
+                  style: const TextStyle(color: Colors.grey)),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                  onPressed: () => rp.loadRoutes(),
+                  child: const Text('ลองอีกครั้ง')),
+            ]),
       );
 
   Widget _emptyView() => const Center(
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Icon(Icons.route, size: 52, color: Colors.grey),
-          SizedBox(height: 12),
-          Text('ยังไม่มีเส้นทาง', style: TextStyle(color: Colors.grey)),
-        ]),
+        child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.route, size: 52, color: Colors.grey),
+              SizedBox(height: 12),
+              Text('ยังไม่มีเส้นทาง',
+                  style: TextStyle(color: Colors.grey)),
+            ]),
       );
 }
 
@@ -159,7 +175,22 @@ class _RouteCard extends StatelessWidget {
                               fontSize: 12,
                               color: Color(0xFF6B7280),
                               fontWeight: FontWeight.w600)),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 6),
+                      if (route.zoneName != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(route.zoneName!,
+                              style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Color(0xFF2563EB),
+                                  fontWeight: FontWeight.w600)),
+                        ),
+                      const Spacer(),
                       Container(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 2),

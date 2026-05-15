@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../passenger/passenger_home.dart';
 import '../driver/driver_home.dart';
+import '../admin_info_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -36,9 +37,18 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
     if (!ok) return;
 
-    final role = auth.user?.role ?? 'passenger';
-    Widget dest = role == 'driver' ? const DriverHome() : const PassengerHome();
+    _navigateByRole(auth.user?.role ?? 'passenger');
+  }
 
+  void _navigateByRole(String role) {
+    final Widget dest;
+    if (role == 'driver') {
+      dest = const DriverHome();
+    } else if (role == 'admin' || role == 'super_admin') {
+      dest = const AdminInfoScreen();
+    } else {
+      dest = const PassengerHome();
+    }
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => dest),
     );
@@ -75,10 +85,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       width: 80,
                       height: 80,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha:0.2),
                         borderRadius: BorderRadius.circular(22),
                         border: Border.all(
-                            color: Colors.white.withOpacity(0.35), width: 2),
+                            color: Colors.white.withValues(alpha:0.35), width: 2),
                       ),
                       child: const Icon(Icons.directions_bus,
                           size: 44, color: Colors.white),
@@ -96,7 +106,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Text(
                       'เข้าสู่ระบบเพื่อใช้งาน',
                       style: TextStyle(
-                          color: Colors.white.withOpacity(0.78), fontSize: 14),
+                          color: Colors.white.withValues(alpha:0.78), fontSize: 14),
                     ),
                   ],
                 ),
@@ -119,7 +129,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFEF2F2),
-                            border: Border.all(color: const Color(0xFFFCA5A5)),
+                            border:
+                                Border.all(color: const Color(0xFFFCA5A5)),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Row(
@@ -131,7 +142,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 child: Text(
                                   auth.error!,
                                   style: const TextStyle(
-                                      color: Color(0xFFDC2626), fontSize: 13),
+                                      color: Color(0xFFDC2626),
+                                      fontSize: 13),
                                 ),
                               ),
                             ],
@@ -147,8 +159,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           hint: 'username หรือ email',
                           icon: Icons.person_outline,
                         ),
-                        validator: (v) =>
-                            (v == null || v.trim().isEmpty) ? 'กรุณากรอกชื่อผู้ใช้' : null,
+                        validator: (v) => (v == null || v.trim().isEmpty)
+                            ? 'กรุณากรอกชื่อผู้ใช้'
+                            : null,
                         textInputAction: TextInputAction.next,
                       ),
                       const SizedBox(height: 16),
@@ -164,7 +177,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           icon: Icons.lock_outline,
                           suffix: IconButton(
                             icon: Icon(
-                              _obscure ? Icons.visibility_off : Icons.visibility,
+                              _obscure
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
                               size: 20,
                               color: Colors.grey,
                             ),
@@ -197,13 +212,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                   height: 22,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2.5,
-                                    valueColor: AlwaysStoppedAnimation(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation(
+                                        Colors.white),
                                   ),
                                 )
                               : const Text(
                                   'เข้าสู่ระบบ',
                                   style: TextStyle(
-                                      fontSize: 16, fontWeight: FontWeight.w700),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700),
                                 ),
                         ),
                       ),
@@ -221,7 +238,9 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _label(String text) => Text(
         text,
         style: const TextStyle(
-            fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF374151)),
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF374151)),
       );
 
   InputDecoration _inputDeco({

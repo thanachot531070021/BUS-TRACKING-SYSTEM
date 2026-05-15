@@ -19,8 +19,10 @@ class DriverProvider extends ChangeNotifier {
   bool _onDuty = false;
   bool _loading = false;
   String? _error;
+  String? _assignedRouteName;
   List<WaitingModel> _waitingPassengers = [];
   Timer? _gpsTimer;
+  Timer? _waitingPollingTimer;
 
   UserModel? get driverUser => _driverUser;
   Map<String, dynamic>? get driverProfile => _driverProfile;
@@ -28,8 +30,19 @@ class DriverProvider extends ChangeNotifier {
   bool get loading => _loading;
   String? get error => _error;
   List<WaitingModel> get waitingPassengers => _waitingPassengers;
-  String? get assignedRouteId => _driverProfile?['assigned_route_id']?.toString();
+
+  // Bus UUID in the driver record (used to send duty toggle)
   String? get assignedBusId => _driverProfile?['assigned_bus_id']?.toString();
+
+  // Plate number from the nested assigned_bus object
+  String? get assignedBusPlate {
+    final bus = _driverProfile?['assigned_bus'];
+    if (bus is Map) return bus['plate_number']?.toString();
+    return null;
+  }
+
+  String? get assignedRouteId => _driverProfile?['assigned_route_id']?.toString();
+  String? get assignedRouteName => _assignedRouteName;
   String? get employeeCode => _driverProfile?['employee_code']?.toString();
 
   Future<void> loadProfile() async {
@@ -40,7 +53,13 @@ class DriverProvider extends ChangeNotifier {
       final data = await _api.get(ApiConfig.driverMe);
       final json = data is Map ? (data['data'] ?? data) : data;
       _driverProfile = json as Map<String, dynamic>;
-      _onDuty = _driverProfile?['status'] == 'on_duty';
+
+      // Duty status = assigned bus status ('on' means on duty)
+      final assignedBus = _driverProfile?['assigned_bus'];
+      _onDuty = assignedBus is Map && assignedBus['status'] == 'on';
+
+      // Fetch route name separately (profile only returns route UUID)
+      await _loadRouteName();
     } catch (e) {
       _error = e.toString();
     }
@@ -48,19 +67,40 @@ class DriverProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> toggleDuty() async {
+  Future<void> _loadRouteName() async {
+    final routeId = assignedRouteId;
+    if (routeId == null) return;
     try {
-      final data = await _api.post(ApiConfig.driverDuty);
+      final data = await _api.get(ApiConfig.routeById(routeId));
       final json = data is Map ? (data['data'] ?? data) : data;
       if (json is Map) {
-        _onDuty = json['status'] == 'on_duty' || json['onDuty'] == true;
+        _assignedRouteName = json['route_name']?.toString();
+      }
+    } catch (_) {}
+  }
+
+  Future<bool> toggleDuty() async {
+    final busId = assignedBusId;
+    if (busId == null) return false;
+
+    try {
+      final newStatus = _onDuty ? 'off' : 'on';
+      final data = await _api.post(ApiConfig.driverDuty, body: {
+        'busId': busId,
+        'status': newStatus,
+      });
+      final json = data is Map ? (data['data'] ?? data) : data;
+      if (json is Map) {
+        _onDuty = json['status'] == 'on';
       } else {
         _onDuty = !_onDuty;
       }
       if (_onDuty) {
         _startGps();
+        _startWaitingPolling();
       } else {
         _stopGps();
+        _stopWaitingPolling();
       }
       notifyListeners();
       return true;
@@ -87,6 +127,19 @@ class DriverProvider extends ChangeNotifier {
     _gpsTimer = null;
   }
 
+  // Poll waiting passengers every 30 seconds while on duty
+  void _startWaitingPolling() {
+    _waitingPollingTimer?.cancel();
+    _waitingPollingTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      loadWaitingPassengers();
+    });
+  }
+
+  void _stopWaitingPolling() {
+    _waitingPollingTimer?.cancel();
+    _waitingPollingTimer = null;
+  }
+
   Future<void> loadWaitingPassengers() async {
     try {
       _waitingPassengers =
@@ -109,6 +162,7 @@ class DriverProvider extends ChangeNotifier {
   @override
   void dispose() {
     _stopGps();
+    _stopWaitingPolling();
     super.dispose();
   }
 }

@@ -16,22 +16,35 @@ class _DriverHomeState extends State<DriverHome> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       context.read<DriverProvider>().loadProfile();
     });
   }
 
   Future<void> _toggleDuty() async {
     final dp = context.read<DriverProvider>();
+
+    // Must have an assigned bus to go on duty
+    if (dp.assignedBusId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('ยังไม่มีรถที่ได้รับมอบหมาย กรุณาติดต่อ Admin'),
+        backgroundColor: Color(0xFFEF4444),
+      ));
+      return;
+    }
+
     final ok = await dp.toggleDuty();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(ok
           ? (dp.onDuty ? '🟢 เริ่มปฏิบัติงานแล้ว' : '⚫ หยุดปฏิบัติงานแล้ว')
-          : '❌ เกิดข้อผิดพลาด'),
-      backgroundColor:
-          ok ? (dp.onDuty ? const Color(0xFF10B981) : const Color(0xFF6B7280))
-              : const Color(0xFFEF4444),
+          : '❌ เกิดข้อผิดพลาด กรุณาลองอีกครั้ง'),
+      backgroundColor: ok
+          ? (dp.onDuty
+              ? const Color(0xFF10B981)
+              : const Color(0xFF6B7280))
+          : const Color(0xFFEF4444),
     ));
   }
 
@@ -57,7 +70,7 @@ class _DriverHomeState extends State<DriverHome> {
             padding: const EdgeInsets.only(right: 8),
             child: PopupMenuButton<String>(
               icon: CircleAvatar(
-                backgroundColor: Colors.white.withOpacity(0.2),
+                backgroundColor: Colors.white.withValues(alpha:0.2),
                 child: Text(
                   (auth.user?.displayName ?? 'D')[0].toUpperCase(),
                   style: const TextStyle(
@@ -66,9 +79,10 @@ class _DriverHomeState extends State<DriverHome> {
               ),
               onSelected: (v) async {
                 if (v == 'logout') {
+                  final navigator = Navigator.of(context);
                   await auth.logout();
                   if (!mounted) return;
-                  Navigator.of(context).pushReplacement(
+                  navigator.pushReplacement(
                     MaterialPageRoute(builder: (_) => const LoginScreen()),
                   );
                 }
@@ -93,25 +107,43 @@ class _DriverHomeState extends State<DriverHome> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  // Duty status card
+                  if (dp.error != null) _errorBanner(dp.error!),
+                  if (dp.error != null) const SizedBox(height: 14),
+
                   _dutyCard(dp),
                   const SizedBox(height: 14),
 
-                  // Profile info card
                   _profileCard(dp, auth),
                   const SizedBox(height: 14),
 
-                  // GPS status card
                   if (dp.onDuty) _gpsCard(),
                   if (dp.onDuty) const SizedBox(height: 14),
 
-                  // Go to waiting list
                   _waitingButton(dp),
                 ],
               ),
             ),
     );
   }
+
+  Widget _errorBanner(String msg) => Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFEF2F2),
+          border: Border.all(color: const Color(0xFFFCA5A5)),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(children: [
+          const Icon(Icons.warning_amber_rounded,
+              color: Color(0xFFDC2626), size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(msg,
+                style: const TextStyle(
+                    color: Color(0xFFDC2626), fontSize: 13)),
+          ),
+        ]),
+      );
 
   Widget _dutyCard(DriverProvider dp) => Card(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -132,7 +164,7 @@ class _DriverHomeState extends State<DriverHome> {
                   boxShadow: dp.onDuty
                       ? [
                           BoxShadow(
-                              color: const Color(0xFF10B981).withOpacity(0.5),
+                              color: const Color(0xFF10B981).withValues(alpha:0.5),
                               blurRadius: 8)
                         ]
                       : null,
@@ -144,7 +176,9 @@ class _DriverHomeState extends State<DriverHome> {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: dp.onDuty ? Colors.white : const Color(0xFF1E293B),
+                  color: dp.onDuty
+                      ? Colors.white
+                      : const Color(0xFF1E293B),
                 ),
               ),
             ]),
@@ -153,20 +187,34 @@ class _DriverHomeState extends State<DriverHome> {
               width: double.infinity,
               height: 46,
               child: ElevatedButton.icon(
-                onPressed: _toggleDuty,
-                icon: Icon(dp.onDuty ? Icons.stop_circle : Icons.play_circle),
+                onPressed: dp.assignedBusId == null ? null : _toggleDuty,
+                icon: Icon(dp.onDuty
+                    ? Icons.stop_circle
+                    : Icons.play_circle),
                 label: Text(dp.onDuty ? 'หยุดปฏิบัติงาน' : 'เริ่มปฏิบัติงาน'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: dp.onDuty
                       ? const Color(0xFFEF4444)
                       : const Color(0xFF10B981),
                   foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.grey.shade300,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
                   elevation: 0,
                 ),
               ),
             ),
+            if (dp.assignedBusId == null) ...[
+              const SizedBox(height: 8),
+              Text(
+                'ยังไม่มีรถที่ได้รับมอบหมาย',
+                style: TextStyle(
+                    fontSize: 12,
+                    color: dp.onDuty
+                        ? Colors.white54
+                        : Colors.grey.shade500),
+              ),
+            ],
           ]),
         ),
       );
@@ -176,23 +224,39 @@ class _DriverHomeState extends State<DriverHome> {
         elevation: 0,
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Row(children: [
               Icon(Icons.badge_outlined, color: Color(0xFF3B82F6), size: 20),
               SizedBox(width: 8),
               Text('ข้อมูลพนักงาน',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                  style: TextStyle(
+                      fontWeight: FontWeight.w700, fontSize: 15)),
             ]),
             const Divider(height: 20),
-            _row(Icons.person_outline, 'ชื่อ', auth.user?.displayName ?? '-'),
+            _row(Icons.person_outline, 'ชื่อ',
+                auth.user?.displayName ?? '-'),
             const SizedBox(height: 8),
-            _row(Icons.numbers, 'รหัสพนักงาน', dp.employeeCode ?? '-'),
+            _row(Icons.numbers, 'รหัสพนักงาน',
+                dp.employeeCode ?? '-'),
             const SizedBox(height: 8),
-            _row(Icons.directions_bus_outlined, 'รถที่รับผิดชอบ',
-                dp.assignedBusId ?? 'ยังไม่ได้รับมอบหมาย'),
+            _row(
+              Icons.directions_bus_outlined,
+              'รถที่รับผิดชอบ',
+              dp.assignedBusPlate ??
+                  (dp.assignedBusId != null
+                      ? _shortId(dp.assignedBusId!)
+                      : 'ยังไม่ได้รับมอบหมาย'),
+            ),
             const SizedBox(height: 8),
-            _row(Icons.route_outlined, 'เส้นทาง',
-                dp.assignedRouteId ?? 'ยังไม่ได้รับมอบหมาย'),
+            _row(
+              Icons.route_outlined,
+              'เส้นทาง',
+              dp.assignedRouteName ??
+                  (dp.assignedRouteId != null
+                      ? _shortId(dp.assignedRouteId!)
+                      : 'ยังไม่ได้รับมอบหมาย'),
+            ),
           ]),
         ),
       );
@@ -208,7 +272,7 @@ class _DriverHomeState extends State<DriverHome> {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: const Color(0xFF3B82F6).withOpacity(0.15),
+                color: const Color(0xFF3B82F6).withValues(alpha:0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(Icons.gps_fixed,
@@ -216,13 +280,17 @@ class _DriverHomeState extends State<DriverHome> {
             ),
             const SizedBox(width: 12),
             const Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('GPS กำลังส่งตำแหน่ง',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w700, color: Color(0xFF1E40AF))),
-                Text('ส่งพิกัดทุก 5 วินาที',
-                    style: TextStyle(fontSize: 12, color: Color(0xFF3B82F6))),
-              ]),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('GPS กำลังส่งตำแหน่ง',
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1E40AF))),
+                    Text('ส่งพิกัดทุก 5 วินาที',
+                        style: TextStyle(
+                            fontSize: 12, color: Color(0xFF3B82F6))),
+                  ]),
             ),
             const _PulsingDot(),
           ]),
@@ -244,23 +312,52 @@ class _DriverHomeState extends State<DriverHome> {
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFEF9C3),
+                  color: dp.waitingPassengers.isNotEmpty
+                      ? const Color(0xFFFEF3C7)
+                      : const Color(0xFFFEF9C3),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(Icons.people_alt_outlined,
                     color: Color(0xFFD97706), size: 24),
               ),
               const SizedBox(width: 14),
-              const Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('ผู้โดยสารรอรับ',
-                      style:
-                          TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                  Text('ดูรายการและรับผู้โดยสาร',
-                      style: TextStyle(fontSize: 12, color: Colors.grey)),
-                ]),
+              Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('ผู้โดยสารรอรับ',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w700, fontSize: 15)),
+                      Text(
+                        dp.waitingPassengers.isEmpty
+                            ? 'ดูรายการและรับผู้โดยสาร'
+                            : '${dp.waitingPassengers.length} คนรอรับ',
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: dp.waitingPassengers.isNotEmpty
+                                ? const Color(0xFFD97706)
+                                : Colors.grey),
+                      ),
+                    ]),
               ),
-              const Icon(Icons.chevron_right, color: Colors.grey),
+              if (dp.waitingPassengers.isNotEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF59E0B),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    '${dp.waitingPassengers.length}',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800),
+                  ),
+                )
+              else
+                const Icon(Icons.chevron_right, color: Colors.grey),
             ]),
           ),
         ),
@@ -279,6 +376,9 @@ class _DriverHomeState extends State<DriverHome> {
                   overflow: TextOverflow.ellipsis)),
         ],
       );
+
+  String _shortId(String id) =>
+      id.length > 8 ? '${id.substring(0, 8)}…' : id;
 }
 
 class _PulsingDot extends StatefulWidget {

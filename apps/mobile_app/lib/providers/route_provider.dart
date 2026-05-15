@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../models/route_model.dart';
 import '../models/bus_model.dart';
@@ -19,6 +20,7 @@ class RouteProvider extends ChangeNotifier {
   bool _loading = false;
   bool _busLoading = false;
   String? _error;
+  Timer? _busPollingTimer;
 
   List<RouteModel> get routes => _routes;
   List<BusModel> get liveBuses => _liveBuses;
@@ -53,6 +55,19 @@ class RouteProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Start polling live bus positions every 5 seconds (used by RouteDetail)
+  void startBusPolling(String routeId) {
+    _busPollingTimer?.cancel();
+    _busPollingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      loadLiveBuses(routeId);
+    });
+  }
+
+  void stopBusPolling() {
+    _busPollingTimer?.cancel();
+    _busPollingTimer = null;
+  }
+
   Future<bool> createWaiting(String routeId, {double? lat, double? lng}) async {
     try {
       _myWaiting = await _waitingService.createWaiting(
@@ -79,5 +94,11 @@ class RouteProvider extends ChangeNotifier {
   void clearWaiting() {
     _myWaiting = null;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    stopBusPolling();
+    super.dispose();
   }
 }
