@@ -137,6 +137,12 @@ const SECTIONS = {
   drivers: {
     title: 'คนขับรถ', icon: '🚌',
     subtitle: 'จัดการข้อมูลคนขับรถโดยสาร',
+    groupBy: item => {
+      if (!item.assigned_route_id) return 'ยังไม่ได้กำหนดเส้นทาง';
+      const routes = (_ssCache && _ssCache['/admin/routes']) || [];
+      const r = routes.find(x => x.id === item.assigned_route_id);
+      return r ? [r.route_code, r.route_name].filter(Boolean).join(' — ') : String(item.assigned_route_id);
+    },
     listPath:   '/admin/drivers',
     createPath: '/admin/drivers/with-user',
     updatePath: id => `/admin/drivers/${id}`,
@@ -144,12 +150,20 @@ const SECTIONS = {
     idField: 'id',
     withUserCreate: true,
     resetPassword: true,
-    prefetch: ['/admin/routes'],
+    prefetch: ['/admin/routes', '/admin/buses'],
     columns: [
       { key: 'user',          label: 'ชื่อ',          r: (v,row) => v ? `<strong>${esc(v.full_name||v.username||'—')}</strong><br><small style="color:var(--muted)">${esc(v.email||'')}</small>` : chip(row.user_id) },
       { key: 'employee_code', label: 'รหัสพนักงาน',   bold: false },
       { key: 'license_no',    label: 'ใบขับขี่'       },
       { key: 'assigned_route_id', label: 'เส้นทาง',   r: v => lookupLabel('/admin/routes', v, r => [r.route_code, r.route_name].filter(Boolean).join(' — ')) },
+      { key: 'user_id', label: 'ทะเบียนรถ', r: v => {
+        if (!v) return '<span style="color:var(--muted)">—</span>';
+        const buses = (_ssCache && _ssCache['/admin/buses']) || [];
+        const bus = buses.find(b => String(b.driver_id) === String(v));
+        return bus
+          ? `<span style="font-weight:600;font-family:'JetBrains Mono',monospace;font-size:12.5px">${esc(bus.plate_number)}</span>`
+          : '<span style="color:var(--muted)">—</span>';
+      }},
       { key: 'status',        label: 'สถานะ',          r: statusBadge },
       { key: 'created_by', label: 'สร้างโดย', r: (v, row) => row?.created_by_user ? esc(row.created_by_user.full_name || row.created_by_user.username || v) : (v ? chip(v) : '—') },
       { key: 'updated_by', label: 'แก้ไขล่าสุดโดย', r: (v, row) => row?.updated_by_user ? esc(row.updated_by_user.full_name || row.updated_by_user.username || v) : (v ? chip(v) : '—') },
@@ -232,6 +246,10 @@ const SECTIONS = {
   routes: {
     title: 'เส้นทางรถ', icon: '🛣️',
     subtitle: 'จัดการเส้นทางการให้บริการ',
+    groupBy: item => {
+      const z = item.zone;
+      return z ? [z.zone_code, z.zone_name].filter(Boolean).join(' — ') : (item.zone_id || 'ไม่ระบุโซน');
+    },
     listPath:   '/admin/routes',
     createPath: '/admin/routes',
     updatePath: id => `/admin/routes/${id}`,
@@ -270,6 +288,14 @@ const SECTIONS = {
   buses: {
     title: 'รถโดยสาร', icon: '🚍',
     subtitle: 'จัดการข้อมูลรถโดยสารทั้งหมด',
+    groupBy: item => {
+      if (!item.route_id) return 'ยังไม่ได้กำหนดเส้นทาง';
+      const r = item.route;
+      if (r) return [r.route_code, r.route_name].filter(Boolean).join(' — ');
+      const routes = (_ssCache && _ssCache['/admin/routes']) || [];
+      const cached = routes.find(x => x.id === item.route_id);
+      return cached ? [cached.route_code, cached.route_name].filter(Boolean).join(' — ') : String(item.route_id);
+    },
     listPath:   '/admin/buses',
     createPath: '/admin/buses',
     updatePath: id => `/admin/buses/${id}`,
@@ -278,8 +304,21 @@ const SECTIONS = {
     prefetch: ['/admin/routes', '/admin/drivers'],
     columns: [
       { key: 'plate_number', label: 'ทะเบียนรถ',  bold: true },
-      { key: 'route_id',     label: 'เส้นทาง',     r: v => lookupLabel('/admin/routes', v, r => [r.route_code, r.route_name].filter(Boolean).join(' — ')) },
-      { key: 'driver_id',    label: 'คนขับ',        r: v => lookupLabel('/admin/drivers', v, d => d.user ? (d.user.full_name || d.user.username || d.employee_code || d.id) : (d.employee_code || d.id)) },
+      { key: 'route_id',     label: 'เส้นทาง',     r: (v, row) => {
+        const r = row?.route;
+        if (r) return `<span style="font-weight:500">${esc([r.route_code, r.route_name].filter(Boolean).join(' — '))}</span>`;
+        if (!v) return '<span style="color:var(--muted)">—</span>';
+        return lookupLabel('/admin/routes', v, rt => [rt.route_code, rt.route_name].filter(Boolean).join(' — '));
+      }},
+      { key: 'driver_id',    label: 'คนขับ',        r: (v, row) => {
+        const u = row?.driver_user;
+        if (u) return `<span style="font-weight:500">${esc(u.full_name || u.username || v)}</span>`;
+        if (!v) return '<span style="color:var(--muted)">—</span>';
+        const drivers = (_ssCache && _ssCache['/admin/drivers']) || [];
+        const d = drivers.find(x => String(x.user_id) === String(v));
+        if (d) return `<span style="font-weight:500">${esc(d.user?.full_name || d.user?.username || d.employee_code || v)}</span>`;
+        return chip(v);
+      }},
       { key: 'status',       label: 'สถานะ',         r: statusBadge },
       { key: 'created_by', label: 'สร้างโดย', r: (v, row) => row?.created_by_user ? esc(row.created_by_user.full_name || row.created_by_user.username || v) : (v ? chip(v) : '—') },
       { key: 'updated_by', label: 'แก้ไขล่าสุดโดย', r: (v, row) => row?.updated_by_user ? esc(row.updated_by_user.full_name || row.updated_by_user.username || v) : (v ? chip(v) : '—') },
@@ -290,18 +329,41 @@ const SECTIONS = {
         fetchPath: '/admin/drivers',
         labelFn: d => d.user ? (d.user.full_name || d.user.username || d.employee_code || d.id) : (d.employee_code || d.id),
         valueFn:  d => d.user_id,
+        filterFn: driver => {
+          const buses = state.cache['buses'] || [];
+          const currentBusId = modal.mode === 'edit' ? modal.editId : null;
+          const takenIds = new Set(
+            buses.filter(b => !currentBusId || String(b.id) !== String(currentBusId))
+                 .map(b => b.driver_id).filter(Boolean)
+          );
+          return !takenIds.has(driver.user_id);
+        },
         onSelect: (_id, driver) => {
-          const routeId = driver?.assigned_route_id;
-          if (!routeId) return;
-          initAsyncSelect('ss_routeId', '/admin/routes',
-            r => [r.route_code, r.route_name].filter(Boolean).join(' — '),
-            r => r.id, routeId);
+          const routeId = driver?.assigned_route_id || '';
+          const hiddenEl = document.getElementById('f_route_hidden');
+          const displayEl = document.getElementById('f_route_display');
+          if (hiddenEl) hiddenEl.value = routeId;
+          if (displayEl) {
+            if (!routeId) {
+              displayEl.textContent = '— คนขับนี้ยังไม่มีเส้นทาง —';
+              displayEl.style.color = 'var(--muted)';
+            } else {
+              const routes = _ssCache['/admin/routes'] || [];
+              const route = routes.find(r => r.id === routeId);
+              displayEl.textContent = route
+                ? [route.route_code, route.route_name].filter(Boolean).join(' — ')
+                : routeId;
+              displayEl.style.color = 'var(--text)';
+            }
+          }
         },
       },
       { n: 'routeId', rk: 'route_id', label: 'เส้นทาง', type: 'async-select', req: false,
         fetchPath: '/admin/routes',
         labelFn: r => [r.route_code, r.route_name].filter(Boolean).join(' — '),
         valueFn:  r => r.id,
+        locked: true,
+        placeholder: '— เลือกคนขับก่อน —',
       },
       { n: 'status', rk: 'status', label: 'สถานะ', type: 'select', req: false,
         options: [
@@ -461,7 +523,7 @@ function ssFilter(id, q) {
   } else { nr?.remove(); }
 }
 
-async function initAsyncSelect(containerId, fetchPath, labelFn, valueFn, currentVal, onSelect = null) {
+async function initAsyncSelect(containerId, fetchPath, labelFn, valueFn, currentVal, onSelect = null, filterFn = null) {
   const el = document.getElementById(containerId);
   if (!el) return;
   const listEl = el.querySelector('.ss-options-list');
@@ -474,9 +536,10 @@ async function initAsyncSelect(containerId, fetchPath, labelFn, valueFn, current
       _ssCache[fetchPath] = extractList(raw);
     }
     const items = _ssCache[fetchPath];
+    const visibleItems = filterFn ? items.filter(filterFn) : items;
 
     // Empty state — ไม่มีข้อมูลในรายการ
-    if (items.length === 0) {
+    if (visibleItems.length === 0) {
       listEl.innerHTML = `
         <div class="ss-option" data-value="">— เลือก —</div>
         <div class="ss-no-results" style="padding:14px;text-align:center;color:var(--muted)">
@@ -484,7 +547,6 @@ async function initAsyncSelect(containerId, fetchPath, labelFn, valueFn, current
         </div>`;
       triggerLabel.textContent = '— เลือก —';
       triggerLabel.classList.add('ph');
-      // ยังคง bind click ให้ปุ่ม "— เลือก —" ปิด dropdown ได้
       listEl.querySelector('.ss-option')?.addEventListener('click', () => {
         if (hiddenEl) hiddenEl.value = '';
         triggerLabel.textContent = '— เลือก —';
@@ -495,17 +557,20 @@ async function initAsyncSelect(containerId, fetchPath, labelFn, valueFn, current
     }
 
     listEl.innerHTML = `<div class="ss-option" data-value="">— เลือก —</div>` +
-      items.map(item => {
+      visibleItems.map(item => {
         const v = String(valueFn(item));
         const l = esc(labelFn(item));
         const sel = v === String(currentVal ?? '') ? ' selected' : '';
         return `<div class="ss-option${sel}" data-value="${esc(v)}" title="${l}">${l}</div>`;
       }).join('');
-    // Set label
+    // Set label + hidden value for pre-selected value
     if (currentVal) {
       const found = items.find(i => String(valueFn(i)) === String(currentVal));
-      if (found) { triggerLabel.textContent = labelFn(found); triggerLabel.classList.remove('ph'); }
-      else { triggerLabel.textContent = '— เลือก —'; triggerLabel.classList.add('ph'); }
+      if (found) {
+        triggerLabel.textContent = labelFn(found);
+        triggerLabel.classList.remove('ph');
+        if (hiddenEl) hiddenEl.value = String(valueFn(found));
+      } else { triggerLabel.textContent = '— เลือก —'; triggerLabel.classList.add('ph'); }
     } else { triggerLabel.textContent = '— เลือก —'; triggerLabel.classList.add('ph'); }
     // Click handlers
     listEl.querySelectorAll('.ss-option').forEach(opt => {
@@ -535,10 +600,12 @@ function populateAsyncSelects(fields, data, defaults = {}) {
   (fields || []).filter(f => f.type === 'async-select').forEach(f => {
     // Zone Admin: zone_id rendered as static display ใน buildForm — ข้าม initAsyncSelect
     if (f.rk === 'zone_id' && state.adminType === 'zone_admin') return;
+    // Locked fields are rendered as read-only display — skip initAsyncSelect
+    if (f.locked) return;
     const currentVal = (f.rk && data) ? (data[f.rk] ?? '')
                      : (f.rk && defaults[f.rk] != null) ? defaults[f.rk]
                      : '';
-    initAsyncSelect(`ss_${f.n}`, f.fetchPath, f.labelFn, f.valueFn, String(currentVal), f.onSelect || null);
+    initAsyncSelect(`ss_${f.n}`, f.fetchPath, f.labelFn, f.valueFn, String(currentVal), f.onSelect || null, f.filterFn || null);
   });
 }
 
@@ -563,6 +630,18 @@ function changePageSize(section, size) {
   state.pagination[section].pageSize = Number(size);
   state.pagination[section].page = 1;
   gotoPage(section, 1);
+}
+
+function toggleGroup(headerRow) {
+  const gid = headerRow.dataset.groupId;
+  const section = headerRow.dataset.section;
+  const key = headerRow.dataset.groupKey;
+  const isCollapsed = headerRow.classList.toggle('is-collapsed');
+  if (state.collapsedGroups?.[section]) state.collapsedGroups[section][key] = isCollapsed;
+  const table = headerRow.closest('table');
+  table.querySelectorAll(`tr[data-group-member="${gid}"]`).forEach(row => {
+    row.classList.toggle('tbl-row-hidden', isCollapsed);
+  });
 }
 
 function _reinjectBusDriverTabs() {
@@ -808,34 +887,73 @@ function renderTable(section, allItems) {
   // Pagination state
   if (!state.pagination[section]) state.pagination[section] = { page: 1, pageSize: 25 };
   const pg = state.pagination[section];
-  const total = allItems.length;
+  const sortedItems = cfg.groupBy
+    ? [...allItems].sort((a, b) => {
+        const ka = cfg.groupBy(a), kb = cfg.groupBy(b);
+        return ka < kb ? -1 : ka > kb ? 1 : 0;
+      })
+    : allItems;
+  const total = sortedItems.length;
   const totalPages = Math.ceil(total / pg.pageSize) || 1;
   pg.page = Math.max(1, Math.min(pg.page, totalPages));
   const start = (pg.page - 1) * pg.pageSize;
-  const items = allItems.slice(start, start + pg.pageSize);
+  const items = sortedItems.slice(start, start + pg.pageSize);
+
+  const renderItemCells = item => {
+    const id = item[cfg.idField];
+    let cells = cfg.columns.map(col => {
+      const v = item[col.key];
+      const html = col.r ? col.r(v, item) : (v != null ? esc(String(v)) : '—');
+      return `<td>${col.bold ? `<strong>${html}</strong>` : html}</td>`;
+    }).join('');
+    if (!ro) {
+      cells += `<td><div class="td-actions">
+        ${!noEdit ? `<button class="btn btn-warning btn-icon btn-sm" title="แก้ไข" onclick="openEdit('${section}','${esc(String(id))}')">✏️</button>` : ''}
+        ${cfg.resetPassword ? `<button class="btn btn-icon btn-sm" title="Reset Password" style="background:#eff6ff;color:#3b82f6;border:1.5px solid #bfdbfe" onclick="openResetPasswordModal('${section}','${esc(String(id))}')">🔑</button>` : ''}
+        <button class="btn btn-danger btn-icon btn-sm" title="ลบ" onclick="askDelete('${section}','${esc(String(id))}')">🗑️</button>
+      </div></td>`;
+    }
+    return cells;
+  };
 
   let rows = '';
   if (!total) {
     rows = `<tr><td colspan="${colCount}" style="text-align:center;padding:44px;color:var(--muted)">
       <div style="font-size:34px;margin-bottom:10px">📭</div>ยังไม่มีข้อมูล
     </td></tr>`;
-  } else {
-    rows = items.map(item => {
-      const id = item[cfg.idField];
-      let cells = cfg.columns.map(col => {
-        const v = item[col.key];
-        const html = col.r ? col.r(v, item) : (v != null ? esc(String(v)) : '—');
-        return `<td>${col.bold ? `<strong>${html}</strong>` : html}</td>`;
-      }).join('');
-      if (!ro) {
-        cells += `<td><div class="td-actions">
-          ${!noEdit ? `<button class="btn btn-warning btn-icon btn-sm" title="แก้ไข" onclick="openEdit('${section}','${esc(String(id))}')">✏️</button>` : ''}
-          ${cfg.resetPassword ? `<button class="btn btn-icon btn-sm" title="Reset Password" style="background:#eff6ff;color:#3b82f6;border:1.5px solid #bfdbfe" onclick="openResetPasswordModal('${section}','${esc(String(id))}')">🔑</button>` : ''}
-          <button class="btn btn-danger btn-icon btn-sm" title="ลบ" onclick="askDelete('${section}','${esc(String(id))}')">🗑️</button>
-        </div></td>`;
+  } else if (cfg.groupBy) {
+    const groupMap = new Map();
+    for (const item of sortedItems) {
+      const key = cfg.groupBy(item);
+      if (!groupMap.has(key)) groupMap.set(key, []);
+      groupMap.get(key).push(item);
+    }
+    const groupKeyList = [...groupMap.keys()];
+    if (!state.collapsedGroups) state.collapsedGroups = {};
+    if (!state.collapsedGroups[section]) state.collapsedGroups[section] = {};
+    rows = '';
+    let lastGroup = null;
+    for (const item of items) {
+      const key = cfg.groupBy(item);
+      if (key !== lastGroup) {
+        const groupCount = groupMap.get(key)?.length ?? 0;
+        const gid = groupKeyList.indexOf(key);
+        const isCollapsed = !!state.collapsedGroups[section][key];
+        rows += `<tr class="tbl-group-header${isCollapsed ? ' is-collapsed' : ''}" data-group-id="${gid}" data-section="${section}" data-group-key="${esc(key)}" onclick="toggleGroup(this)">
+          <td colspan="${colCount}"><div class="tbl-group-inner">
+            <span class="tbl-group-chevron"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></span>
+            <span class="tbl-group-label">${esc(key)}</span>
+            <span class="tbl-group-count">${groupCount} รายการ</span>
+          </div></td>
+        </tr>`;
+        lastGroup = key;
       }
-      return `<tr>${cells}</tr>`;
-    }).join('');
+      const gid = groupKeyList.indexOf(key);
+      const isCollapsed = !!state.collapsedGroups[section][key];
+      rows += `<tr data-group-member="${gid}"${isCollapsed ? ' class="tbl-row-hidden"' : ''}>${renderItemCells(item)}</tr>`;
+    }
+  } else {
+    rows = items.map(item => `<tr>${renderItemCells(item)}</tr>`).join('');
   }
 
   // Pagination bar
@@ -1500,6 +1618,26 @@ async function openEdit(section, id) {
           </div>`);
       }
     }
+
+    // Drivers: inject plate number section at the bottom
+    if (section === 'drivers') {
+      const buses = _ssCache['/admin/buses'] || state.cache['buses'] || [];
+      const driverUserId = item.user_id;
+      const currentBus = driverUserId ? buses.find(b => String(b.driver_id) === String(driverUserId)) : null;
+      modal.bodyEl().insertAdjacentHTML('beforeend', `
+        <div style="border-top:1.5px dashed var(--border);margin:16px 0 12px;padding-top:14px">
+          <div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+            🚍 รถโดยสาร
+          </div>
+          <input type="hidden" id="edit_busId" value="${esc(currentBus?.id || '')}">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">ทะเบียนรถ
+              <small style="color:var(--muted);font-weight:400"> — ${currentBus ? 'แก้ไขทะเบียนรถที่ผูกอยู่' : 'กรอกเพื่อสร้างรถใหม่และผูกกับคนขับ'}</small>
+            </label>
+            <input type="text" class="form-control" id="edit_plateNumber" value="${esc(currentBus?.plate_number || '')}" placeholder="เช่น กข 1234">
+          </div>
+        </div>`);
+    }
   } catch (err) {
     modal.bodyEl().innerHTML = `<p style="color:var(--danger);padding:8px">⚠️ ${esc(err.message)}</p>`;
   }
@@ -1536,7 +1674,7 @@ async function checkPhoneUnique(phone, excludeUserId = null) {
 async function checkPlateUnique(plate, excludeBusId = null) {
   if (!plate) return true;
   try {
-    const cached = state.cache['buses'];
+    const cached = state.cache['buses']?.length ? state.cache['buses'] : (_ssCache['/admin/buses'] || null);
     const buses = cached?.length ? cached : extractList(await apiFetch('/admin/buses'));
     return !buses.some(b => b.plate_number === plate && b.id !== excludeBusId);
   } catch { return true; }
@@ -1638,6 +1776,12 @@ async function submitModal() {
       alertDialog('เลขที่ใบขับขี่นี้ถูกใช้งานในระบบแล้ว', 'ใบขับขี่ซ้ำ');
       return;
     }
+    const _editPlate   = document.getElementById('edit_plateNumber')?.value?.trim() || null;
+    const _editBusId   = document.getElementById('edit_busId')?.value?.trim() || null;
+    if (_editPlate && !(await checkPlateUnique(_editPlate, _editBusId || null))) {
+      alertDialog('ทะเบียนรถนี้มีอยู่ในระบบแล้ว กรุณาใช้ทะเบียนอื่น', 'ทะเบียนรถซ้ำ');
+      return;
+    }
   }
 
   const btn = modal.submitBtn();
@@ -1703,9 +1847,24 @@ async function submitModal() {
           toast('แก้ไขผู้ใช้งานสำเร็จ ✅', 'success');
         }
       } else if (section === 'drivers') {
-        // ส่ง body ทั้งหมด (user fields + driver fields) ไปยัง driver endpoint
-        // backend จะแยก user fields ออกและอัปเดต user record ให้เอง
         await apiFetch(cfg.updatePath(editId), { method: 'PUT', body: JSON.stringify(body) });
+
+        // Handle bus plate: update existing bus OR create new one if plate was provided
+        const newPlate     = document.getElementById('edit_plateNumber')?.value?.trim() || null;
+        const existingBusId = document.getElementById('edit_busId')?.value?.trim() || null;
+        if (newPlate) {
+          if (existingBusId) {
+            await apiFetch(`/admin/buses/${existingBusId}`, { method: 'PUT', body: JSON.stringify({ plateNumber: newPlate }) });
+          } else {
+            const driverItem = state.cache['drivers']?.find(d => String(d.id) === String(editId));
+            const userId = driverItem?.user_id;
+            if (userId) {
+              const routeId = body.assignedRouteId || driverItem?.assigned_route_id || null;
+              await apiFetch('/admin/buses', { method: 'POST', body: JSON.stringify({ plateNumber: newPlate, driverId: userId, routeId, status: 'on' }) });
+            }
+          }
+          delete _ssCache['/admin/buses'];
+        }
         toast(`แก้ไข${cfg.title}สำเร็จ ✅`, 'success');
       } else {
         await apiFetch(cfg.updatePath(editId), { method:'PUT', body: JSON.stringify(body) });
@@ -1713,6 +1872,7 @@ async function submitModal() {
       }
     }
     closeModal();
+    if (section === 'buses') delete _ssCache['/admin/buses'];
     loadSection(section);
   } catch (err) {
     alertDialog(err.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง', 'บันทึกไม่สำเร็จ');
@@ -1746,6 +1906,25 @@ function buildForm(fields, data, mode, defaults = {}) {
               🗺️ ${displayText}
               <span style="font-size:11px;color:var(--muted);margin-left:auto">โซนของคุณ 🔒</span>
             </div>
+          </div>`;
+        }
+
+        // Locked: auto-derived from another field, not manually editable
+        if (f.locked) {
+          let displayText = f.placeholder || '— เลือกก่อน —';
+          let hasVal = false;
+          if (val) {
+            const cached = _ssCache[f.fetchPath] || [];
+            const found = cached.find(x => String(f.valueFn(x)) === String(val));
+            if (found) { displayText = f.labelFn(found); hasVal = true; }
+          }
+          return `<div class="form-group">
+            <label class="form-label">${esc(f.label)}<small style="color:var(--muted);font-weight:400;margin-left:6px">— กำหนดอัตโนมัติจากคนขับ</small></label>
+            <input type="hidden" name="${esc(f.n)}" id="f_route_hidden" value="${esc(String(val))}">
+            <div id="f_route_display" class="form-control" style="background:var(--bg);pointer-events:none;color:${hasVal ? 'var(--text)' : 'var(--muted)'}">
+              ${esc(displayText)}
+            </div>
+            ${hint}
           </div>`;
         }
 
@@ -1816,6 +1995,7 @@ async function executeDelete() {
     await apiFetch(cfg.deletePath(del.id), { method:'DELETE' });
     toast(`ลบ${cfg.title}สำเร็จ`, 'success');
     closeConfirm();
+    if (del.section === 'buses') delete _ssCache['/admin/buses'];
     loadSection(del.section);
   } catch (err) {
     toast(`❌ ลบไม่สำเร็จ: ${err.message}`, 'error');
@@ -1837,38 +2017,38 @@ const NAV_GROUPS = [
   {
     label: 'ภาพรวม',
     items: [
-      { section: 'dashboard', icon: '📊', label: 'Dashboard' },
-      { section: 'analytics', icon: '📈', label: 'Analytics' },
+      { section: 'dashboard', icon: 'layout-dashboard', label: 'Dashboard' },
+      { section: 'analytics', icon: 'bar-chart-3',      label: 'Analytics' },
     ],
   },
   {
     label: 'การจัดการระบบ',
     superAdminOnly: true,
     items: [
-      { section: 'zones',  icon: '🗺️', label: 'โซน' },
-      { section: 'users',  icon: '👥', label: 'ผู้ใช้งาน' },
+      { section: 'zones',  icon: 'layers',  label: 'โซน' },
+      { section: 'users',  icon: 'users',   label: 'ผู้ใช้งาน' },
     ],
   },
   {
     label: 'บัญชีผู้ดูแล',
     items: [
-      { section: 'admins', icon: '👤', label: 'ผู้ดูแลระบบ' },
+      { section: 'admins', icon: 'shield-check', label: 'ผู้ดูแลระบบ' },
     ],
   },
   {
     label: 'การเดินรถ',
     items: [
-      { section: 'routes',  icon: '🛣️',   label: 'เส้นทางรถ' },
-      { section: 'drivers', icon: '🧑‍✈️', label: 'คนขับรถ' },
-      { section: 'buses',   icon: '🚍',   label: 'รถโดยสาร' },
-      { section: 'waiting', icon: '⏳',   label: 'รายการรอรับ' },
+      { section: 'routes',  icon: 'route',          label: 'เส้นทางรถ' },
+      { section: 'drivers', icon: 'user-check',  label: 'คนขับรถ' },
+      { section: 'buses',   icon: 'bus',             label: 'รถโดยสาร' },
+      { section: 'waiting', icon: 'clock',           label: 'รายการรอรับ' },
     ],
   },
   {
     label: 'การตั้งค่า',
     superAdminOnly: true,
     items: [
-      { section: 'settings', icon: '⚙️', label: 'การตั้งค่า API' },
+      { section: 'settings', icon: 'settings-2', label: 'การตั้งค่า API' },
     ],
   },
 ];
@@ -1885,9 +2065,11 @@ function renderNav() {
         <div class="nav-group-label">${g.label}</div>
         ${g.items.map(item => `
           <button class="nav-item${state.section === item.section ? ' active' : ''}" data-section="${item.section}" onclick="navigate('${item.section}')">
-            <span class="nav-icon">${item.icon}</span><span>${item.label}</span>
+            <i data-lucide="${item.icon}" class="nav-icon"></i><span>${item.label}</span>
           </button>`).join('')}
       </div>`).join('');
+
+  if (window.lucide) lucide.createIcons({ nodes: [nav] });
 
   const roleEl = document.getElementById('userRole');
   if (roleEl && state.adminType) {
@@ -2097,6 +2279,17 @@ function openWithUserModal(section) {
         <option value="active">✅ ใช้งาน</option>
         <option value="inactive">⛔ ไม่ใช้งาน</option>
       </select>
+    </div>
+    <div style="border-top:1.5px dashed var(--border);margin:16px 0 12px;padding-top:14px">
+      <div style="font-size:12px;font-weight:700;color:var(--primary);margin-bottom:10px;display:flex;align-items:center;gap:6px">
+        🚍 รถโดยสาร <span style="font-weight:400;color:var(--muted)">(ไม่บังคับ)</span>
+      </div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">ทะเบียนรถ
+          <small style="color:var(--muted);font-weight:400"> — ถ้ากรอก ระบบจะสร้างรถโดยสารและผูกคนขับให้อัตโนมัติ</small>
+        </label>
+        <input type="text" class="form-control" id="wu_plateNumber" placeholder="เช่น กข 1234">
+      </div>
     </div>` : `
     <div class="form-group">
       <label class="form-label">ประเภท Admin <span style="color:var(--danger)">*</span></label>
@@ -2384,6 +2577,11 @@ async function submitWithUser(section) {
       alertDialog('เลขที่ใบขับขี่นี้ถูกใช้งานในระบบแล้ว', 'ใบขับขี่ซ้ำ');
       return;
     }
+    const plateNumber = document.getElementById('wu_plateNumber')?.value?.trim() || null;
+    if (plateNumber && !(await checkPlateUnique(plateNumber))) {
+      alertDialog('ทะเบียนรถนี้มีอยู่ในระบบแล้ว กรุณาใช้ทะเบียนอื่น', 'ทะเบียนรถซ้ำ');
+      return;
+    }
   }
 
   const body = {
@@ -2409,12 +2607,38 @@ async function submitWithUser(section) {
     }),
   };
 
+  const plateNumber = isDriver ? (document.getElementById('wu_plateNumber')?.value?.trim() || null) : null;
   const path = isDriver ? '/admin/drivers/with-user' : '/admin/admins/with-user';
   try {
     document.getElementById('modalSubmitBtn').disabled = true;
-    await apiFetch(path, { method: 'POST', body: JSON.stringify(body) });
-    toast(`${isDriver ? 'คนขับรถ' : 'ผู้ดูแลระบบ'}สร้างสำเร็จ ✅`, 'success');
+    const res = await apiFetch(path, { method: 'POST', body: JSON.stringify(body) });
+
+    if (isDriver && plateNumber) {
+      const userId = res?.data?.user?.id;
+      if (userId) {
+        try {
+          await apiFetch('/admin/buses', {
+            method: 'POST',
+            body: JSON.stringify({
+              plateNumber,
+              driverId:  userId,
+              routeId:   body.assignedRouteId || null,
+              status:    'on',
+            }),
+          });
+          toast('สร้างคนขับรถและรถโดยสารเรียบร้อยแล้ว ✅', 'success');
+        } catch (busErr) {
+          toast(`สร้างคนขับสำเร็จ แต่สร้างรถไม่สำเร็จ: ${busErr.message || 'ลองสร้างรถแยกภายหลัง'}`, 'warning');
+        }
+      } else {
+        toast('คนขับรถสร้างสำเร็จ ✅', 'success');
+      }
+    } else {
+      toast(`${isDriver ? 'คนขับรถ' : 'ผู้ดูแลระบบ'}สร้างสำเร็จ ✅`, 'success');
+    }
+
     closeModal();
+    delete _ssCache['/admin/buses']; // invalidate so next render re-fetches
     if (section === 'drivers') renderBusDriver('drivers');
     else loadSection('admins');
   } catch (err) {
@@ -2551,6 +2775,7 @@ window.genRouteCode            = genRouteCode;
 window.openAssignAdminModal = openAssignAdminModal;
 window.toggleAssignZone     = toggleAssignZone;
 window.gotoPage             = gotoPage;
+window.toggleGroup          = toggleGroup;
 window.changePageSize  = changePageSize;
 window.ssToggle        = ssToggle;
 window.ssFilter        = ssFilter;

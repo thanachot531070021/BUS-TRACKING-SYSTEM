@@ -25,7 +25,7 @@ export async function getBusById(env: Env, busId: string) {
   return rows[0] ?? null;
 }
 
-const BUS_SELECT = 'id,plate_number,route_id,driver_id,status,current_lat,current_lng,current_speed,last_seen_at,created_at,updated_at,created_by,updated_by,created_by_user:users!fk_buses_created_by(id,full_name,username),updated_by_user:users!fk_buses_updated_by(id,full_name,username)';
+const BUS_SELECT = 'id,plate_number,route_id,driver_id,status,current_lat,current_lng,current_speed,last_seen_at,created_at,updated_at,created_by,updated_by,route:routes(id,route_code,route_name),driver_user:users!buses_driver_id_fkey(id,full_name,username),created_by_user:users!fk_buses_created_by(id,full_name,username),updated_by_user:users!fk_buses_updated_by(id,full_name,username)';
 
 export async function listAdminBuses(env: Env, routeIds?: string[]) {
   if (!usingSupabase(env)) return sampleBuses;

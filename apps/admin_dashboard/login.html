@@ -3,218 +3,308 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>เข้าสู่ระบบ — Bus Tracking Admin</title>
+  <title>เข้าสู่ระบบ — BusTrack Admin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+    :root {
+      --primary: #6366f1;
+      --primary-d: #4f46e5;
+    }
+
     body {
-      font-family: 'Inter', system-ui, sans-serif;
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
       min-height: 100vh;
-      background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: grid;
+      place-items: center;
       padding: 16px;
       overflow: hidden;
+      background: #0d1020;
+      -webkit-font-smoothing: antialiased;
     }
 
-    body::before, body::after {
+    /* ── Background ──────────────────────────── */
+    .bg {
+      position: fixed; inset: 0;
+      overflow: hidden; z-index: 0;
+    }
+    /* Dot grid */
+    .bg::before {
       content: '';
-      position: fixed;
-      border-radius: 50%;
-      pointer-events: none;
-      opacity: 0.08;
+      position: absolute; inset: 0;
+      background-image: radial-gradient(rgba(255,255,255,0.035) 1px, transparent 1px);
+      background-size: 24px 24px;
     }
-    body::before {
+    /* Gradient orbs */
+    .orb {
+      position: absolute; border-radius: 50%;
+      pointer-events: none; filter: blur(90px);
+    }
+    .orb-1 {
       width: 600px; height: 600px;
-      background: #3b82f6;
-      top: -200px; left: -200px;
+      background: radial-gradient(circle, rgba(99,102,241,0.22) 0%, transparent 65%);
+      top: -200px; left: -150px;
+      animation: drift1 14s ease-in-out infinite alternate;
     }
-    body::after {
-      width: 500px; height: 500px;
-      background: #6366f1;
-      bottom: -200px; right: -150px;
+    .orb-2 {
+      width: 480px; height: 480px;
+      background: radial-gradient(circle, rgba(139,92,246,0.16) 0%, transparent 65%);
+      bottom: -150px; right: -120px;
+      animation: drift2 18s ease-in-out infinite alternate;
+    }
+    .orb-3 {
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(6,182,212,0.1) 0%, transparent 65%);
+      top: 55%; left: 60%;
+      animation: drift1 10s ease-in-out infinite alternate-reverse;
+    }
+    @keyframes drift1 {
+      from { transform: translate(0,0) scale(1); }
+      to   { transform: translate(30px,-20px) scale(1.08); }
+    }
+    @keyframes drift2 {
+      from { transform: translate(0,0) scale(1); }
+      to   { transform: translate(-24px,16px) scale(1.05); }
     }
 
-    .login-card {
-      background: rgba(255,255,255,0.97);
-      border-radius: 20px;
-      box-shadow: 0 30px 60px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.15);
-      width: 100%; max-width: 420px;
-      overflow: hidden;
+    /* ── Card ────────────────────────────────── */
+    .card {
       position: relative; z-index: 1;
-      animation: cardIn 0.45s cubic-bezier(0.34,1.56,0.64,1);
+      width: 100%; max-width: 420px;
+      background: #fff;
+      border-radius: 20px;
+      box-shadow:
+        0 24px 60px rgba(0,0,0,0.45),
+        0 0 0 1px rgba(255,255,255,0.06),
+        0 1px 0 rgba(255,255,255,0.1) inset;
+      overflow: hidden;
+      animation: cardIn .45s cubic-bezier(0.34,1.4,0.64,1) both;
     }
-
     @keyframes cardIn {
       from { transform: translateY(40px) scale(0.95); opacity: 0; }
-      to   { transform: translateY(0) scale(1);       opacity: 1; }
+      to   { transform: translateY(0) scale(1); opacity: 1; }
     }
 
-    .login-header {
-      background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
-      padding: 36px 32px 44px;
+    /* ── Card header ─────────────────────────── */
+    .card-head {
+      background: linear-gradient(150deg, #312e81 0%, #4338ca 40%, #6366f1 75%, #818cf8 100%);
+      padding: 36px 32px 52px;
       text-align: center;
       position: relative;
     }
-
-    .login-header::after {
+    /* Wave cut */
+    .card-head::after {
       content: '';
       position: absolute;
       bottom: -1px; left: 0; right: 0;
-      height: 40px;
-      background: rgba(255,255,255,0.97);
-      border-radius: 50% 50% 0 0;
+      height: 48px;
+      background: #fff;
+      border-radius: 60% 60% 0 0 / 100%;
+    }
+    /* Dot grid overlay */
+    .card-head::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px);
+      background-size: 20px 20px;
     }
 
-    .logo-wrap {
-      width: 76px; height: 76px;
-      background: rgba(255,255,255,0.2);
-      border: 2px solid rgba(255,255,255,0.35);
-      border-radius: 22px;
+    .logo-mark {
+      position: relative; z-index: 1;
+      width: 72px; height: 72px;
+      background: rgba(255,255,255,0.15);
+      border: 1.5px solid rgba(255,255,255,0.25);
+      border-radius: 20px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 38px;
       margin: 0 auto 16px;
       backdrop-filter: blur(4px);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
     }
-
-    .login-header h1 {
+    .card-head h1 {
+      position: relative; z-index: 1;
       color: #fff;
       font-size: 21px; font-weight: 800;
-      letter-spacing: -0.02em;
-      margin-bottom: 5px;
-      text-shadow: 0 1px 3px rgba(0,0,0,0.15);
+      letter-spacing: -0.035em;
+      margin-bottom: 4px;
+    }
+    .card-head p {
+      position: relative; z-index: 1;
+      color: rgba(255,255,255,0.75);
+      font-size: 13px; font-weight: 500;
     }
 
-    .login-header p { color: rgba(255,255,255,0.78); font-size: 13px; }
+    /* ── Card body ───────────────────────────── */
+    .card-body { padding: 12px 30px 28px; }
 
-    .login-body { padding: 12px 32px 28px; }
-
-    .section-title {
-      font-size: 14px; font-weight: 700; color: #1e293b;
-      text-align: center; margin-bottom: 22px;
+    .notice {
+      display: flex; align-items: center; gap: 8px;
+      background: #eef2ff; border: 1px solid #c7d2fe;
+      border-radius: 10px; padding: 9px 12px;
+      margin-bottom: 18px;
+      font-size: 12.5px; color: #3730a3; font-weight: 500;
     }
+    .notice svg { flex-shrink: 0; width: 14px; height: 14px; }
 
     .error-msg {
       display: none;
-      background: #fef2f2;
-      border: 1px solid #fca5a5;
-      border-radius: 10px;
-      padding: 10px 14px;
-      font-size: 13px; color: #dc2626;
-      margin-bottom: 16px;
       align-items: center; gap: 8px;
+      background: #fff1f2; border: 1px solid #fecdd3;
+      border-radius: 10px; padding: 9px 12px;
+      font-size: 13px; color: #9f1239;
+      margin-bottom: 16px;
+      animation: shake .38s ease;
     }
-    .error-msg.show { display: flex; animation: shake 0.4s ease; }
-
+    .error-msg.show { display: flex; }
     @keyframes shake {
       0%,100% { transform: translateX(0); }
-      20%,60%  { transform: translateX(-6px); }
-      40%,80%  { transform: translateX(6px); }
+      20%,60%  { transform: translateX(-5px); }
+      40%,80%  { transform: translateX(5px); }
     }
 
-    .form-group { margin-bottom: 15px; }
-
+    .form-group { margin-bottom: 14px; }
     .form-label {
       display: block;
-      font-size: 12.5px; font-weight: 600;
-      color: #374151; margin-bottom: 6px;
+      font-size: 12.5px; font-weight: 600; color: #1e293b;
+      margin-bottom: 6px; letter-spacing: -0.01em;
     }
 
     .input-wrap { position: relative; }
     .input-icon {
-      position: absolute; left: 12px; top: 50%;
+      position: absolute; left: 11px; top: 50%;
       transform: translateY(-50%);
-      font-size: 16px; pointer-events: none;
+      pointer-events: none; color: #94a3b8;
     }
+    .input-icon svg { width: 15px; height: 15px; }
 
     .form-input {
       width: 100%;
-      padding: 11px 12px 11px 40px;
-      border: 1.5px solid #e5e7eb;
-      border-radius: 11px;
-      font-size: 14px; color: #1f2937;
-      background: #f9fafb;
+      padding: 10px 11px 10px 36px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 14px; color: #0f172a;
+      background: #f8fafc;
       outline: none; font-family: inherit;
-      transition: all 0.15s;
+      transition: all .14s;
+      letter-spacing: -0.01em;
     }
     .form-input:focus {
-      border-color: #3b82f6;
+      border-color: var(--primary);
       background: #fff;
-      box-shadow: 0 0 0 3px rgba(59,130,246,0.13);
+      box-shadow: 0 0 0 3px rgba(99,102,241,.15);
     }
-    .form-input.has-toggle { padding-right: 42px; }
+    .form-input::placeholder { color: #94a3b8; }
+    .form-input.has-toggle { padding-right: 40px; }
 
     .toggle-pw {
-      position: absolute; right: 12px; top: 50%;
+      position: absolute; right: 11px; top: 50%;
       transform: translateY(-50%);
       background: none; border: none;
-      cursor: pointer; font-size: 16px; color: #9ca3af;
-      padding: 4px; transition: color 0.15s; font-family: inherit;
+      cursor: pointer; color: #94a3b8;
+      padding: 4px; transition: color .14s; font-family: inherit;
     }
-    .toggle-pw:hover { color: #6b7280; }
+    .toggle-pw svg { width: 16px; height: 16px; }
+    .toggle-pw:hover { color: #64748b; }
 
-    .btn-login {
+    .btn-submit {
       width: 100%;
-      padding: 13px;
-      background: linear-gradient(135deg, #1d4ed8, #3b82f6);
-      color: #fff; border: none; border-radius: 11px;
+      padding: 12px;
+      background: var(--primary);
+      color: #fff; border: none; border-radius: 10px;
       font-size: 15px; font-weight: 700;
       cursor: pointer; font-family: inherit;
-      transition: all 0.2s;
+      transition: all .18s;
       display: flex; align-items: center; justify-content: center; gap: 8px;
-      margin-top: 6px;
-      box-shadow: 0 4px 14px rgba(59,130,246,0.38);
+      margin-top: 4px;
+      letter-spacing: -0.02em;
+      box-shadow: 0 4px 14px rgba(99,102,241,.35), inset 0 1px 0 rgba(255,255,255,.15);
     }
-    .btn-login:hover:not(:disabled) {
+    .btn-submit:hover:not(:disabled) {
+      background: var(--primary-d);
       transform: translateY(-1px);
-      box-shadow: 0 7px 20px rgba(59,130,246,0.46);
+      box-shadow: 0 7px 20px rgba(99,102,241,.45);
     }
-    .btn-login:disabled { opacity: 0.65; cursor: not-allowed; transform: none; }
+    .btn-submit:disabled { opacity: .6; cursor: not-allowed; transform: none; }
 
-    .spinner {
+    .spinner-ring {
       width: 18px; height: 18px;
-      border: 2.5px solid rgba(255,255,255,0.35);
+      border: 2.5px solid rgba(255,255,255,.3);
       border-top-color: #fff;
       border-radius: 50%;
-      animation: spin 0.7s linear infinite;
+      animation: spin .65s linear infinite;
       display: none;
     }
-    .spinner.show { display: block; }
+    .spinner-ring.show { display: block; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    .login-footer {
+    /* ── Footer ──────────────────────────────── */
+    .card-foot {
       text-align: center;
-      padding: 0 32px 24px;
-      font-size: 12px; color: #9ca3af;
+      padding: 0 30px 22px;
+      font-size: 12px; color: #94a3b8;
+      letter-spacing: -0.01em;
     }
-    .login-footer strong { color: #6b7280; }
+    .card-foot strong { color: #64748b; }
   </style>
 </head>
 <body>
 
-  <div class="login-card">
-    <div class="login-header">
-      <div class="logo-wrap">🚌</div>
-      <h1>Bus Tracking System</h1>
-      <p>Admin Portal — ระบบจัดการผู้ดูแล</p>
+  <div class="bg">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div class="logo-mark">
+        <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 24 24"
+             fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="1" y="3" width="15" height="13" rx="2"/>
+          <path d="M16 8h4l3 3v5h-7V8z"/>
+          <circle cx="5.5" cy="18.5" r="2.5"/>
+          <circle cx="18.5" cy="18.5" r="2.5"/>
+        </svg>
+      </div>
+      <h1>BusTrack Admin</h1>
+      <p>ระบบจัดการ Bus Tracking</p>
     </div>
 
-    <div class="login-body">
-      <p class="section-title">🔐 เข้าสู่ระบบผู้ดูแล</p>
+    <div class="card-body">
+
+      <div class="notice">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        เฉพาะ Super Admin และ Zone Admin เท่านั้น
+      </div>
 
       <div class="error-msg" id="errorMsg">
-        <span>⚠️</span><span id="errorText"></span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+             style="flex-shrink:0">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <span id="errorText"></span>
       </div>
 
       <form id="loginForm" onsubmit="doLogin(event)" novalidate>
+
         <div class="form-group">
           <label class="form-label">ชื่อผู้ใช้ / Username</label>
           <div class="input-wrap">
-            <span class="input-icon">👤</span>
+            <span class="input-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                <circle cx="12" cy="7" r="4"/>
+              </svg>
+            </span>
             <input type="text" id="identifier" class="form-input"
               placeholder="username หรือ email" required autocomplete="username">
           </div>
@@ -223,22 +313,40 @@
         <div class="form-group">
           <label class="form-label">รหัสผ่าน</label>
           <div class="input-wrap">
-            <span class="input-icon">🔒</span>
+            <span class="input-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+            </span>
             <input type="password" id="password" class="form-input has-toggle"
-              placeholder="••••••••" required autocomplete="current-password">
-            <button type="button" class="toggle-pw" onclick="togglePw()">👁️</button>
+              placeholder="รหัสผ่าน" required autocomplete="current-password">
+            <button type="button" class="toggle-pw" onclick="togglePw()" id="togglePwBtn">
+              <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
           </div>
         </div>
 
-        <button type="submit" class="btn-login" id="loginBtn">
-          <div class="spinner" id="spinner"></div>
-          <span id="btnText">เข้าสู่ระบบ →</span>
+        <button type="submit" class="btn-submit" id="loginBtn">
+          <div class="spinner-ring" id="spinner"></div>
+          <span id="btnText">เข้าสู่ระบบ</span>
+          <svg id="arrowIcon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"/>
+            <polyline points="12 5 19 12 12 19"/>
+          </svg>
         </button>
+
       </form>
     </div>
 
-    <div class="login-footer">
-      <strong>Bus Tracking Admin Dashboard</strong><br>
+    <div class="card-foot">
+      <strong>BusTrack Admin Dashboard</strong><br>
       เฉพาะผู้ดูแลระบบที่ได้รับอนุญาตเท่านั้น
     </div>
   </div>
@@ -247,34 +355,37 @@
     const API = 'https://bus-tracking-worker.thanachot-jo888.workers.dev';
     const TOKEN_KEY = 'bus-tracking-admin-token';
 
-    // Redirect if already logged in
     if (localStorage.getItem(TOKEN_KEY)) window.location.replace('index.html');
 
+    let pwVisible = false;
     function togglePw() {
       const el = document.getElementById('password');
-      const btn = document.querySelector('.toggle-pw');
-      el.type = el.type === 'password' ? 'text' : 'password';
-      btn.textContent = el.type === 'password' ? '👁️' : '🙈';
+      pwVisible = !pwVisible;
+      el.type = pwVisible ? 'text' : 'password';
+      document.getElementById('eyeIcon').innerHTML = pwVisible
+        ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/>'
+        : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
     }
 
     function showErr(msg) {
       document.getElementById('errorText').textContent = msg;
       document.getElementById('errorMsg').classList.add('show');
     }
+    function hideErr() { document.getElementById('errorMsg').classList.remove('show'); }
 
     function setLoading(on) {
-      document.getElementById('loginBtn').disabled = on;
+      const btn = document.getElementById('loginBtn');
+      btn.disabled = on;
       document.getElementById('spinner').classList.toggle('show', on);
-      document.getElementById('btnText').textContent = on ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ →';
+      document.getElementById('btnText').textContent = on ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ';
+      document.getElementById('arrowIcon').style.display = on ? 'none' : '';
     }
 
     async function doLogin(e) {
       e.preventDefault();
-      document.getElementById('errorMsg').classList.remove('show');
-
+      hideErr();
       const identifier = document.getElementById('identifier').value.trim();
       const password   = document.getElementById('password').value;
-
       if (!identifier || !password) { showErr('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน'); return; }
 
       setLoading(true);
@@ -285,14 +396,9 @@
           body: JSON.stringify({ identifier, password, expectedRole: 'admin' })
         });
         const data = await res.json().catch(() => ({}));
+        if (!res.ok) { showErr(data?.message || data?.error || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'); setLoading(false); return; }
 
-        if (!res.ok) {
-          showErr(data?.message || data?.error || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
-          setLoading(false); return;
-        }
-
-        const token = data?.token || data?.data?.token
-                   || data?.accessToken || data?.data?.accessToken
+        const token = data?.token || data?.data?.token || data?.accessToken || data?.data?.accessToken
                    || data?.access_token || data?.data?.access_token;
         if (!token) { showErr('ไม่ได้รับ token กรุณาตรวจสอบสิทธิ์บัญชี'); setLoading(false); return; }
 
@@ -300,17 +406,15 @@
         const user = data?.user || data?.data?.user || data?.data?.profile || data?.profile;
         if (user) localStorage.setItem('bus-tracking-admin-user', JSON.stringify(user));
 
-        // Track login event (fire & forget) + mark analytics_day so init() skips duplicate
         try {
           const ua = navigator.userAgent;
-          const platform = /Windows/.test(ua)?'Windows':/Macintosh/.test(ua)?'macOS':/Linux/.test(ua)?'Linux':/iPhone|iPad/.test(ua)?'iOS':/Android/.test(ua)?'Android':'Unknown';
+          const platform = /Windows/.test(ua)?'Windows':/Mac/.test(ua)?'macOS':/Linux/.test(ua)?'Linux':/iPhone|iPad/.test(ua)?'iOS':/Android/.test(ua)?'Android':'Unknown';
           const deviceType = /Mobi|iPhone|iPod/.test(ua)?'mobile':/iPad|Android(?!.*Mobile)/.test(ua)?'tablet':'desktop';
           fetch(`${API}/analytics/event`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
             body: JSON.stringify({ source: 'web_admin', eventType: 'login', page: 'login', platform, deviceType }),
           }).catch(() => {});
-          // Mark today so dashboard's trackDailySession() won't fire again same day
           localStorage.setItem('analytics_day', new Date().toISOString().slice(0, 10));
         } catch {}
 
@@ -322,7 +426,6 @@
     }
 
     document.getElementById('identifier').focus();
-
     const reason = new URLSearchParams(location.search).get('reason');
     if (reason === 'expired') showErr('Session หมดอายุ กรุณาเข้าสู่ระบบใหม่');
   </script>
