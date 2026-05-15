@@ -22,11 +22,19 @@ export type AuthContext = {
   routeIds?: string[];
 };
 
+export type Province = {
+  id: number;
+  name_th: string;
+  name_en: string;
+  geography_id: number;
+};
+
 export type Zone = {
   id: string;
   zone_code?: string | null;
   zone_name: string;
   description?: string | null;
+  province?: string | null;
   status: 'active' | 'inactive';
   created_at?: string;
   updated_at?: string;
@@ -36,6 +44,7 @@ export type CreateZoneBody = {
   zoneCode?: string | null;
   zoneName: string;
   description?: string | null;
+  province?: string | null;
   status?: 'active' | 'inactive';
 };
 

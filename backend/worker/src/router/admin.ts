@@ -1,6 +1,7 @@
 import { handleAdminCreateBus, handleAdminCreateRoute, handleAdminDashboardSummary, handleAdminDeleteBus, handleAdminDeleteRoute, handleAdminGetBusById, handleAdminGetRouteById, handleAdminListBuses, handleAdminListRoutes, handleAdminLogin, handleAdminRouteBuses, handleAdminRouteWaitingSummary, handleAdminUpdateBus, handleAdminUpdateRoute, handleAdminWaiting, handleAdminWaitingSummary } from '../handlers/admin';
 import { handleAdminCreateAdmin, handleAdminCreateAdminWithUser, handleAdminCreateDriver, handleAdminCreateDriverWithUser, handleAdminCreateRouteAdmin, handleAdminCreateUser, handleAdminDeleteAdmin, handleAdminDeleteDriver, handleAdminDeleteRouteAdmin, handleAdminDeleteUser, handleAdminGetAdminById, handleAdminGetDriverById, handleAdminGetRouteAdminById, handleAdminGetUserById, handleAdminListAdmins, handleAdminListDrivers, handleAdminListRouteAdmins, handleAdminListUsers, handleAdminResetPassword, handleAdminUpdateAdmin, handleAdminUpdateDriver, handleAdminUpdateUser } from '../handlers/admin-users';
 import { handleAdminCreateZone, handleAdminDeleteZone, handleAdminGetZoneById, handleAdminListZones, handleAdminUpdateZone } from '../handlers/zones';
+import { handleListProvinces } from '../handlers/provinces';
 import { handleGetAnalytics, handleLogEvent } from '../handlers/analytics';
 import { json, notFound } from '../lib/http';
 import { enrichAdminScope, requireAdminScope, requireRole } from '../middleware/auth.middleware';
@@ -197,6 +198,13 @@ export async function adminRouter(request: Request, env: Env) {
     const auth = await requireAdminScope(env, request);
     if (auth instanceof Response) return auth;
     return handleGetAnalytics(env, request);
+  }
+
+  // ── Provinces (read-only reference data) ─────────────────────────────────
+  if (pathname === '/admin/provinces' && request.method === 'GET') {
+    const auth = await requireAdminScope(env, request);
+    if (auth instanceof Response) return auth;
+    return handleListProvinces(env);
   }
 
   return notFound();

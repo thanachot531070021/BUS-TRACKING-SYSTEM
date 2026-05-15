@@ -1,7 +1,7 @@
 import { supabaseFetch, usingSupabase } from '../lib/supabase';
 import type { CreateZoneBody, Env, JsonRecord, UpdateZoneBody, Zone } from '../types';
 
-const ZONE_SELECT = 'id,zone_code,zone_name,description,status,created_at,updated_at,created_by,updated_by,created_by_user:users!fk_zones_created_by(id,full_name,username),updated_by_user:users!fk_zones_updated_by(id,full_name,username)';
+const ZONE_SELECT = 'id,zone_code,zone_name,description,province,status,created_at,updated_at,created_by,updated_by,created_by_user:users!fk_zones_created_by(id,full_name,username),updated_by_user:users!fk_zones_updated_by(id,full_name,username)';
 
 export async function listZones(env: Env) {
   if (!usingSupabase(env)) return [] as Zone[];
@@ -30,6 +30,7 @@ export async function createZone(env: Env, body: CreateZoneBody, userId?: string
       zone_code:   body.zoneCode ?? null,
       zone_name:   body.zoneName,
       description: body.description ?? null,
+      province:    body.province ?? null,
       status:      body.status ?? 'active',
       created_by:  userId ?? null,
       updated_by:  userId ?? null,
@@ -46,6 +47,7 @@ export async function updateZone(env: Env, zoneId: string, body: UpdateZoneBody,
       zone_code:   body.zoneCode,
       zone_name:   body.zoneName,
       description: body.description,
+      province:    body.province,
       status:      body.status,
       updated_by:  userId ?? null,
     }),

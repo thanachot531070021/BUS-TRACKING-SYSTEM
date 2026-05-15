@@ -6,6 +6,9 @@ class ApiConfig {
   static const String login = '/auth/login';
   static const String me = '/auth/me';
 
+  // Zones
+  static const String zones = '/zones';
+
   // Public / Passenger
   static const String routes = '/routes';
   static String routeById(String id) => '/routes/$id';

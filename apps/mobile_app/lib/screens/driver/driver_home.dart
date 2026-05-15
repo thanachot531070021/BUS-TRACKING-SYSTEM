@@ -142,6 +142,18 @@ class _DriverHomeState extends State<DriverHome> {
                 style: const TextStyle(
                     color: Color(0xFFDC2626), fontSize: 13)),
           ),
+          const SizedBox(width: 8),
+          TextButton.icon(
+            onPressed: () => context.read<DriverProvider>().loadProfile(),
+            icon: const Icon(Icons.refresh, size: 15),
+            label: const Text('ลองใหม่', style: TextStyle(fontSize: 12)),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFDC2626),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              minimumSize: Size.zero,
+            ),
+          ),
         ]),
       );
 

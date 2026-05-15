@@ -30,6 +30,7 @@ CREATE TABLE zones (
   zone_code   TEXT        UNIQUE,
   zone_name   TEXT        NOT NULL,
   description TEXT,
+  province    TEXT,
   status      zone_status NOT NULL DEFAULT 'active',
   created_by  UUID,
   updated_by  UUID,
@@ -343,6 +344,14 @@ VALUES (
   'super_admin',
   'active'
 );
+*/
+
+-- =============================================
+-- MIGRATION: Add province to zones (2026-05-15)
+-- Run this if the database already exists
+-- =============================================
+/*
+ALTER TABLE zones ADD COLUMN IF NOT EXISTS province TEXT;
 */
 
 -- =============================================

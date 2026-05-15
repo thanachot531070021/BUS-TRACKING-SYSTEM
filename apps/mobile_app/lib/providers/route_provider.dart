@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import '../models/route_model.dart';
+import '../config/api_config.dart';
 import '../models/bus_model.dart';
+import '../models/route_model.dart';
 import '../models/waiting_model.dart';
+import '../models/zone_model.dart';
+import '../services/api_service.dart';
 import '../services/bus_service.dart';
 import '../services/route_service.dart';
 import '../services/waiting_service.dart';
@@ -14,21 +17,48 @@ class RouteProvider extends ChangeNotifier {
 
   RouteProvider(this._routeService, this._busService, this._waitingService);
 
+  // --- Route list (PassengerHome) ---
   List<RouteModel> _routes = [];
-  List<BusModel> _liveBuses = [];
-  WaitingModel? _myWaiting;
   bool _loading = false;
-  bool _busLoading = false;
   String? _error;
+
+  // --- Live buses (RouteDetail) ---
+  List<BusModel> _liveBuses = [];
+  bool _busLoading = false;
   Timer? _busPollingTimer;
 
+  // --- Waiting ---
+  WaitingModel? _myWaiting;
+
+  // --- Zones ---
+  List<ZoneModel> _zones = [];
+  bool _zonesLoading = false;
+  String? _zonesError;
+
+  // --- Zone map: all live buses across all routes ---
+  List<BusModel> _allLiveBuses = [];
+  bool _allBusLoading = false;
+  Timer? _zoneBusPollingTimer;
+
+  // Getters
   List<RouteModel> get routes => _routes;
-  List<BusModel> get liveBuses => _liveBuses;
-  WaitingModel? get myWaiting => _myWaiting;
   bool get loading => _loading;
-  bool get busLoading => _busLoading;
   String? get error => _error;
+
+  List<BusModel> get liveBuses => _liveBuses;
+  bool get busLoading => _busLoading;
+
+  WaitingModel? get myWaiting => _myWaiting;
   bool get isWaiting => _myWaiting != null && _myWaiting!.isWaiting;
+
+  List<ZoneModel> get zones => _zones;
+  bool get zonesLoading => _zonesLoading;
+  String? get zonesError => _zonesError;
+
+  List<BusModel> get allLiveBuses => _allLiveBuses;
+  bool get allBusLoading => _allBusLoading;
+
+  // ── Route list ──────────────────────────────────────────────────────────────
 
   Future<void> loadRoutes() async {
     _loading = true;
@@ -43,6 +73,8 @@ class RouteProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Live buses for a single route (RouteDetail) ─────────────────────────────
+
   Future<void> loadLiveBuses(String routeId) async {
     _busLoading = true;
     notifyListeners();
@@ -55,7 +87,6 @@ class RouteProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Start polling live bus positions every 5 seconds (used by RouteDetail)
   void startBusPolling(String routeId) {
     _busPollingTimer?.cancel();
     _busPollingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
@@ -67,6 +98,67 @@ class RouteProvider extends ChangeNotifier {
     _busPollingTimer?.cancel();
     _busPollingTimer = null;
   }
+
+  // ── Zones ────────────────────────────────────────────────────────────────────
+
+  Future<void> loadZones() async {
+    _zonesLoading = true;
+    _zonesError = null;
+    notifyListeners();
+    try {
+      final res = await apiService.get(ApiConfig.zones);
+      final list = res['data'] as List? ?? [];
+      _zones = list.map((j) => ZoneModel.fromJson(j as Map<String, dynamic>)).toList();
+      _zones.sort((a, b) => a.name.compareTo(b.name));
+    } catch (e) {
+      _zonesError = e.toString();
+    }
+    _zonesLoading = false;
+    notifyListeners();
+  }
+
+  // ── All live buses (Zone Map) ─────────────────────────────────────────────────
+
+  Future<void> loadAllLiveBuses() async {
+    _allBusLoading = true;
+    notifyListeners();
+    try {
+      _allLiveBuses = await _busService.getLiveBuses();
+    } catch (_) {
+      _allLiveBuses = [];
+    }
+    _allBusLoading = false;
+    notifyListeners();
+  }
+
+  void startZoneBusPolling() {
+    _zoneBusPollingTimer?.cancel();
+    _zoneBusPollingTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      loadAllLiveBuses();
+    });
+  }
+
+  void stopZoneBusPolling() {
+    _zoneBusPollingTimer?.cancel();
+    _zoneBusPollingTimer = null;
+  }
+
+  /// Returns buses whose routeId belongs to routes in [zoneId].
+  List<BusModel> busesInZone(String zoneId) {
+    final zoneRouteIds = _routes
+        .where((r) => r.zoneId == zoneId)
+        .map((r) => r.id)
+        .toSet();
+    return _allLiveBuses
+        .where((b) => b.routeId != null && zoneRouteIds.contains(b.routeId))
+        .toList();
+  }
+
+  /// Returns routes that belong to [zoneId].
+  List<RouteModel> routesInZone(String zoneId) =>
+      _routes.where((r) => r.zoneId == zoneId).toList();
+
+  // ── Waiting ───────────────────────────────────────────────────────────────────
 
   Future<bool> createWaiting(String routeId, {double? lat, double? lng}) async {
     try {
@@ -99,6 +191,7 @@ class RouteProvider extends ChangeNotifier {
   @override
   void dispose() {
     stopBusPolling();
+    stopZoneBusPolling();
     super.dispose();
   }
 }

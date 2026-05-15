@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import '../passenger/passenger_home.dart';
+import '../passenger/zone_picker.dart';
 import '../driver/driver_home.dart';
 import '../admin_info_screen.dart';
 
@@ -47,7 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } else if (role == 'admin' || role == 'super_admin') {
       dest = const AdminInfoScreen();
     } else {
-      dest = const PassengerHome();
+      dest = const ZonePickerScreen();
     }
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => dest),

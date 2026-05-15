@@ -407,12 +407,12 @@ function renderZones(zones, routes) {
     const zRoutes = routesByZone[zone.id] || [];
     const isActive = zone.status === 'active';
     return `
-    <div class="zone-card" id="zone_${esc(zone.id)}" data-zone-name="${esc((zone.zone_name||'').toLowerCase())}" data-zone-code="${esc((zone.zone_code||'').toLowerCase())}">
+    <div class="zone-card" id="zone_${esc(zone.id)}" data-zone-name="${esc((zone.zone_name||'').toLowerCase())}" data-zone-code="${esc((zone.zone_code||'').toLowerCase())}" data-province="${esc((zone.province||'').toLowerCase())}">
       <div class="zone-header" onclick="toggleZone('${esc(zone.id)}')">
         <div class="zone-icon">🗺️</div>
         <div class="zone-info">
           <div class="zone-name">${esc(zone.zone_name || 'ไม่ระบุชื่อ')}</div>
-          <div class="zone-code">${zone.zone_code ? `[${esc(zone.zone_code)}]` : ''} · ${zRoutes.length} เส้นทาง</div>
+          <div class="zone-code">${zone.zone_code ? `[${esc(zone.zone_code)}]` : ''}${zone.province ? ` · ${esc(zone.province)}` : ''} · ${zRoutes.length} เส้นทาง</div>
         </div>
         <div class="zone-meta">
           <span class="badge ${isActive ? 'b-green' : 'b-gray'}">${isActive ? '✅ เปิดให้บริการ' : '⛔ ปิด'}</span>
@@ -557,6 +557,7 @@ function openZoneDetail(zoneId) {
       <div class="detail-section-title">ข้อมูลโซน</div>
       ${row('ชื่อโซน', zone.zone_name)}
       ${row('รหัสโซน', zone.zone_code ? `<code>${esc(zone.zone_code)}</code>` : '—')}
+      ${zone.province ? row('จังหวัด', zone.province) : ''}
       ${row('สถานะ', zone.status === 'active' ? '<span class="badge b-green">✅ เปิดให้บริการ</span>' : '<span class="badge b-gray">⛔ ปิด</span>')}
       ${zone.description ? row('รายละเอียด', zone.description) : ''}
       ${row('ID', `<code>${esc(zone.id)}</code>`)}
@@ -692,7 +693,8 @@ function applySearch() {
       if (match) anyRouteMatch = true;
     });
 
-    const zoneMatch = !q || zName.includes(q) || zCode.includes(q) || anyRouteMatch;
+    const zProvince = zoneEl.dataset.province || '';
+    const zoneMatch = !q || zName.includes(q) || zCode.includes(q) || zProvince.includes(q) || anyRouteMatch;
     zoneEl.classList.toggle('hidden-zone', !zoneMatch);
     if (q && zoneMatch) { zoneEl.classList.add('open','active'); }
   });
