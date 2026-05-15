@@ -1,135 +1,235 @@
--- BUS TRACKING SYSTEM
--- Supabase PostgreSQL schema starter
+-- =============================================
+-- BUS TRACKING SYSTEM — Complete Database Schema
+-- Run this in Supabase SQL Editor (new project)
+-- =============================================
 
-create extension if not exists pgcrypto;
+-- Extensions
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-create or replace function set_updated_at()
-returns trigger as $$
-begin
-  new.updated_at = now();
-  return new;
-end;
-$$ language plpgsql;
+-- =============================================
+-- ENUMS
+-- =============================================
+CREATE TYPE user_role        AS ENUM ('passenger', 'driver', 'admin');
+CREATE TYPE auth_provider    AS ENUM ('guest', 'phone', 'google', 'facebook', 'email');
+CREATE TYPE admin_type       AS ENUM ('super_admin', 'zone_admin', 'route_admin');
+CREATE TYPE user_status      AS ENUM ('active', 'inactive', 'suspended');
+CREATE TYPE zone_status      AS ENUM ('active', 'inactive');
+CREATE TYPE route_status     AS ENUM ('active', 'inactive');
+CREATE TYPE bus_status       AS ENUM ('on', 'off', 'maintenance');
+CREATE TYPE driver_status    AS ENUM ('active', 'inactive');
+CREATE TYPE admin_status     AS ENUM ('active', 'inactive');
+CREATE TYPE waiting_status   AS ENUM ('waiting', 'cancelled', 'picked_up');
+CREATE TYPE analytics_source AS ENUM ('web_admin', 'mobile_app');
+CREATE TYPE license_type     AS ENUM ('public_car', 'public_bus', 'public_motorcycle');
 
-create table if not exists users (
-  id uuid primary key default gen_random_uuid(),
-  auth_user_id uuid unique,
-  auth_provider text not null default 'guest' check (auth_provider in ('guest', 'phone', 'google', 'email')),
-  provider_user_id text,
-  email text unique,
-  email_verified boolean not null default false,
-  username text unique,
-  phone_number text unique,
-  full_name text,
-  given_name text,
-  family_name text,
-  avatar_url text,
-  role text not null check (role in ('passenger', 'driver', 'admin')),
-  status text not null default 'active' check (status in ('active', 'inactive', 'suspended')),
-  last_login_at timestamptz,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique(auth_provider, provider_user_id)
+-- =============================================
+-- TABLE: zones
+-- =============================================
+CREATE TABLE zones (
+  id          UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  zone_code   TEXT        UNIQUE,
+  zone_name   TEXT        NOT NULL,
+  description TEXT,
+  status      zone_status NOT NULL DEFAULT 'active',
+  created_by  UUID,
+  updated_by  UUID,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-create index if not exists idx_users_role on users(role);
-create index if not exists idx_users_auth_provider on users(auth_provider);
-create index if not exists idx_users_provider_user_id on users(provider_user_id);
-create index if not exists idx_users_username on users(username);
-
-create table if not exists drivers (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null unique references users(id) on delete cascade,
-  employee_code text unique,
-  license_no text,
-  assigned_bus_id uuid,
-  assigned_route_id uuid,
-  status text not null default 'active' check (status in ('active', 'inactive')),
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+-- =============================================
+-- TABLE: users
+-- =============================================
+CREATE TABLE users (
+  id               UUID          PRIMARY KEY DEFAULT uuid_generate_v4(),
+  auth_user_id     UUID          UNIQUE REFERENCES auth.users(id) ON DELETE SET NULL,
+  auth_provider    auth_provider NOT NULL DEFAULT 'guest',
+  provider_user_id TEXT,
+  email            TEXT          UNIQUE,
+  email_verified   BOOLEAN       NOT NULL DEFAULT FALSE,
+  username         TEXT          UNIQUE,
+  phone_number     TEXT          UNIQUE,
+  full_name        TEXT,
+  given_name       TEXT,
+  family_name      TEXT,
+  avatar_url       TEXT,
+  role             user_role     NOT NULL DEFAULT 'passenger',
+  status           user_status   NOT NULL DEFAULT 'active',
+  last_login_at    TIMESTAMPTZ,
+  created_at       TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+  updated_at       TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+  UNIQUE (auth_provider, provider_user_id)
 );
 
-create table if not exists admins (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null unique references users(id) on delete cascade,
-  admin_type text not null check (admin_type in ('super_admin', 'route_admin')),
-  status text not null default 'active' check (status in ('active', 'inactive')),
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+-- =============================================
+-- TABLE: admins
+-- =============================================
+CREATE TABLE admins (
+  id         UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id    UUID         NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  admin_type admin_type   NOT NULL DEFAULT 'zone_admin',
+  zone_id    UUID         REFERENCES zones(id) ON DELETE SET NULL,
+  avatar_url TEXT,
+  status     admin_status NOT NULL DEFAULT 'active',
+  created_by UUID         REFERENCES users(id) ON DELETE SET NULL,
+  updated_by UUID         REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
-create table if not exists routes (
-  id uuid primary key default gen_random_uuid(),
-  route_code text unique,
-  route_name text not null,
-  start_location text,
-  end_location text,
-  route_polyline text,
-  status text not null default 'active' check (status in ('active', 'inactive')),
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+-- =============================================
+-- TABLE: routes
+-- =============================================
+CREATE TABLE routes (
+  id             UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
+  route_code     TEXT         UNIQUE,
+  route_name     TEXT         NOT NULL,
+  start_location TEXT,
+  end_location   TEXT,
+  route_polyline TEXT,
+  zone_id        UUID         REFERENCES zones(id) ON DELETE SET NULL,
+  status         route_status NOT NULL DEFAULT 'active',
+  created_by     UUID         REFERENCES users(id) ON DELETE SET NULL,
+  updated_by     UUID         REFERENCES users(id) ON DELETE SET NULL,
+  created_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  updated_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
-create table if not exists route_admins (
-  id uuid primary key default gen_random_uuid(),
-  route_id uuid not null references routes(id) on delete cascade,
-  admin_id uuid not null references admins(id) on delete cascade,
-  created_at timestamptz not null default now(),
-  unique(route_id, admin_id)
+-- =============================================
+-- TABLE: buses
+-- =============================================
+CREATE TABLE buses (
+  id            UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  plate_number  TEXT        NOT NULL UNIQUE,
+  route_id      UUID        REFERENCES routes(id) ON DELETE SET NULL,
+  driver_id     UUID        REFERENCES users(id) ON DELETE SET NULL,
+  status        bus_status  NOT NULL DEFAULT 'off',
+  current_lat   DOUBLE PRECISION,
+  current_lng   DOUBLE PRECISION,
+  current_speed DOUBLE PRECISION DEFAULT 0,
+  last_seen_at  TIMESTAMPTZ,
+  created_by    UUID        REFERENCES users(id) ON DELETE SET NULL,
+  updated_by    UUID        REFERENCES users(id) ON DELETE SET NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-create table if not exists buses (
-  id uuid primary key default gen_random_uuid(),
-  plate_number text not null unique,
-  route_id uuid references routes(id) on delete set null,
-  driver_id uuid references drivers(id) on delete set null,
-  status text not null default 'off' check (status in ('off', 'on', 'maintenance')),
-  current_lat double precision,
-  current_lng double precision,
-  current_speed double precision,
-  last_seen_at timestamptz,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+-- =============================================
+-- TABLE: drivers
+-- =============================================
+CREATE TABLE drivers (
+  id                  UUID          PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id             UUID          NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  employee_code       TEXT          UNIQUE,
+  license_no          TEXT,
+  license_type        license_type,
+  license_issue_date  DATE,
+  license_expiry_date DATE,
+  date_of_birth       DATE,
+  address             TEXT,
+  photo_url           TEXT,
+  assigned_bus_id     UUID          REFERENCES buses(id) ON DELETE SET NULL,
+  assigned_route_id   UUID          REFERENCES routes(id) ON DELETE SET NULL,
+  status              driver_status NOT NULL DEFAULT 'active',
+  created_by          UUID          REFERENCES users(id) ON DELETE SET NULL,
+  updated_by          UUID          REFERENCES users(id) ON DELETE SET NULL,
+  created_at          TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+  updated_at          TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
 
-alter table if exists drivers
-  drop constraint if exists drivers_assigned_bus_id_fkey;
-alter table if exists drivers
-  add constraint drivers_assigned_bus_id_fkey foreign key (assigned_bus_id) references buses(id) on delete set null;
-
-alter table if exists drivers
-  drop constraint if exists drivers_assigned_route_id_fkey;
-alter table if exists drivers
-  add constraint drivers_assigned_route_id_fkey foreign key (assigned_route_id) references routes(id) on delete set null;
-
-create table if not exists bus_locations (
-  id bigserial primary key,
-  bus_id uuid not null references buses(id) on delete cascade,
-  lat double precision not null,
-  lng double precision not null,
-  speed double precision,
-  recorded_at timestamptz not null default now()
+-- =============================================
+-- TABLE: bus_locations  (location history log)
+-- =============================================
+CREATE TABLE bus_locations (
+  id          UUID            PRIMARY KEY DEFAULT uuid_generate_v4(),
+  bus_id      UUID            NOT NULL REFERENCES buses(id) ON DELETE CASCADE,
+  lat         DOUBLE PRECISION NOT NULL,
+  lng         DOUBLE PRECISION NOT NULL,
+  speed       DOUBLE PRECISION DEFAULT 0,
+  recorded_at TIMESTAMPTZ     NOT NULL DEFAULT NOW()
 );
 
-create index if not exists idx_bus_locations_bus_id_recorded_at
-on bus_locations(bus_id, recorded_at desc);
-
-create table if not exists passenger_waiting (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid references users(id) on delete set null,
-  route_id uuid not null references routes(id) on delete cascade,
-  lat double precision not null,
-  lng double precision not null,
-  status text not null default 'waiting' check (status in ('waiting', 'cancelled', 'picked_up')),
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+-- =============================================
+-- TABLE: route_admins  (legacy assignment — kept for backward compat)
+-- =============================================
+CREATE TABLE route_admins (
+  id         UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  route_id   UUID        NOT NULL REFERENCES routes(id) ON DELETE CASCADE,
+  admin_id   UUID        NOT NULL REFERENCES admins(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (route_id, admin_id)
 );
 
-create index if not exists idx_passenger_waiting_route_status
-on passenger_waiting(route_id, status);
+-- =============================================
+-- TABLE: passenger_waiting
+-- =============================================
+CREATE TABLE passenger_waiting (
+  id         UUID           PRIMARY KEY DEFAULT uuid_generate_v4(),
+  route_id   UUID           NOT NULL REFERENCES routes(id) ON DELETE CASCADE,
+  user_id    UUID           REFERENCES users(id) ON DELETE SET NULL,
+  lat        DOUBLE PRECISION NOT NULL,
+  lng        DOUBLE PRECISION NOT NULL,
+  status     waiting_status NOT NULL DEFAULT 'waiting',
+  created_at TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ    NOT NULL DEFAULT NOW()
+);
 
-create or replace view active_buses_live as
-select
+-- =============================================
+-- TABLE: analytics_events
+-- =============================================
+CREATE TABLE analytics_events (
+  id          UUID             PRIMARY KEY DEFAULT uuid_generate_v4(),
+  source      analytics_source NOT NULL,
+  event_type  TEXT             NOT NULL,
+  user_id     UUID             REFERENCES users(id) ON DELETE SET NULL,
+  session_id  TEXT,
+  page        TEXT,
+  platform    TEXT,
+  os          TEXT,
+  device_type TEXT,
+  user_agent  TEXT,
+  ip_hint     TEXT,
+  created_at  TIMESTAMPTZ      NOT NULL DEFAULT NOW()
+);
+
+-- =============================================
+-- INDEXES
+-- =============================================
+CREATE INDEX idx_users_auth_user_id        ON users(auth_user_id);
+CREATE INDEX idx_users_role                ON users(role);
+CREATE INDEX idx_admins_user_id            ON admins(user_id);
+CREATE INDEX idx_admins_zone_id            ON admins(zone_id);
+CREATE INDEX idx_routes_zone_id            ON routes(zone_id);
+CREATE INDEX idx_drivers_user_id           ON drivers(user_id);
+CREATE INDEX idx_drivers_assigned_route_id ON drivers(assigned_route_id);
+CREATE INDEX idx_buses_route_id            ON buses(route_id);
+CREATE INDEX idx_buses_status              ON buses(status);
+CREATE INDEX idx_bus_locations_bus_id      ON bus_locations(bus_id);
+CREATE INDEX idx_bus_locations_recorded_at ON bus_locations(recorded_at DESC);
+CREATE INDEX idx_waiting_route_id          ON passenger_waiting(route_id);
+CREATE INDEX idx_waiting_status            ON passenger_waiting(status);
+CREATE INDEX idx_analytics_event_type      ON analytics_events(event_type);
+CREATE INDEX idx_analytics_user_id         ON analytics_events(user_id);
+CREATE INDEX idx_analytics_created_at      ON analytics_events(created_at DESC);
+
+-- Audit trail indexes
+CREATE INDEX idx_zones_created_by   ON zones(created_by);
+CREATE INDEX idx_admins_created_by  ON admins(created_by);
+CREATE INDEX idx_routes_created_by  ON routes(created_by);
+CREATE INDEX idx_buses_created_by   ON buses(created_by);
+CREATE INDEX idx_drivers_created_by ON drivers(created_by);
+
+-- FK constraints for zones.created_by / updated_by (zones is defined before users)
+ALTER TABLE zones
+  ADD CONSTRAINT fk_zones_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+  ADD CONSTRAINT fk_zones_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL;
+
+-- =============================================
+-- VIEWS
+-- =============================================
+
+CREATE OR REPLACE VIEW active_buses_live AS
+SELECT
   b.id,
   b.plate_number,
   b.route_id,
@@ -140,110 +240,148 @@ select
   b.current_lng,
   b.current_speed,
   b.last_seen_at
-from buses b
-left join routes r on r.id = b.route_id
-where b.status = 'on';
+FROM buses b
+LEFT JOIN routes r ON r.id = b.route_id
+WHERE b.status = 'on';
 
-create or replace view active_waiting_passengers as
-select
+CREATE OR REPLACE VIEW active_waiting_passengers AS
+SELECT
   pw.id,
-  pw.user_id,
   pw.route_id,
   r.route_name,
   pw.lat,
   pw.lng,
   pw.status,
-  pw.created_at,
-  pw.updated_at
-from passenger_waiting pw
-left join routes r on r.id = pw.route_id
-where pw.status = 'waiting';
+  pw.user_id,
+  COUNT(*) OVER (PARTITION BY pw.route_id) AS waiting_count,
+  pw.created_at
+FROM passenger_waiting pw
+LEFT JOIN routes r ON r.id = pw.route_id
+WHERE pw.status = 'waiting';
 
-drop trigger if exists trg_users_set_updated_at on users;
-create trigger trg_users_set_updated_at
-before update on users
-for each row execute function set_updated_at();
+-- =============================================
+-- AUTO updated_at TRIGGER
+-- =============================================
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
-drop trigger if exists trg_drivers_set_updated_at on drivers;
-create trigger trg_drivers_set_updated_at
-before update on drivers
-for each row execute function set_updated_at();
+CREATE TRIGGER trg_users_updated_at
+  BEFORE UPDATE ON users
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
-drop trigger if exists trg_admins_set_updated_at on admins;
-create trigger trg_admins_set_updated_at
-before update on admins
-for each row execute function set_updated_at();
+CREATE TRIGGER trg_zones_updated_at
+  BEFORE UPDATE ON zones
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
-drop trigger if exists trg_routes_set_updated_at on routes;
-create trigger trg_routes_set_updated_at
-before update on routes
-for each row execute function set_updated_at();
+CREATE TRIGGER trg_admins_updated_at
+  BEFORE UPDATE ON admins
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
-drop trigger if exists trg_buses_set_updated_at on buses;
-create trigger trg_buses_set_updated_at
-before update on buses
-for each row execute function set_updated_at();
+CREATE TRIGGER trg_routes_updated_at
+  BEFORE UPDATE ON routes
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
-drop trigger if exists trg_passenger_waiting_set_updated_at on passenger_waiting;
-create trigger trg_passenger_waiting_set_updated_at
-before update on passenger_waiting
-for each row execute function set_updated_at();
+CREATE TRIGGER trg_buses_updated_at
+  BEFORE UPDATE ON buses
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
--- Enable realtime for core tables in Supabase dashboard:
--- buses
--- bus_locations
--- passenger_waiting
--- routes
--- users
--- drivers
--- admins
+CREATE TRIGGER trg_drivers_updated_at
+  BEFORE UPDATE ON drivers
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
--- ===== ANALYTICS =====
-create table if not exists analytics_events (
-  id          uuid primary key default gen_random_uuid(),
-  source      text not null check (source in ('web_admin', 'mobile_app')),
-  event_type  text not null,
-  user_id     uuid references users(id) on delete set null,
-  session_id  text,
-  page        text,
-  platform    text,
-  os          text,
-  device_type text,
-  user_agent  text,
-  ip_hint     text,
-  created_at  timestamptz not null default now()
+CREATE TRIGGER trg_passenger_waiting_updated_at
+  BEFORE UPDATE ON passenger_waiting
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- =============================================
+-- ROW LEVEL SECURITY
+-- Worker uses service_role key → bypasses RLS.
+-- Enable RLS so anon key cannot read raw tables.
+-- =============================================
+ALTER TABLE users             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE admins            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE drivers           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE buses             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bus_locations     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE routes            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE zones             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE route_admins      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE passenger_waiting ENABLE ROW LEVEL SECURITY;
+ALTER TABLE analytics_events  ENABLE ROW LEVEL SECURITY;
+
+-- =============================================
+-- INITIAL DATA  (run AFTER creating the schema)
+-- =============================================
+-- Step 1: Create the super admin account in Supabase Dashboard
+--   Authentication → Users → "Add user" → enter email + password
+--   Copy the UUID shown as "User UID"
+--
+-- Step 2: Replace <AUTH_USER_UUID> below with that UUID, then run:
+
+/*
+INSERT INTO users (auth_user_id, auth_provider, email, email_verified, username, full_name, role, status)
+VALUES (
+  '<AUTH_USER_UUID>',   -- UUID from Supabase Auth
+  'email',
+  'admin@yourdomain.com',
+  TRUE,
+  'superadmin',
+  'Super Admin',
+  'admin',
+  'active'
+)
+RETURNING id;           -- copy this users.id for the next insert
+
+INSERT INTO admins (user_id, admin_type, status)
+VALUES (
+  '<USERS_ID_FROM_ABOVE>',
+  'super_admin',
+  'active'
 );
+*/
 
-create index if not exists idx_analytics_source_created_at on analytics_events(source, created_at desc);
-create index if not exists idx_analytics_event_type_created_at on analytics_events(event_type, created_at desc);
-create index if not exists idx_analytics_user_id on analytics_events(user_id);
-create index if not exists idx_analytics_created_at on analytics_events(created_at desc);
+-- =============================================
+-- MIGRATION: Add audit trail to existing DB
+-- Run this if the database already exists
+-- (skip if running the full schema above)
+-- =============================================
+/*
+-- Add columns (safe to run multiple times)
+ALTER TABLE zones   ADD COLUMN IF NOT EXISTS created_by UUID;
+ALTER TABLE zones   ADD COLUMN IF NOT EXISTS updated_by UUID;
+ALTER TABLE admins  ADD COLUMN IF NOT EXISTS created_by UUID;
+ALTER TABLE admins  ADD COLUMN IF NOT EXISTS updated_by UUID;
+ALTER TABLE routes  ADD COLUMN IF NOT EXISTS created_by UUID;
+ALTER TABLE routes  ADD COLUMN IF NOT EXISTS updated_by UUID;
+ALTER TABLE buses   ADD COLUMN IF NOT EXISTS created_by UUID;
+ALTER TABLE buses   ADD COLUMN IF NOT EXISTS updated_by UUID;
+ALTER TABLE drivers ADD COLUMN IF NOT EXISTS created_by UUID;
+ALTER TABLE drivers ADD COLUMN IF NOT EXISTS updated_by UUID;
 
--- ===== ZONES =====
-create table if not exists zones (
-  id          uuid primary key default gen_random_uuid(),
-  zone_code   text unique,
-  zone_name   text not null,
-  description text,
-  status      text not null default 'active' check (status in ('active', 'inactive')),
-  created_at  timestamptz not null default now(),
-  updated_at  timestamptz not null default now()
-);
+-- Add FK constraints (skips if already exists)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_zones_created_by')   THEN ALTER TABLE zones   ADD CONSTRAINT fk_zones_created_by   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL; END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_zones_updated_by')   THEN ALTER TABLE zones   ADD CONSTRAINT fk_zones_updated_by   FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL; END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_admins_created_by')  THEN ALTER TABLE admins  ADD CONSTRAINT fk_admins_created_by  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL; END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_admins_updated_by')  THEN ALTER TABLE admins  ADD CONSTRAINT fk_admins_updated_by  FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL; END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_routes_created_by')  THEN ALTER TABLE routes  ADD CONSTRAINT fk_routes_created_by  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL; END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_routes_updated_by')  THEN ALTER TABLE routes  ADD CONSTRAINT fk_routes_updated_by  FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL; END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_buses_created_by')   THEN ALTER TABLE buses   ADD CONSTRAINT fk_buses_created_by   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL; END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_buses_updated_by')   THEN ALTER TABLE buses   ADD CONSTRAINT fk_buses_updated_by   FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL; END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_drivers_created_by') THEN ALTER TABLE drivers ADD CONSTRAINT fk_drivers_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL; END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_drivers_updated_by') THEN ALTER TABLE drivers ADD CONSTRAINT fk_drivers_updated_by FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL; END IF;
+END $$;
 
-drop trigger if exists trg_zones_set_updated_at on zones;
-create trigger trg_zones_set_updated_at
-before update on zones
-for each row execute function set_updated_at();
-
--- Add zone_id to routes (a route belongs to a zone)
-alter table routes add column if not exists zone_id uuid references zones(id) on delete set null;
-create index if not exists idx_routes_zone_id on routes(zone_id);
-
--- Add zone_id to admins (a zone_admin manages one zone)
-alter table admins add column if not exists zone_id uuid references zones(id) on delete set null;
-
--- Update admin_type constraint: route_admin → zone_admin
--- Run this only if migrating from old schema:
--- alter table admins drop constraint if exists admins_admin_type_check;
--- alter table admins add constraint admins_admin_type_check
---   check (admin_type in ('super_admin', 'zone_admin'));
+-- Add indexes (safe to run multiple times)
+CREATE INDEX IF NOT EXISTS idx_zones_created_by   ON zones(created_by);
+CREATE INDEX IF NOT EXISTS idx_admins_created_by  ON admins(created_by);
+CREATE INDEX IF NOT EXISTS idx_routes_created_by  ON routes(created_by);
+CREATE INDEX IF NOT EXISTS idx_buses_created_by   ON buses(created_by);
+CREATE INDEX IF NOT EXISTS idx_drivers_created_by ON drivers(created_by);
+*/

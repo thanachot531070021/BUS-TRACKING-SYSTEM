@@ -1,4 +1,4 @@
-import { createBus, createBusLocation, deleteBus, getBusById, listAdminBuses, listBusesByRoute, listLiveBuses, updateBus, updateDriverDuty } from '../repositories/buses';
+import { createBus, createBusLocation, deleteBus, findBusByDriverId, getBusById, listAdminBuses, listBusesByRoute, listLiveBuses, updateBus, updateDriverDuty } from '../repositories/buses';
 import type { CreateBusBody, Env, UpdateBusBody, UpdateDriverDutyBody, UpdateLocationBody } from '../types';
 
 export async function listLiveBusesService(env: Env, routeId?: string | null) {
@@ -17,12 +17,16 @@ export async function listAdminBusesService(env: Env, routeIds?: string[]) {
   return listAdminBuses(env, routeIds);
 }
 
-export async function createBusService(env: Env, body: CreateBusBody) {
-  return createBus(env, body);
+export async function findBusByDriverIdService(env: Env, driverUserId: string) {
+  return findBusByDriverId(env, driverUserId);
 }
 
-export async function updateBusService(env: Env, busId: string, body: UpdateBusBody) {
-  return updateBus(env, busId, body);
+export async function createBusService(env: Env, body: CreateBusBody, userId?: string | null) {
+  return createBus(env, body, userId);
+}
+
+export async function updateBusService(env: Env, busId: string, body: UpdateBusBody, userId?: string | null) {
+  return updateBus(env, busId, body, userId);
 }
 
 export async function deleteBusService(env: Env, busId: string) {

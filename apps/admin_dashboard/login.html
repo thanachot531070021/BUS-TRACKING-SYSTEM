@@ -322,6 +322,9 @@
     }
 
     document.getElementById('identifier').focus();
+
+    const reason = new URLSearchParams(location.search).get('reason');
+    if (reason === 'expired') showErr('Session หมดอายุ กรุณาเข้าสู่ระบบใหม่');
   </script>
 </body>
 </html>

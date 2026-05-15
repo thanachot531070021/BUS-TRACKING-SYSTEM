@@ -1,5 +1,5 @@
 import { handleAdminCreateBus, handleAdminCreateRoute, handleAdminDashboardSummary, handleAdminDeleteBus, handleAdminDeleteRoute, handleAdminGetBusById, handleAdminGetRouteById, handleAdminListBuses, handleAdminListRoutes, handleAdminLogin, handleAdminRouteBuses, handleAdminRouteWaitingSummary, handleAdminUpdateBus, handleAdminUpdateRoute, handleAdminWaiting, handleAdminWaitingSummary } from '../handlers/admin';
-import { handleAdminCreateAdmin, handleAdminCreateAdminWithUser, handleAdminCreateDriver, handleAdminCreateDriverWithUser, handleAdminCreateRouteAdmin, handleAdminCreateUser, handleAdminDeleteAdmin, handleAdminDeleteDriver, handleAdminDeleteRouteAdmin, handleAdminDeleteUser, handleAdminGetAdminById, handleAdminGetDriverById, handleAdminGetRouteAdminById, handleAdminGetUserById, handleAdminListAdmins, handleAdminListDrivers, handleAdminListRouteAdmins, handleAdminListUsers, handleAdminUpdateAdmin, handleAdminUpdateDriver, handleAdminUpdateUser } from '../handlers/admin-users';
+import { handleAdminCreateAdmin, handleAdminCreateAdminWithUser, handleAdminCreateDriver, handleAdminCreateDriverWithUser, handleAdminCreateRouteAdmin, handleAdminCreateUser, handleAdminDeleteAdmin, handleAdminDeleteDriver, handleAdminDeleteRouteAdmin, handleAdminDeleteUser, handleAdminGetAdminById, handleAdminGetDriverById, handleAdminGetRouteAdminById, handleAdminGetUserById, handleAdminListAdmins, handleAdminListDrivers, handleAdminListRouteAdmins, handleAdminListUsers, handleAdminResetPassword, handleAdminUpdateAdmin, handleAdminUpdateDriver, handleAdminUpdateUser } from '../handlers/admin-users';
 import { handleAdminCreateZone, handleAdminDeleteZone, handleAdminGetZoneById, handleAdminListZones, handleAdminUpdateZone } from '../handlers/zones';
 import { handleGetAnalytics, handleLogEvent } from '../handlers/analytics';
 import { json, notFound } from '../lib/http';
@@ -31,10 +31,18 @@ export async function adminRouter(request: Request, env: Env) {
     if (enriched instanceof Response) return enriched;
     if (enriched.adminType !== 'super_admin') return json({ error: 'Forbidden: only super admin can manage zones' }, 403);
     if (pathname === '/admin/zones' && request.method === 'GET') return handleAdminListZones(env);
-    if (pathname === '/admin/zones' && request.method === 'POST') return handleAdminCreateZone(env, request);
+    if (pathname === '/admin/zones' && request.method === 'POST') return handleAdminCreateZone(env, request, enriched);
     if (pathname.startsWith('/admin/zones/') && request.method === 'GET') return handleAdminGetZoneById(env, getIdFromPath(pathname, '/admin/zones/') ?? '');
-    if (pathname.startsWith('/admin/zones/') && request.method === 'PUT') return handleAdminUpdateZone(env, request, getIdFromPath(pathname, '/admin/zones/') ?? '');
+    if (pathname.startsWith('/admin/zones/') && request.method === 'PUT') return handleAdminUpdateZone(env, request, getIdFromPath(pathname, '/admin/zones/') ?? '', enriched);
     if (pathname.startsWith('/admin/zones/') && request.method === 'DELETE') return handleAdminDeleteZone(env, getIdFromPath(pathname, '/admin/zones/') ?? '');
+  }
+
+  // ── Reset Password (accessible to zone_admin — RBAC in handler) ─────────
+  if (pathname.startsWith('/admin/users/') && pathname.endsWith('/reset-password') && request.method === 'POST') {
+    const auth = await requireAdminScope(env, request);
+    if (auth instanceof Response) return auth;
+    const userId = pathname.split('/')[3] ?? '';
+    return handleAdminResetPassword(env, request, userId, auth);
   }
 
   // ── Users (Super Admin only) ─────────────────────────────────────────────
@@ -141,7 +149,7 @@ export async function adminRouter(request: Request, env: Env) {
   if (pathname === '/admin/routes' && request.method === 'POST') {
     const auth = await requireAdminScope(env, request);
     if (auth instanceof Response) return auth;
-    return handleAdminCreateRoute(env, request);
+    return handleAdminCreateRoute(env, request, auth);
   }
   if (pathname.startsWith('/admin/routes/') && pathname.endsWith('/buses') && request.method === 'GET') return handleAdminRouteBuses(env, pathname.split('/')[3] ?? '');
   if (pathname.startsWith('/admin/routes/') && pathname.endsWith('/waiting-summary') && request.method === 'GET') return handleAdminRouteWaitingSummary(env, pathname.split('/')[3] ?? '');
@@ -149,7 +157,7 @@ export async function adminRouter(request: Request, env: Env) {
   if (pathname.startsWith('/admin/routes/') && request.method === 'PUT') {
     const auth = await requireAdminScope(env, request);
     if (auth instanceof Response) return auth;
-    return handleAdminUpdateRoute(env, request, getIdFromPath(pathname, '/admin/routes/') ?? '');
+    return handleAdminUpdateRoute(env, request, getIdFromPath(pathname, '/admin/routes/') ?? '', auth);
   }
   if (pathname.startsWith('/admin/routes/') && request.method === 'DELETE') {
     const auth = await requireAdminScope(env, request);
@@ -166,13 +174,13 @@ export async function adminRouter(request: Request, env: Env) {
   if (pathname === '/admin/buses' && request.method === 'POST') {
     const auth = await requireAdminScope(env, request);
     if (auth instanceof Response) return auth;
-    return handleAdminCreateBus(env, request);
+    return handleAdminCreateBus(env, request, auth);
   }
   if (pathname.startsWith('/admin/buses/') && request.method === 'GET') return handleAdminGetBusById(env, getIdFromPath(pathname, '/admin/buses/') ?? '');
   if (pathname.startsWith('/admin/buses/') && request.method === 'PUT') {
     const auth = await requireAdminScope(env, request);
     if (auth instanceof Response) return auth;
-    return handleAdminUpdateBus(env, request, getIdFromPath(pathname, '/admin/buses/') ?? '');
+    return handleAdminUpdateBus(env, request, getIdFromPath(pathname, '/admin/buses/') ?? '', auth);
   }
   if (pathname.startsWith('/admin/buses/') && request.method === 'DELETE') {
     const auth = await requireAdminScope(env, request);

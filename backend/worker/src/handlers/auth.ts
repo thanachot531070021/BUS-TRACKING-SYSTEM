@@ -1,5 +1,6 @@
 import { badRequest, json, readJson } from '../lib/http';
 import { currentUserService, googleLoginService, passwordLoginService, registerService } from '../services/auth.service';
+import { findAdminByUserId } from '../repositories/admins';
 import { requireAuth } from '../middleware/auth.middleware';
 import { validateLoginBody, validateRegisterBody } from '../schemas/auth.schema';
 import type { Env } from '../types';
@@ -32,10 +33,37 @@ export async function handlePasswordLogin(env: Env, request: Request) {
   const validated = validateLoginBody(body);
   if (!validated.ok) return badRequest(validated.error);
 
-  return json({
-    message: 'Login success',
-    data: await passwordLoginService(env, validated.data.identifier, validated.data.password, validated.data.expectedRole as any),
-  });
+  try {
+    const result = await passwordLoginService(env, validated.data.identifier, validated.data.password, validated.data.expectedRole as any) as any;
+
+    if (validated.data.expectedRole === 'admin') {
+      const profile = result?.profile;
+      if (!profile || profile.role !== 'admin') {
+        return json({ error: 'บัญชีนี้ไม่มีสิทธิ์เข้าระบบผู้ดูแล' }, 403);
+      }
+      const adminRecord = await findAdminByUserId(env, profile.id) as any;
+      if (!adminRecord || !['super_admin', 'zone_admin'].includes(adminRecord.admin_type)) {
+        return json({ error: 'บัญชีนี้ไม่มีสิทธิ์เข้าระบบ — เฉพาะ Super Admin และ Zone Admin เท่านั้น' }, 403);
+      }
+      if (adminRecord.status !== 'active') {
+        return json({ error: 'บัญชีผู้ดูแลนี้ถูกระงับการใช้งาน กรุณาติดต่อผู้ดูแลระบบ' }, 403);
+      }
+    }
+
+    return json({ message: 'Login success', data: result });
+  } catch (e) {
+    const msg = String((e as any)?.message ?? '');
+    if (msg.includes('invalid_credentials') || msg.includes('Invalid login credentials')) {
+      return json({ error: 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง' }, 401);
+    }
+    if (msg.includes('No email found')) {
+      return json({ error: 'ไม่พบบัญชีผู้ใช้นี้ในระบบ' }, 401);
+    }
+    if (msg.includes('Email not confirmed')) {
+      return json({ error: 'กรุณายืนยัน Email ก่อนเข้าสู่ระบบ' }, 401);
+    }
+    throw e;
+  }
 }
 
 export async function handleCurrentUser(env: Env, request: Request) {

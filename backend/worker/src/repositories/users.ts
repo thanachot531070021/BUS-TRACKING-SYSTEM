@@ -49,12 +49,12 @@ const mockUsers: UserProfile[] = [
 export async function listUsers(env: Env) {
   if (!usingSupabase(env)) return mockUsers;
   // Include admin profile so frontend can distinguish super_admin vs zone_admin
-  return supabaseFetch<UserProfile[]>(env, 'users?select=*,admin_profile:admins(admin_type,zone_id)&order=created_at.desc');
+  return supabaseFetch<UserProfile[]>(env, 'users?select=*,admin_profile:admins!admins_user_id_fkey(admin_type,zone_id)&order=created_at.desc');
 }
 
 export async function getUserById(env: Env, userId: string) {
   if (!usingSupabase(env)) return mockUsers.find((user) => user.id === userId) ?? null;
-  const rows = await supabaseFetch<UserProfile[]>(env, `users?select=*,admin_profile:admins(admin_type,zone_id)&id=eq.${userId}&limit=1`);
+  const rows = await supabaseFetch<UserProfile[]>(env, `users?select=*,admin_profile:admins!admins_user_id_fkey(admin_type,zone_id)&id=eq.${userId}&limit=1`);
   return rows[0] ?? null;
 }
 
@@ -115,7 +115,7 @@ export async function createUser(env: Env, body: CreateUserBody) {
   return created[0];
 }
 
-export async function updateUser(env: Env, userId: string, body: UpdateUserBody) {
+export async function updateUser(env: Env, userId: string, body: UpdateUserBody, updatedBy?: string | null) {
   if (!usingSupabase(env)) return { id: userId, ...body };
 
   const updated = await supabaseFetch<JsonRecord[]>(env, `users?id=eq.${userId}`, {
@@ -134,7 +134,7 @@ export async function updateUser(env: Env, userId: string, body: UpdateUserBody)
       avatar_url: body.avatarUrl,
       role: body.role,
       status: body.status,
-      last_login_at: new Date().toISOString(),
+      ...(body.lastLoginAt !== undefined ? { last_login_at: body.lastLoginAt } : {}),
     }),
   });
 

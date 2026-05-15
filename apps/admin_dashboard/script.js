@@ -15,10 +15,28 @@ const clearAuth = () => { localStorage.removeItem(TOKEN_KEY); localStorage.remov
 const getApiBase = () => (localStorage.getItem(API_KEY) || DEFAULT_API).replace(/\/$/, '');
 
 // ===== API FETCH =====
+function forceLogout(reason = 'expired') {
+  clearAuth();
+  window.location.replace(`login.html?reason=${reason}`);
+}
+
+function scheduleTokenExpiry() {
+  const token = getToken();
+  if (!token) return;
+  try {
+    const { exp } = JSON.parse(atob(token.split('.')[1]));
+    if (!exp) return;
+    const msLeft = exp * 1000 - Date.now();
+    if (msLeft <= 0) { forceLogout(); return; }
+    setTimeout(() => forceLogout(), msLeft);
+  } catch {}
+}
+
 async function apiFetch(path, opts = {}, auth = true) {
   const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
   if (auth && getToken()) headers.Authorization = `Bearer ${getToken()}`;
   const res = await fetch(`${getApiBase()}${path}`, { ...opts, headers });
+  if (res.status === 401) { forceLogout(); throw new Error('Session expired'); }
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || data.message || `HTTP ${res.status}`);
   return data;
@@ -56,6 +74,7 @@ const SECTIONS = {
     updatePath: id => `/admin/users/${id}`,
     deletePath: id => `/admin/users/${id}`,
     idField: 'id',
+    resetPassword: true,
     columns: [
       { key: 'id',        label: 'ID',           r: chip },
       { key: 'username',  label: 'Username',      bold: true },
@@ -65,10 +84,11 @@ const SECTIONS = {
       { key: 'status',    label: 'สถานะ',          r: statusBadge },
     ],
     formFields: [
-      { n: 'username',  rk: 'username',  label: 'Username',      type: 'text',     req: true  },
-      { n: 'email',     rk: 'email',     label: 'Email',          type: 'email',    req: true  },
-      { n: 'fullName',  rk: 'full_name', label: 'ชื่อ-นามสกุล',  type: 'text',     req: false },
-      { n: 'password',  rk: null,        label: 'รหัสผ่าน',       type: 'password', req: false, createOnly: true },
+      { n: 'username',     rk: 'username',     label: 'Username',      type: 'text',     req: true  },
+      { n: 'email',        rk: 'email',        label: 'Email',          type: 'email',    req: true  },
+      { n: 'fullName',     rk: 'full_name',    label: 'ชื่อ-นามสกุล',  type: 'text',     req: false },
+      { n: 'phoneNumber',  rk: 'phone_number', label: 'เบอร์โทร',       type: 'text',     req: false },
+      { n: 'password',     rk: null,           label: 'รหัสผ่าน',       type: 'password', req: false, createOnly: true },
       { n: 'role',      rk: 'role',      label: 'บทบาท',           type: 'select',   req: true,
         options: [
           { v: 'passenger',  l: '🧑 ผู้โดยสาร'  },
@@ -101,6 +121,8 @@ const SECTIONS = {
       { key: 'zone_name', label: 'ชื่อโซน'  },
       { key: 'description', label: 'รายละเอียด', r: v => v ? esc(v) : '—' },
       { key: 'status',    label: 'สถานะ',    r: statusBadge },
+      { key: 'created_by', label: 'สร้างโดย', r: (v, row) => row?.created_by_user ? esc(row.created_by_user.full_name || row.created_by_user.username || v) : (v ? chip(v) : '—') },
+      { key: 'updated_by', label: 'แก้ไขล่าสุดโดย', r: (v, row) => row?.updated_by_user ? esc(row.updated_by_user.full_name || row.updated_by_user.username || v) : (v ? chip(v) : '—') },
     ],
     formFields: [
       { n: 'zoneCode', rk: 'zone_code', label: 'รหัสโซน',      type: 'text', req: false },
@@ -121,6 +143,7 @@ const SECTIONS = {
     deletePath: id => `/admin/drivers/${id}`,
     idField: 'id',
     withUserCreate: true,
+    resetPassword: true,
     prefetch: ['/admin/routes'],
     columns: [
       { key: 'user',          label: 'ชื่อ',          r: (v,row) => v ? `<strong>${esc(v.full_name||v.username||'—')}</strong><br><small style="color:var(--muted)">${esc(v.email||'')}</small>` : chip(row.user_id) },
@@ -128,10 +151,29 @@ const SECTIONS = {
       { key: 'license_no',    label: 'ใบขับขี่'       },
       { key: 'assigned_route_id', label: 'เส้นทาง',   r: v => lookupLabel('/admin/routes', v, r => [r.route_code, r.route_name].filter(Boolean).join(' — ')) },
       { key: 'status',        label: 'สถานะ',          r: statusBadge },
+      { key: 'created_by', label: 'สร้างโดย', r: (v, row) => row?.created_by_user ? esc(row.created_by_user.full_name || row.created_by_user.username || v) : (v ? chip(v) : '—') },
+      { key: 'updated_by', label: 'แก้ไขล่าสุดโดย', r: (v, row) => row?.updated_by_user ? esc(row.updated_by_user.full_name || row.updated_by_user.username || v) : (v ? chip(v) : '—') },
     ],
     formFields: [
+      { n: 'fullName',    rk: 'full_name',    label: 'ชื่อ-นามสกุล', type: 'text',  req: false, fromUser: true },
+      { n: 'email',       rk: 'email',        label: 'Email',         type: 'email', req: false, fromUser: true },
+      { n: 'phoneNumber', rk: 'phone_number', label: 'เบอร์โทร',      type: 'text',  req: false, fromUser: true },
       { n: 'employeeCode',    rk: 'employee_code',    label: 'รหัสพนักงาน',     type: 'text', req: false },
-      { n: 'licenseNo',       rk: 'license_no',       label: 'หมายเลขใบขับขี่', type: 'text', req: false },
+      { n: 'licenseNo',       rk: 'license_no',       label: 'เลขที่ใบอนุญาต (กรมขนส่ง)', type: 'text', req: true },
+      { n: 'licenseType',     rk: 'license_type',     label: 'ประเภทใบอนุญาต', type: 'select', req: false,
+        options: [
+          { v: 'public_car',        l: '🚗 รถยนต์สาธารณะ (แท็กซี่)' },
+          { v: 'public_bus',        l: '🚌 รถโดยสาร (บัส)' },
+          { v: 'public_motorcycle', l: '🏍️ รถจักรยานยนต์สาธารณะ (วิน)' },
+        ]
+      },
+      { n: 'licenseIssueDate',  rk: 'license_issue_date',  label: 'วันออกบัตร',    type: 'date', req: false },
+      { n: 'licenseExpiryDate', rk: 'license_expiry_date', label: 'วันหมดอายุ',    type: 'date', req: false },
+      { n: 'dateOfBirth',       rk: 'date_of_birth',       label: 'วันเดือนปีเกิด', type: 'date', req: false },
+      { n: 'address',           rk: 'address',             label: 'ที่อยู่',         type: 'text', req: false },
+      { n: 'photoUrl',          rk: 'photo_url',           label: 'URL รูปถ่าย',    type: 'url',  req: false,
+        hint: 'ลิงก์รูปถ่ายผู้ขับ (ขนาดมาตรฐาน)'
+      },
       { n: 'assignedRouteId', rk: 'assigned_route_id', label: 'เส้นทาง', type: 'async-select', req: false,
         fetchPath: '/admin/routes',
         labelFn: r => [r.route_code, r.route_name].filter(Boolean).join(' — '),
@@ -151,13 +193,20 @@ const SECTIONS = {
     updatePath: id => `/admin/admins/${id}`,
     deletePath: id => `/admin/admins/${id}`,
     idField: 'id',
-    assignAdminCreate: true,
+    withUserCreate: true,
+    resetPassword: true,
     prefetch: ['/admin/zones'],
     columns: [
       { key: 'user',       label: 'ชื่อ',        r: (v,row) => v ? `<strong>${esc(v.full_name||v.username||'—')}</strong><br><small style="color:var(--muted)">${esc(v.email||'')}</small>` : chip(row.user_id) },
       { key: 'admin_type', label: 'ประเภท',       r: adminTypeBadge },
-      { key: 'zone_id',    label: 'โซน',          r: v => lookupLabel('/admin/zones', v, z => [z.zone_code, z.zone_name].filter(Boolean).join(' — ')) },
+      { key: 'zone_id',    label: 'โซน',          r: (v, row) => {
+        const z = row?.zone;
+        if (z) return `<span style="font-weight:500" title="${esc(v||'')}">${esc([z.zone_code, z.zone_name].filter(Boolean).join(' — '))}</span>`;
+        return lookupLabel('/admin/zones', v, zz => [zz.zone_code, zz.zone_name].filter(Boolean).join(' — '));
+      }},
       { key: 'status',     label: 'สถานะ',         r: statusBadge },
+      { key: 'created_by', label: 'สร้างโดย', r: (v, row) => row?.created_by_user ? esc(row.created_by_user.full_name || row.created_by_user.username || v) : (v ? chip(v) : '—') },
+      { key: 'updated_by', label: 'แก้ไขล่าสุดโดย', r: (v, row) => row?.updated_by_user ? esc(row.updated_by_user.full_name || row.updated_by_user.username || v) : (v ? chip(v) : '—') },
     ],
     formFields: [
       { n: 'adminType', rk: 'admin_type', label: 'ประเภท Admin', type: 'select', req: true,
@@ -170,6 +219,9 @@ const SECTIONS = {
         fetchPath: '/admin/zones',
         labelFn: z => [z.zone_code, z.zone_name].filter(Boolean).join(' — '),
         valueFn:  z => z.id,
+      },
+      { n: 'avatarUrl', rk: 'avatar_url', label: 'URL รูปโปรไฟล์', type: 'url', req: false,
+        hint: 'ลิงก์รูปโปรไฟล์ผู้ดูแลระบบ'
       },
       { n: 'status', rk: 'status', label: 'สถานะ', type: 'select', req: false,
         options: [{ v: 'active', l: '✅ ใช้งาน' }, { v: 'inactive', l: '⛔ ไม่ใช้งาน' }]
@@ -191,19 +243,27 @@ const SECTIONS = {
       { key: 'route_name',     label: 'ชื่อเส้นทาง'  },
       { key: 'start_location', label: 'จุดเริ่มต้น'   },
       { key: 'end_location',   label: 'จุดสิ้นสุด'    },
-      { key: 'zone_id',        label: 'โซน',           r: v => lookupLabel('/admin/zones', v, z => [z.zone_code, z.zone_name].filter(Boolean).join(' — ')) },
+      { key: 'zone_id',        label: 'โซน',           r: (v, row) => {
+        const z = row?.zone;
+        if (z) return `<span style="font-weight:500" title="${esc(v||'')}">${esc([z.zone_code, z.zone_name].filter(Boolean).join(' — '))}</span>`;
+        return lookupLabel('/admin/zones', v, zz => [zz.zone_code, zz.zone_name].filter(Boolean).join(' — '));
+      }},
       { key: 'status',         label: 'สถานะ',          r: statusBadge },
+      { key: 'created_by', label: 'สร้างโดย', r: (v, row) => row?.created_by_user ? esc(row.created_by_user.full_name || row.created_by_user.username || v) : (v ? chip(v) : '—') },
+      { key: 'updated_by', label: 'แก้ไขล่าสุดโดย', r: (v, row) => row?.updated_by_user ? esc(row.updated_by_user.full_name || row.updated_by_user.username || v) : (v ? chip(v) : '—') },
     ],
     formFields: [
-      { n: 'routeCode',     rk: 'route_code',     label: 'รหัสเส้นทาง',  type: 'text', req: true  },
-      { n: 'routeName',     rk: 'route_name',     label: 'ชื่อเส้นทาง',   type: 'text', req: true  },
-      { n: 'startLocation', rk: 'start_location', label: 'จุดเริ่มต้น',   type: 'text', req: false },
-      { n: 'endLocation',   rk: 'end_location',   label: 'จุดสิ้นสุด',    type: 'text', req: false },
-      { n: 'zoneId', rk: 'zone_id', label: 'โซน', type: 'async-select', req: false,
+      { n: 'zoneId', rk: 'zone_id', label: 'โซน', type: 'async-select', req: true,
         fetchPath: '/admin/zones',
         labelFn: z => [z.zone_code, z.zone_name].filter(Boolean).join(' — '),
         valueFn:  z => z.id,
       },
+      { n: 'routeCode',     rk: 'route_code',     label: 'รหัสเส้นทาง',  type: 'text', req: true,
+        hint: 'สร้างอัตโนมัติเมื่อเลือกโซน หรือกรอกเอง'
+      },
+      { n: 'routeName',     rk: 'route_name',     label: 'ชื่อเส้นทาง',   type: 'text', req: true  },
+      { n: 'startLocation', rk: 'start_location', label: 'จุดเริ่มต้น',   type: 'text', req: false },
+      { n: 'endLocation',   rk: 'end_location',   label: 'จุดสิ้นสุด',    type: 'text', req: false },
     ],
   },
 
@@ -221,18 +281,27 @@ const SECTIONS = {
       { key: 'route_id',     label: 'เส้นทาง',     r: v => lookupLabel('/admin/routes', v, r => [r.route_code, r.route_name].filter(Boolean).join(' — ')) },
       { key: 'driver_id',    label: 'คนขับ',        r: v => lookupLabel('/admin/drivers', v, d => d.user ? (d.user.full_name || d.user.username || d.employee_code || d.id) : (d.employee_code || d.id)) },
       { key: 'status',       label: 'สถานะ',         r: statusBadge },
+      { key: 'created_by', label: 'สร้างโดย', r: (v, row) => row?.created_by_user ? esc(row.created_by_user.full_name || row.created_by_user.username || v) : (v ? chip(v) : '—') },
+      { key: 'updated_by', label: 'แก้ไขล่าสุดโดย', r: (v, row) => row?.updated_by_user ? esc(row.updated_by_user.full_name || row.updated_by_user.username || v) : (v ? chip(v) : '—') },
     ],
     formFields: [
-      { n: 'plateNumber', rk: 'plate_number', label: 'ทะเบียนรถ',  type: 'text', req: true },
-      { n: 'routeId',  rk: 'route_id',  label: 'เส้นทาง', type: 'async-select', req: false,
-        fetchPath: '/admin/routes',
-        labelFn: r => [r.route_code, r.route_name].filter(Boolean).join(' — '),
-        valueFn:  r => r.id,
-      },
+      { n: 'plateNumber', rk: 'plate_number', label: 'ทะเบียนรถ', type: 'text', req: true },
       { n: 'driverId', rk: 'driver_id', label: 'คนขับ', type: 'async-select', req: false,
         fetchPath: '/admin/drivers',
         labelFn: d => d.user ? (d.user.full_name || d.user.username || d.employee_code || d.id) : (d.employee_code || d.id),
-        valueFn:  d => d.id,
+        valueFn:  d => d.user_id,
+        onSelect: (_id, driver) => {
+          const routeId = driver?.assigned_route_id;
+          if (!routeId) return;
+          initAsyncSelect('ss_routeId', '/admin/routes',
+            r => [r.route_code, r.route_name].filter(Boolean).join(' — '),
+            r => r.id, routeId);
+        },
+      },
+      { n: 'routeId', rk: 'route_id', label: 'เส้นทาง', type: 'async-select', req: false,
+        fetchPath: '/admin/routes',
+        labelFn: r => [r.route_code, r.route_name].filter(Boolean).join(' — '),
+        valueFn:  r => r.id,
       },
       { n: 'status', rk: 'status', label: 'สถานะ', type: 'select', req: false,
         options: [
@@ -392,7 +461,7 @@ function ssFilter(id, q) {
   } else { nr?.remove(); }
 }
 
-async function initAsyncSelect(containerId, fetchPath, labelFn, valueFn, currentVal) {
+async function initAsyncSelect(containerId, fetchPath, labelFn, valueFn, currentVal, onSelect = null) {
   const el = document.getElementById(containerId);
   if (!el) return;
   const listEl = el.querySelector('.ss-options-list');
@@ -451,6 +520,10 @@ async function initAsyncSelect(containerId, fetchPath, labelFn, valueFn, current
         el.querySelector('.ss-search-input').value = '';
         el.querySelectorAll('.ss-option').forEach(o => o.classList.remove('ss-hidden'));
         el.querySelector('.ss-no-results')?.remove();
+        if (v && onSelect) {
+          const item = items.find(i => String(valueFn(i)) === v);
+          onSelect(v, item);
+        }
       });
     });
   } catch (e) {
@@ -465,7 +538,7 @@ function populateAsyncSelects(fields, data, defaults = {}) {
     const currentVal = (f.rk && data) ? (data[f.rk] ?? '')
                      : (f.rk && defaults[f.rk] != null) ? defaults[f.rk]
                      : '';
-    initAsyncSelect(`ss_${f.n}`, f.fetchPath, f.labelFn, f.valueFn, String(currentVal));
+    initAsyncSelect(`ss_${f.n}`, f.fetchPath, f.labelFn, f.valueFn, String(currentVal), f.onSelect || null);
   });
 }
 
@@ -473,7 +546,7 @@ function populateAsyncSelects(fields, data, defaults = {}) {
    PAGINATION
    ===================================================== */
 function getActiveSection() {
-  return state.section === 'busDriver' ? (state._busDriverTab || 'buses') : state.section;
+  return state.section;
 }
 
 function gotoPage(section, page) {
@@ -483,7 +556,6 @@ function gotoPage(section, page) {
   const totalPages = Math.ceil(items.length / pg.pageSize) || 1;
   pg.page = Math.max(1, Math.min(page, totalPages));
   renderTable(section, items);
-  if (state.section === 'busDriver') _reinjectBusDriverTabs();
 }
 
 function changePageSize(section, size) {
@@ -506,6 +578,123 @@ function _busDriverTabsHtml(tab) {
     <button class="btn ${tab==='buses'?'btn-primary':'btn-secondary'}" onclick="renderBusDriver('buses')">🚍 รถโดยสาร</button>
     <button class="btn ${tab==='drivers'?'btn-primary':'btn-secondary'}" onclick="renderBusDriver('drivers')">🧑‍✈️ คนขับรถ</button>
   </div>`;
+}
+
+/* =====================================================
+   ALERT DIALOG (centered popup for save errors)
+   ===================================================== */
+function alertDialog(msg, title = 'เกิดข้อผิดพลาด') {
+  document.getElementById('_alertDialog')?.remove();
+  if (!document.getElementById('_alertDialogStyle')) {
+    const s = document.createElement('style');
+    s.id = '_alertDialogStyle';
+    s.textContent = '@keyframes _adBg{from{opacity:0}to{opacity:1}}@keyframes _adBox{from{transform:scale(.88) translateY(24px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}';
+    document.head.appendChild(s);
+  }
+  const isEmail = /email|อีเมล/i.test(msg);
+  const iconBg = isEmail ? '#fef3c7' : '#fef2f2';
+  const icon   = isEmail ? '📧' : '❌';
+  const btnClr = isEmail ? '#f59e0b' : '#ef4444';
+  const btnShd = isEmail ? 'rgba(245,158,11,.35)' : 'rgba(239,68,68,.35)';
+
+  const el = document.createElement('div');
+  el.id = '_alertDialog';
+  el.style.cssText = 'position:fixed;inset:0;z-index:199999;background:rgba(15,23,42,.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:20px;animation:_adBg .2s ease';
+  el.innerHTML = `
+    <div style="background:#fff;border-radius:20px;box-shadow:0 24px 64px rgba(0,0,0,.25),0 0 0 1px rgba(0,0,0,.04);padding:32px 28px 28px;max-width:400px;width:100%;text-align:center;animation:_adBox .28s cubic-bezier(.34,1.56,.64,1)">
+      <div style="width:68px;height:68px;border-radius:50%;background:${iconBg};display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:32px;box-shadow:0 4px 16px rgba(0,0,0,.08)">${icon}</div>
+      <div style="font-size:17px;font-weight:700;color:#1e293b;margin-bottom:8px;line-height:1.3">${esc(title)}</div>
+      <div style="font-size:13.5px;color:#64748b;line-height:1.7;margin-bottom:24px">${esc(msg)}</div>
+      <button id="_alertOkBtn" style="padding:11px 40px;background:${btnClr};color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 4px 14px ${btnShd}">ตกลง</button>
+    </div>`;
+  el.querySelector('#_alertOkBtn').addEventListener('click', () => el.remove());
+  el.addEventListener('click', e => { if (e.target === el) el.remove(); });
+  document.body.appendChild(el);
+  setTimeout(() => el.querySelector('#_alertOkBtn')?.focus(), 50);
+}
+
+/* =====================================================
+   RESET PASSWORD MODAL
+   ===================================================== */
+function openResetPasswordModal(section, itemId) {
+  let userId, displayName;
+  if (section === 'users') {
+    userId = itemId;
+    const item = (state.cache['users'] || []).find(x => String(x.id) === String(itemId));
+    displayName = item?.username || item?.full_name || item?.email || itemId;
+  } else {
+    const item = (state.cache[section] || []).find(x => String(x.id) === String(itemId));
+    userId = item?.user_id;
+    displayName = item?.user?.full_name || item?.user?.username || item?.user?.email || itemId;
+  }
+  if (!userId) { toast('ไม่พบข้อมูล User', 'error'); return; }
+
+  document.getElementById('_resetPwDialog')?.remove();
+  if (!document.getElementById('_alertDialogStyle')) {
+    const s = document.createElement('style');
+    s.id = '_alertDialogStyle';
+    s.textContent = '@keyframes _adBg{from{opacity:0}to{opacity:1}}@keyframes _adBox{from{transform:scale(.88) translateY(24px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}';
+    document.head.appendChild(s);
+  }
+
+  const el = document.createElement('div');
+  el.id = '_resetPwDialog';
+  el.style.cssText = 'position:fixed;inset:0;z-index:199999;background:rgba(15,23,42,.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:20px;animation:_adBg .2s ease';
+  el.innerHTML = `
+    <div style="background:#fff;border-radius:20px;box-shadow:0 24px 64px rgba(0,0,0,.25),0 0 0 1px rgba(0,0,0,.04);padding:32px 28px 28px;max-width:400px;width:100%;animation:_adBox .28s cubic-bezier(.34,1.56,.64,1)">
+      <div style="text-align:center;margin-bottom:22px">
+        <div style="width:62px;height:62px;border-radius:50%;background:#eff6ff;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:28px;box-shadow:0 4px 16px rgba(0,0,0,.08)">🔑</div>
+        <div style="font-size:17px;font-weight:700;color:#1e293b;margin-bottom:4px">Reset Password</div>
+        <div style="font-size:13px;color:#64748b">${esc(displayName)}</div>
+      </div>
+      <div style="margin-bottom:20px">
+        <label style="display:block;font-size:12.5px;font-weight:600;color:#374151;margin-bottom:6px">รหัสผ่านใหม่ <span style="color:#ef4444">*</span></label>
+        <div style="position:relative">
+          <input id="_resetPwInput" type="password" placeholder="อย่างน้อย 6 ตัวอักษร" autocomplete="new-password"
+            style="width:100%;padding:10px 40px 10px 12px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px;font-family:inherit;outline:none;box-sizing:border-box;transition:border-color .15s"
+            oninput="this.style.borderColor=this.value.length>=6?'#10b981':'#e5e7eb'">
+          <button type="button" onclick="var i=document.getElementById('_resetPwInput');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'👁️':'🙈'"
+            style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px;padding:2px">👁️</button>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button onclick="document.getElementById('_resetPwDialog')?.remove()"
+          style="flex:1;padding:11px;border:1.5px solid #e5e7eb;border-radius:10px;background:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;color:#64748b">
+          ยกเลิก
+        </button>
+        <button id="_resetPwSubmit"
+          style="flex:2;padding:11px;background:#3b82f6;color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 4px 12px rgba(59,130,246,.35)">
+          🔑 Reset Password
+        </button>
+      </div>
+    </div>`;
+
+  el.addEventListener('click', e => { if (e.target === el) el.remove(); });
+  el.querySelector('#_resetPwSubmit').addEventListener('click', async () => {
+    const newPassword = document.getElementById('_resetPwInput')?.value?.trim();
+    if (!newPassword || newPassword.length < 6) {
+      toast('กรุณากรอกรหัสผ่านอย่างน้อย 6 ตัวอักษร', 'warning');
+      return;
+    }
+    const btn = el.querySelector('#_resetPwSubmit');
+    btn.disabled = true; btn.textContent = '⏳ กำลัง Reset...';
+    try {
+      await apiFetch(`/admin/users/${userId}/reset-password`, {
+        method: 'POST',
+        body: JSON.stringify({ newPassword }),
+      });
+      el.remove();
+      toast(`Reset password ของ ${displayName} สำเร็จ ✅`, 'success');
+      loadSection(section);
+    } catch (err) {
+      alertDialog(err.message || 'ไม่สามารถ reset password ได้', 'Reset ไม่สำเร็จ');
+    } finally {
+      if (el.parentElement) { btn.disabled = false; btn.textContent = '🔑 Reset Password'; }
+    }
+  });
+
+  document.body.appendChild(el);
+  setTimeout(() => document.getElementById('_resetPwInput')?.focus(), 50);
 }
 
 /* =====================================================
@@ -553,7 +742,7 @@ function navigate(section) {
   document.getElementById('pageSubtitle').textContent = cfg.subtitle;
   // Auto-close sidebar on mobile after navigation
   if (window.innerWidth <= 900) closeSidebar();
-  loadSection(section);
+  return loadSection(section);
 }
 
 /* =====================================================
@@ -562,10 +751,10 @@ function navigate(section) {
 async function loadSection(section) {
   const content = document.getElementById('mainContent');
 
-  if (section === 'dashboard') { renderDashboard(); return; }
-  if (section === 'analytics') { renderAnalytics(); return; }
-  if (section === 'settings')  { renderSettings();  return; }
-  if (section === 'busDriver') { renderBusDriver('buses'); return; }
+  if (section === 'dashboard') return renderDashboard();
+  if (section === 'analytics') return renderAnalytics();
+  if (section === 'settings')  return renderSettings();
+  if (section === 'busDriver') return renderBusDriver('drivers');
 
   const cfg = SECTIONS[section];
   if (!cfg?.listPath) return;
@@ -641,6 +830,7 @@ function renderTable(section, allItems) {
       if (!ro) {
         cells += `<td><div class="td-actions">
           ${!noEdit ? `<button class="btn btn-warning btn-icon btn-sm" title="แก้ไข" onclick="openEdit('${section}','${esc(String(id))}')">✏️</button>` : ''}
+          ${cfg.resetPassword ? `<button class="btn btn-icon btn-sm" title="Reset Password" style="background:#eff6ff;color:#3b82f6;border:1.5px solid #bfdbfe" onclick="openResetPasswordModal('${section}','${esc(String(id))}')">🔑</button>` : ''}
           <button class="btn btn-danger btn-icon btn-sm" title="ลบ" onclick="askDelete('${section}','${esc(String(id))}')">🗑️</button>
         </div></td>`;
       }
@@ -710,7 +900,6 @@ function filterTable() {
     : allItems;
   if (state.pagination[section]) state.pagination[section].page = 1;
   renderTable(section, state.filtered[section]);
-  if (state.section === 'busDriver') _reinjectBusDriverTabs();
 }
 
 /* =====================================================
@@ -723,18 +912,28 @@ async function renderDashboard() {
   try {
     const raw = await apiFetch('/admin/summary');
     const s   = raw?.data || raw || {};
+    const isZone = s.zone_scoped || state.adminType === 'zone_admin';
+
+    const scopeLabel = isZone
+      ? `<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;padding:10px 16px;background:var(--bg);border-radius:10px;border:1px solid var(--border)">
+          <span style="font-size:18px">🗺️</span>
+          <span style="font-weight:600;color:var(--primary)">โซนของคุณ: ${esc(state.zoneLabel || state.zoneId || '—')}</span>
+          <span style="font-size:12px;color:var(--muted);margin-left:4px">ข้อมูลแสดงเฉพาะในโซนนี้</span>
+        </div>`
+      : '';
 
     const cards = [
-      { icon:'🛣️', cls:'si-blue',   val: s.total_routes   ?? s.totalRoutes   ?? '—', label:'เส้นทางทั้งหมด'    },
-      { icon:'🚍', cls:'si-green',  val: s.total_buses    ?? s.totalBuses    ?? '—', label:'รถโดยสารทั้งหมด'  },
-      { icon:'🟢', cls:'si-yellow', val: s.active_buses   ?? s.activeBuses   ?? '—', label:'รถที่ออกให้บริการ' },
-      { icon:'🚌', cls:'si-purple', val: s.total_drivers  ?? s.totalDrivers  ?? '—', label:'คนขับทั้งหมด'      },
-      { icon:'👥', cls:'si-indigo', val: s.total_users    ?? s.totalUsers    ?? '—', label:'ผู้ใช้งานทั้งหมด'  },
-      { icon:'⏳', cls:'si-red',    val: s.waiting_count  ?? s.waitingCount  ?? s.total_waiting ?? '—', label:'รายการรอรับ' },
-      { icon:'👤', cls:'si-teal',   val: s.total_admins   ?? s.totalAdmins   ?? '—', label:'Admin ทั้งหมด'     },
+      { icon:'🛣️', cls:'si-blue',   val: s.total_routes   ?? '—', label: isZone ? 'เส้นทางในโซน'      : 'เส้นทางทั้งหมด'    },
+      { icon:'🚍', cls:'si-green',  val: s.total_buses    ?? '—', label: isZone ? 'รถในโซน'           : 'รถโดยสารทั้งหมด'  },
+      { icon:'🟢', cls:'si-yellow', val: s.active_buses   ?? '—', label:'รถที่ออกให้บริการ'                                  },
+      { icon:'🚌', cls:'si-purple', val: s.total_drivers  ?? '—', label: isZone ? 'คนขับในโซน'         : 'คนขับทั้งหมด'      },
+      ...(!isZone ? [{ icon:'👥', cls:'si-indigo', val: s.total_users ?? '—', label:'ผู้ใช้งานทั้งหมด' }] : []),
+      { icon:'⏳', cls:'si-red',    val: s.waiting_count  ?? '—', label: isZone ? 'รอรับในโซน'         : 'รายการรอรับทั้งหมด' },
+      { icon:'👤', cls:'si-teal',   val: s.total_admins   ?? '—', label: isZone ? 'Admin ในโซน'        : 'Admin ทั้งหมด'     },
     ];
 
     content.innerHTML = `
+      ${scopeLabel}
       <div class="stats-grid">
         ${cards.map(c => `
           <div class="stat-card">
@@ -744,16 +943,6 @@ async function renderDashboard() {
               <div class="stat-label">${c.label}</div>
             </div>
           </div>`).join('')}
-      </div>
-
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">📋 Summary (Raw JSON)</div>
-          <button class="btn btn-secondary btn-sm" onclick="renderDashboard()">🔄 รีเฟรช</button>
-        </div>
-        <div class="card-body">
-          <pre>${esc(JSON.stringify(s, null, 2))}</pre>
-        </div>
       </div>`;
   } catch (err) {
     content.innerHTML = errCard('dashboard', err.message);
@@ -778,6 +967,77 @@ function makeChart(id, config) {
 }
 
 async function renderAnalytics() {
+  destroyCharts();
+  if (state.adminType === 'zone_admin') { renderZoneAnalytics(); return; }
+  renderGlobalAnalytics();
+}
+
+async function renderZoneAnalytics() {
+  const content = document.getElementById('mainContent');
+  content.innerHTML = `<div class="card"><div class="loading"><div class="spinner"></div> กำลังโหลด...</div></div>`;
+  try {
+    const [sumRaw, routesRaw, busesRaw] = await Promise.all([
+      apiFetch('/admin/summary'),
+      apiFetch('/admin/routes'),
+      apiFetch('/admin/buses'),
+    ]);
+    const s      = sumRaw?.data || {};
+    const routes = extractList(routesRaw);
+    const buses  = extractList(busesRaw);
+
+    const busByRoute = {};
+    for (const b of buses) {
+      if (!busByRoute[b.route_id]) busByRoute[b.route_id] = { total: 0, active: 0 };
+      busByRoute[b.route_id].total++;
+      if (b.status === 'on') busByRoute[b.route_id].active++;
+    }
+
+    content.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;padding:10px 16px;background:var(--bg);border-radius:10px;border:1px solid var(--border)">
+        <span style="font-size:18px">🗺️</span>
+        <span style="font-weight:600;color:var(--primary)">Analytics โซนของคุณ: ${esc(state.zoneLabel || state.zoneId || '—')}</span>
+        <button class="btn btn-secondary btn-sm" style="margin-left:auto" onclick="renderAnalytics()">🔄 รีเฟรช</button>
+      </div>
+
+      <div class="stats-grid" style="margin-bottom:20px">
+        <div class="stat-card"><div class="stat-icon si-blue">🛣️</div><div><div class="stat-value">${s.total_routes ?? '—'}</div><div class="stat-label">เส้นทางในโซน</div></div></div>
+        <div class="stat-card"><div class="stat-icon si-green">🚍</div><div><div class="stat-value">${s.total_buses ?? '—'}</div><div class="stat-label">รถในโซน</div></div></div>
+        <div class="stat-card"><div class="stat-icon si-yellow">🟢</div><div><div class="stat-value">${s.active_buses ?? '—'}</div><div class="stat-label">รถออกให้บริการ</div></div></div>
+        <div class="stat-card"><div class="stat-icon si-purple">🚌</div><div><div class="stat-value">${s.total_drivers ?? '—'}</div><div class="stat-label">คนขับในโซน</div></div></div>
+        <div class="stat-card"><div class="stat-icon si-red">⏳</div><div><div class="stat-value">${s.waiting_count ?? '—'}</div><div class="stat-label">รอรับในโซน</div></div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title">🛣️ เส้นทางในโซน</div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>รหัส</th><th>ชื่อเส้นทาง</th><th>จุดเริ่มต้น</th><th>จุดสิ้นสุด</th><th>รถทั้งหมด</th><th>รถที่วิ่ง</th><th>สถานะ</th></tr></thead>
+            <tbody>
+              ${routes.length
+                ? routes.map(r => {
+                    const bInfo = busByRoute[r.id] || { total: 0, active: 0 };
+                    return `<tr>
+                      <td><code>${esc(r.route_code || '—')}</code></td>
+                      <td>${esc(r.route_name || '—')}</td>
+                      <td>${esc(r.start_location || '—')}</td>
+                      <td>${esc(r.end_location || '—')}</td>
+                      <td style="text-align:center">${bInfo.total}</td>
+                      <td style="text-align:center">${bInfo.active > 0 ? `<span style="color:#10b981;font-weight:600">${bInfo.active}</span>` : '0'}</td>
+                      <td>${statusBadge(r.status)}</td>
+                    </tr>`;
+                  }).join('')
+                : `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--muted)"><div style="font-size:36px;margin-bottom:10px">📭</div>ยังไม่มีเส้นทาง</td></tr>`
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+  } catch (err) {
+    content.innerHTML = errCard('analytics', err.message);
+  }
+}
+
+async function renderGlobalAnalytics() {
   destroyCharts();
   const content = document.getElementById('mainContent');
   content.innerHTML = `<div class="card"><div class="loading"><div class="spinner"></div> กำลังโหลด Analytics...</div></div>`;
@@ -1110,10 +1370,25 @@ const modal = {
   submitBtn: () => document.getElementById('modalSubmitBtn'),
 };
 
-function openCreate(section) {
+async function openCreate(section) {
   const cfg = SECTIONS[section];
   modal.section = section; modal.mode = 'create'; modal.editId = null;
   modal.titleEl().textContent = `➕ เพิ่ม${cfg.title}`;
+
+  // Routes + zone_admin: pre-fetch zones so buildForm can show zone name (not UUID)
+  if (section === 'routes' && state.adminType === 'zone_admin' && state.zoneId) {
+    if (!_ssCache['/admin/zones'] || !_ssCache['/admin/zones'].length) {
+      try {
+        const raw = await apiFetch('/admin/zones');
+        _ssCache['/admin/zones'] = extractList(raw);
+      } catch (_) {}
+    }
+    // Update zoneLabel from fresh cache if it was missing
+    if (!state.zoneLabel) {
+      const z = (_ssCache['/admin/zones'] || []).find(z => z.id === state.zoneId);
+      if (z) state.zoneLabel = [z.zone_code, z.zone_name].filter(Boolean).join(' — ');
+    }
+  }
 
   // Zone Admin: ใส่ zoneId เป็น default อัตโนมัติ
   const defaults = (state.adminType === 'zone_admin' && state.zoneId)
@@ -1124,7 +1399,13 @@ function openCreate(section) {
   modal.submitBtn().disabled  = false;
   modal.submitBtn().onclick   = submitModal;
   modal.el().classList.remove('hidden');
-  populateAsyncSelects(cfg.formFields, null, defaults);
+
+  // Routes + super_admin: exclude zone from populateAsyncSelects to avoid race condition
+  // (we'll init zone SS ourselves below with the onSelect callback)
+  const fieldsForPopulate = (section === 'routes' && state.adminType !== 'zone_admin')
+    ? cfg.formFields.filter(f => !(f.type === 'async-select' && f.rk === 'zone_id'))
+    : cfg.formFields;
+  populateAsyncSelects(fieldsForPopulate, null, defaults);
 
   // Zone Admin: ล็อค zone dropdown ไม่ให้เปลี่ยน
   if (state.adminType === 'zone_admin' && state.zoneId) {
@@ -1133,6 +1414,49 @@ function openCreate(section) {
       trigger.style.pointerEvents = 'none';
       trigger.style.background    = 'var(--bg)';
       trigger.title = 'โซนถูกกำหนดจากบัญชีของคุณ';
+    }
+  }
+
+  // Routes: auto-generate routeCode from zone_code
+  if (section === 'routes') {
+    const codeInput = document.getElementById('f_routeCode');
+    if (state.adminType === 'zone_admin' && state.zoneId) {
+      // zone_admin: cache is already warm (pre-fetched above)
+      const zones = _ssCache['/admin/zones'] || [];
+      const zone  = zones.find(z => z.id === state.zoneId);
+      // Fallback: extract zone_code from state.zoneLabel (e.g. "CM001 — เชียงใหม่" → "CM001")
+      const zoneCode = zone?.zone_code || (state.zoneLabel ? state.zoneLabel.split(' — ')[0].trim() : '');
+      if (codeInput && !codeInput.value) {
+        codeInput.value = genRouteCode(zoneCode);
+      }
+    } else {
+      // super_admin: init zone SS with onSelect → auto-fill routeCode
+      // (populateAsyncSelects skipped zone above, so no race condition)
+      initAsyncSelect('ss_zoneId', '/admin/zones',
+        z => [z.zone_code, z.zone_name].filter(Boolean).join(' — '),
+        z => z.id, '',
+        (_zoneId, zone) => {
+          const inp = document.getElementById('f_routeCode');
+          if (inp) inp.value = genRouteCode(zone?.zone_code || '');
+        });
+    }
+    // Add regenerate button next to routeCode field
+    const codeGroup = codeInput?.closest('.form-group');
+    if (codeGroup && !codeGroup.querySelector('.btn-regen')) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'btn btn-secondary btn-sm btn-regen';
+      btn.style.marginTop = '6px';
+      btn.textContent = '🔄 สุ่มรหัสใหม่';
+      btn.onclick = () => {
+        const zoneId  = state.zoneId || document.querySelector('#ss_zoneId input[type=hidden]')?.value;
+        const zones   = _ssCache['/admin/zones'] || [];
+        const zone    = zones.find(z => z.id === zoneId);
+        const zCode   = zone?.zone_code || (state.zoneLabel ? state.zoneLabel.split(' — ')[0].trim() : '');
+        const inp     = document.getElementById('f_routeCode');
+        if (inp) inp.value = genRouteCode(zCode);
+      };
+      codeGroup.appendChild(btn);
     }
   }
 }
@@ -1152,8 +1476,30 @@ async function openEdit(section, id) {
       const r = await apiFetch(`${cfg.listPath}/${id}`);
       item = r?.data || r;
     }
+    // Flatten nested user fields so buildForm can read them at top level
+    if (section === 'drivers' && item?.user) {
+      item = { ...item, ...item.user };
+    }
     modal.bodyEl().innerHTML = buildForm(cfg.formFields, item, 'edit');
     populateAsyncSelects(cfg.formFields, item);
+
+    if (cfg.resetPassword) {
+      const resetAt = item?.password_reset_at || (section === 'drivers' && item?.user?.password_reset_at);
+      const resetById = item?.password_reset_by || (section === 'drivers' && item?.user?.password_reset_by);
+      if (resetAt) {
+        const dateStr = new Date(resetAt).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' });
+        let byName = '';
+        if (resetById) {
+          const cachedUsers = state.cache['users'] || [];
+          const byUser = cachedUsers.find(u => u.id === resetById);
+          byName = byUser ? (byUser.full_name || byUser.username || resetById) : resetById;
+        }
+        modal.bodyEl().insertAdjacentHTML('beforeend', `
+          <div style="margin-top:12px;padding:10px 14px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;font-size:12.5px;color:#0369a1">
+            🔑 Reset รหัสผ่านล่าสุด: <strong>${dateStr}</strong>${byName ? ` โดย <strong>${esc(byName)}</strong>` : ''}
+          </div>`);
+      }
+    }
   } catch (err) {
     modal.bodyEl().innerHTML = `<p style="color:var(--danger);padding:8px">⚠️ ${esc(err.message)}</p>`;
   }
@@ -1167,16 +1513,132 @@ function closeModal() {
   if (btn) { btn.disabled = false; btn.textContent = '💾 บันทึก'; }
 }
 
+async function checkUsernameUnique(username, excludeUserId = null) {
+  if (!username) return true;
+  try {
+    const cached = state.cache['users'];
+    const users = cached?.length ? cached : extractList(await apiFetch('/admin/users'));
+    return !users.some(u => u.username === username && u.id !== excludeUserId);
+  } catch {
+    return true; // zone_admin — let DB handle
+  }
+}
+
+async function checkPhoneUnique(phone, excludeUserId = null) {
+  if (!phone) return true;
+  try {
+    const cached = state.cache['users'];
+    const users = cached?.length ? cached : extractList(await apiFetch('/admin/users'));
+    return !users.some(u => u.phone_number === phone && u.id !== excludeUserId);
+  } catch { return true; }
+}
+
+async function checkPlateUnique(plate, excludeBusId = null) {
+  if (!plate) return true;
+  try {
+    const cached = state.cache['buses'];
+    const buses = cached?.length ? cached : extractList(await apiFetch('/admin/buses'));
+    return !buses.some(b => b.plate_number === plate && b.id !== excludeBusId);
+  } catch { return true; }
+}
+
+async function checkDriverAvailable(driverUserId, excludeBusId = null) {
+  if (!driverUserId) return true;
+  try {
+    const cached = state.cache['buses'];
+    const buses = cached?.length ? cached : extractList(await apiFetch('/admin/buses'));
+    const conflict = buses.find(b => b.driver_id === driverUserId && b.id !== excludeBusId);
+    return conflict ? conflict : null; // return conflicting bus or null
+  } catch { return null; }
+}
+
+async function checkLicenseNoUnique(licenseNo, excludeDriverId = null) {
+  if (!licenseNo) return true;
+  try {
+    const cached = state.cache['drivers'];
+    const drivers = cached?.length ? cached : extractList(await apiFetch('/admin/drivers'));
+    return !drivers.some(d => d.license_no === licenseNo && d.id !== excludeDriverId);
+  } catch { return true; }
+}
+
+async function checkEmailUnique(email, excludeUserId = null) {
+  if (!email) return true;
+  try {
+    const cached = state.cache['users'];
+    const users = cached?.length ? cached : extractList(await apiFetch('/admin/users'));
+    return !users.some(u => u.email === email && u.id !== excludeUserId);
+  } catch {
+    return true; // zone_admin can't access /admin/users — DB unique constraint will catch duplicates
+  }
+}
+
 async function submitModal() {
   const { section, mode, editId } = modal;
   const cfg = SECTIONS[section];
   const form = modal.form();
   if (!form.reportValidity()) return;
 
+  // Validate required async-select fields (hidden inputs are not checked by reportValidity)
+  if (mode === 'create' || mode === 'edit') {
+    for (const f of (cfg.formFields || [])) {
+      if (f.type === 'async-select' && f.req) {
+        const hidden = form.querySelector(`input[type=hidden][name="${f.n}"]`);
+        if (!hidden?.value) {
+          toast(`กรุณาเลือก "${f.label}"`, 'error');
+          return;
+        }
+      }
+    }
+  }
+
   const fd = new FormData(form);
   const body = {};
   fd.forEach((v, k) => { if (v !== '') body[k] = v; });
   if (mode === 'create' && cfg.extraCreate) Object.assign(body, cfg.extraCreate);
+
+  if (section === 'users') {
+    const excludeId = mode === 'edit' ? editId : null;
+    if (body.username && !(await checkUsernameUnique(body.username, excludeId))) {
+      alertDialog('Username นี้ถูกใช้งานแล้ว กรุณาใช้ Username อื่น', 'Username ซ้ำ');
+      return;
+    }
+    if (body.email && !(await checkEmailUnique(body.email, excludeId))) {
+      alertDialog('Email นี้ถูกใช้งานแล้ว กรุณาใช้ Email อื่น', 'Email ซ้ำ');
+      return;
+    }
+    if (body.phoneNumber && !(await checkPhoneUnique(body.phoneNumber, excludeId))) {
+      alertDialog('เบอร์โทรนี้ถูกใช้งานแล้ว กรุณาใช้เบอร์โทรอื่น', 'เบอร์โทรซ้ำ');
+      return;
+    }
+  }
+
+  if (section === 'buses') {
+    const excludeBusId = mode === 'edit' ? editId : null;
+    if (body.plateNumber && !(await checkPlateUnique(body.plateNumber, excludeBusId))) {
+      alertDialog('ทะเบียนรถนี้มีอยู่ในระบบแล้ว กรุณาใช้ทะเบียนอื่น', 'ทะเบียนรถซ้ำ');
+      return;
+    }
+    if (body.driverId) {
+      const conflict = await checkDriverAvailable(body.driverId, excludeBusId);
+      if (conflict) {
+        alertDialog(`คนขับนี้ถูกผูกกับรถทะเบียน ${conflict.plate_number || 'อื่น'} แล้ว ไม่สามารถใช้คนขับซ้ำได้`, 'คนขับซ้ำ');
+        return;
+      }
+    }
+  }
+
+  if (section === 'drivers' && mode === 'edit') {
+    const driverItem = state.cache['drivers']?.find(d => String(d.id) === String(editId));
+    const excludeUserId = driverItem?.user_id ?? null;
+    if (body.phoneNumber && !(await checkPhoneUnique(body.phoneNumber, excludeUserId))) {
+      alertDialog('เบอร์โทรนี้ถูกใช้งานแล้ว กรุณาใช้เบอร์โทรอื่น', 'เบอร์โทรซ้ำ');
+      return;
+    }
+    if (body.licenseNo && !(await checkLicenseNoUnique(body.licenseNo, editId))) {
+      alertDialog('เลขที่ใบขับขี่นี้ถูกใช้งานในระบบแล้ว', 'ใบขับขี่ซ้ำ');
+      return;
+    }
+  }
 
   const btn = modal.submitBtn();
   btn.disabled = true; btn.textContent = '⏳ กำลังบันทึก...';
@@ -1240,6 +1702,11 @@ async function submitModal() {
           await apiFetch(cfg.updatePath(editId), { method: 'PUT', body: JSON.stringify(body) });
           toast('แก้ไขผู้ใช้งานสำเร็จ ✅', 'success');
         }
+      } else if (section === 'drivers') {
+        // ส่ง body ทั้งหมด (user fields + driver fields) ไปยัง driver endpoint
+        // backend จะแยก user fields ออกและอัปเดต user record ให้เอง
+        await apiFetch(cfg.updatePath(editId), { method: 'PUT', body: JSON.stringify(body) });
+        toast(`แก้ไข${cfg.title}สำเร็จ ✅`, 'success');
       } else {
         await apiFetch(cfg.updatePath(editId), { method:'PUT', body: JSON.stringify(body) });
         toast(`แก้ไข${cfg.title}สำเร็จ ✅`, 'success');
@@ -1248,7 +1715,7 @@ async function submitModal() {
     closeModal();
     loadSection(section);
   } catch (err) {
-    toast(`❌ ${err.message}`, 'error');
+    alertDialog(err.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง', 'บันทึกไม่สำเร็จ');
     btn.disabled = false;
     btn.textContent = mode === 'create' ? '💾 บันทึก' : '💾 บันทึกการแก้ไข';
   }
@@ -1309,13 +1776,13 @@ function buildForm(fields, data, mode, defaults = {}) {
         ).join('');
         return `<div class="form-group">
           <label class="form-label">${esc(f.label)}${req}</label>
-          <select name="${esc(f.n)}" class="form-control" ${f.req ? 'required' : ''}>
+          <select id="f_${esc(f.n)}" name="${esc(f.n)}" class="form-control" ${f.req ? 'required' : ''}>
             <option value="">— เลือก —</option>${opts}
           </select>${hint}</div>`;
       }
       return `<div class="form-group">
         <label class="form-label">${esc(f.label)}${req}</label>
-        <input type="${f.type}" name="${esc(f.n)}" class="form-control"
+        <input id="f_${esc(f.n)}" type="${f.type}" name="${esc(f.n)}" class="form-control"
           value="${esc(String(val))}" placeholder="${esc(f.label)}" ${f.req ? 'required' : ''}>
         ${hint}</div>`;
     }).join('');
@@ -1356,11 +1823,9 @@ async function executeDelete() {
   }
 }
 
-// Close on backdrop click + close SS dropdowns on outside click
+// Close SS dropdowns on outside click (modal ปิดได้เฉพาะปุ่ม X / ยกเลิก เท่านั้น)
 document.addEventListener('click', e => {
-  if (e.target.id === 'crudModal')    closeModal();
-  if (e.target.id === 'confirmModal') closeConfirm();
-  if (!e.target.closest('.ss-container')) {
+  if (!e.target.closest('.ss-container') && !e.target.closest('.ss-wrap')) {
     document.querySelectorAll('.ss-container.open').forEach(c => c.classList.remove('open'));
   }
 });
@@ -1368,12 +1833,62 @@ document.addEventListener('click', e => {
 /* =====================================================
    RENDER NAV — show/hide super-admin-only items
    ===================================================== */
+const NAV_GROUPS = [
+  {
+    label: 'ภาพรวม',
+    items: [
+      { section: 'dashboard', icon: '📊', label: 'Dashboard' },
+      { section: 'analytics', icon: '📈', label: 'Analytics' },
+    ],
+  },
+  {
+    label: 'การจัดการระบบ',
+    superAdminOnly: true,
+    items: [
+      { section: 'zones',  icon: '🗺️', label: 'โซน' },
+      { section: 'users',  icon: '👥', label: 'ผู้ใช้งาน' },
+    ],
+  },
+  {
+    label: 'บัญชีผู้ดูแล',
+    items: [
+      { section: 'admins', icon: '👤', label: 'ผู้ดูแลระบบ' },
+    ],
+  },
+  {
+    label: 'การเดินรถ',
+    items: [
+      { section: 'routes',  icon: '🛣️',   label: 'เส้นทางรถ' },
+      { section: 'drivers', icon: '🧑‍✈️', label: 'คนขับรถ' },
+      { section: 'buses',   icon: '🚍',   label: 'รถโดยสาร' },
+      { section: 'waiting', icon: '⏳',   label: 'รายการรอรับ' },
+    ],
+  },
+  {
+    label: 'การตั้งค่า',
+    superAdminOnly: true,
+    items: [
+      { section: 'settings', icon: '⚙️', label: 'การตั้งค่า API' },
+    ],
+  },
+];
+
 function renderNav() {
   const isSuperAdmin = state.adminType === 'super_admin';
-  document.querySelectorAll('[data-super-admin-only]').forEach(el => {
-    el.style.display = isSuperAdmin ? '' : 'none';
-  });
-  // Update role badge in sidebar
+  const nav = document.getElementById('sidebarNav');
+  if (!nav) return;
+
+  nav.innerHTML = NAV_GROUPS
+    .filter(g => !g.superAdminOnly || isSuperAdmin)
+    .map(g => `
+      <div class="nav-group">
+        <div class="nav-group-label">${g.label}</div>
+        ${g.items.map(item => `
+          <button class="nav-item${state.section === item.section ? ' active' : ''}" data-section="${item.section}" onclick="navigate('${item.section}')">
+            <span class="nav-icon">${item.icon}</span><span>${item.label}</span>
+          </button>`).join('')}
+      </div>`).join('');
+
   const roleEl = document.getElementById('userRole');
   if (roleEl && state.adminType) {
     const labels = { super_admin: '⭐ Super Admin', zone_admin: '🗺️ Zone Admin' };
@@ -1415,34 +1930,173 @@ async function renderBusDriver(tab = 'buses') {
 }
 
 /* =====================================================
+   HELPERS: route code gen + driver-route cascade
+   ===================================================== */
+function genRouteCode(zoneCode) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const rand = Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+  return zoneCode ? `${String(zoneCode).toUpperCase()}-${rand}` : rand;
+}
+
+const _ssRouteHtml = `
+  <input type="hidden" id="wu_routeId" value="">
+  <div class="ss-trigger" onclick="ssToggle('wu_routeId_ss')">
+    <span class="ss-trigger-label ph">— เลือกเส้นทาง —</span>
+    <span class="ss-trigger-arrow">▾</span>
+  </div>
+  <div class="ss-panel">
+    <input type="text" class="ss-search-input" placeholder="🔍 ค้นหาเส้นทาง..."
+      oninput="ssFilter('wu_routeId_ss', this.value)" autocomplete="off">
+    <div class="ss-options-list"><div class="ss-loading-opt">กำลังโหลด...</div></div>
+  </div>`;
+
+async function autoGenEmployeeCode(routeId) {
+  const el = document.getElementById('wu_employeeCode');
+  if (!el || el.value) return; // ไม่ทับถ้ากรอกไว้แล้ว
+  const route = (_ssCache['/admin/routes'] || []).find(r => r.id === routeId);
+  if (!route?.route_code) return;
+  const drivers = _ssCache['/admin/drivers'] || state.cache['drivers'] || [];
+  const count = drivers.filter(d => d.assigned_route_id === routeId).length;
+  el.value = `${route.route_code}-${String(count + 1).padStart(3, '0')}`;
+}
+
+async function filterDriverRoutesByZone(zoneId) {
+  if (!_ssCache['/admin/routes']) {
+    const raw = await apiFetch('/admin/routes');
+    _ssCache['/admin/routes'] = extractList(raw);
+  }
+  const routes = (_ssCache['/admin/routes'] || []).filter(r => r.zone_id === zoneId);
+
+  const routeGroup = document.getElementById('wu_driverRouteGroup');
+  if (routeGroup) routeGroup.style.display = '';
+
+  const routeSS  = document.getElementById('wu_routeId_ss');
+  if (!routeSS) return;
+  const listEl      = routeSS.querySelector('.ss-options-list');
+  const hiddenEl    = routeSS.querySelector('input[type=hidden]');
+  const triggerLabel = routeSS.querySelector('.ss-trigger-label');
+  if (!listEl) return;
+
+  if (hiddenEl) hiddenEl.value = '';
+  if (triggerLabel) { triggerLabel.textContent = '— เลือกเส้นทาง —'; triggerLabel.classList.add('ph'); }
+
+  if (routes.length === 0) {
+    listEl.innerHTML = `<div class="ss-no-results" style="padding:14px;text-align:center;color:var(--muted)">📭 ไม่มีเส้นทางในโซนนี้</div>`;
+    return;
+  }
+
+  listEl.innerHTML = `<div class="ss-option" data-value="">— เลือก —</div>` +
+    routes.map(r => {
+      const v = esc(r.id);
+      const l = esc([r.route_code, r.route_name].filter(Boolean).join(' — '));
+      return `<div class="ss-option" data-value="${v}" title="${l}">${l}</div>`;
+    }).join('');
+
+  listEl.querySelectorAll('.ss-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      const v = opt.dataset.value;
+      if (hiddenEl) hiddenEl.value = v;
+      if (triggerLabel) {
+        triggerLabel.textContent = v ? opt.textContent : '— เลือกเส้นทาง —';
+        triggerLabel.classList.toggle('ph', !v);
+      }
+      listEl.querySelectorAll('.ss-option').forEach(o => o.classList.remove('selected'));
+      opt.classList.add('selected');
+      routeSS.classList.remove('open');
+      const search = routeSS.querySelector('.ss-search-input');
+      if (search) search.value = '';
+      listEl.querySelectorAll('.ss-option').forEach(o => o.classList.remove('ss-hidden'));
+      if (v) autoGenEmployeeCode(v);
+    });
+  });
+}
+
+/* =====================================================
    2-STEP CREATE: Driver/Admin with User
    ===================================================== */
 function openWithUserModal(section) {
   const isDriver = section === 'drivers';
   const title = isDriver ? '➕ เพิ่มคนขับรถ' : '➕ เพิ่มผู้ดูแลระบบ';
-  const step2Fields = isDriver ? `
+  const _isSuperAdmin = state.adminType === 'super_admin';
+  const _driverRouteZoneHtml = !_isSuperAdmin ? `
     <div class="form-group">
-      <label class="form-label">รหัสพนักงาน</label>
-      <input type="text" class="form-control" id="wu_employeeCode" placeholder="DRV001">
+      <label class="form-label">โซน</label>
+      <div class="form-control" style="background:var(--bg);pointer-events:none;display:flex;align-items:center;gap:8px">
+        🗺️ ${esc(state.zoneLabel || state.zoneId || '—')}
+        <span style="font-size:11px;color:var(--muted);margin-left:auto">โซนของคุณ 🔒</span>
+      </div>
     </div>
     <div class="form-group">
-      <label class="form-label">หมายเลขใบขับขี่</label>
-      <input type="text" class="form-control" id="wu_licenseNo">
-    </div>
+      <label class="form-label">เส้นทาง (ในโซนของคุณ)</label>
+      <div class="ss-container" id="wu_routeId_ss">${_ssRouteHtml}</div>
+    </div>` : `
     <div class="form-group">
-      <label class="form-label">เส้นทาง</label>
-      <div class="ss-container" id="wu_routeId_ss">
-        <input type="hidden" id="wu_routeId" value="">
-        <div class="ss-trigger" onclick="ssToggle('wu_routeId_ss')">
-          <span class="ss-trigger-label ph">— เลือกเส้นทาง —</span>
+      <label class="form-label">โซน <span style="color:var(--danger)">*</span></label>
+      <div class="ss-container" id="wu_driverZone_ss">
+        <input type="hidden" id="wu_driverZone" value="">
+        <div class="ss-trigger" onclick="ssToggle('wu_driverZone_ss')">
+          <span class="ss-trigger-label ph">— เลือกโซนก่อน —</span>
           <span class="ss-trigger-arrow">▾</span>
         </div>
         <div class="ss-panel">
-          <input type="text" class="ss-search-input" placeholder="🔍 ค้นหาเส้นทาง..."
-            oninput="ssFilter('wu_routeId_ss', this.value)" autocomplete="off">
+          <input type="text" class="ss-search-input" placeholder="🔍 ค้นหาโซน..."
+            oninput="ssFilter('wu_driverZone_ss', this.value)" autocomplete="off">
           <div class="ss-options-list"><div class="ss-loading-opt">กำลังโหลด...</div></div>
         </div>
       </div>
+    </div>
+    <div class="form-group" id="wu_driverRouteGroup" style="display:none">
+      <label class="form-label">เส้นทาง</label>
+      <div class="ss-container" id="wu_routeId_ss">${_ssRouteHtml}</div>
+    </div>`;
+
+  const step2Fields = isDriver ? `
+    ${_driverRouteZoneHtml}
+    <div class="form-group">
+      <label class="form-label">รหัสพนักงาน <small style="color:var(--muted)">(สร้างอัตโนมัติเมื่อเลือกเส้นทาง)</small></label>
+      <input type="text" class="form-control" id="wu_employeeCode" placeholder="เช่น R01-001">
+    </div>
+    <div class="form-group">
+      <label class="form-label">หมายเลขใบขับขี่ (กรมขนส่ง) <span class="req">*</span></label>
+      <input type="text" class="form-control" id="wu_licenseNo" required placeholder="เช่น 12345678901234">
+    </div>
+    <div class="form-group">
+      <label class="form-label">ประเภทใบอนุญาต</label>
+      <select class="form-control" id="wu_licenseType">
+        <option value="">— ไม่ระบุ —</option>
+        <option value="public_car">🚗 รถยนต์สาธารณะ (แท็กซี่)</option>
+        <option value="public_bus">🚌 รถโดยสาร (บัส)</option>
+        <option value="public_motorcycle">🏍️ รถจักรยานยนต์สาธารณะ (วิน)</option>
+      </select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="form-group">
+        <label class="form-label">วันออกบัตร</label>
+        <input type="date" class="form-control" id="wu_licenseIssueDate">
+      </div>
+      <div class="form-group">
+        <label class="form-label">วันหมดอายุ</label>
+        <input type="date" class="form-control" id="wu_licenseExpiryDate">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">วันเดือนปีเกิด</label>
+      <input type="date" class="form-control" id="wu_dateOfBirth">
+    </div>
+    <div class="form-group">
+      <label class="form-label">ที่อยู่</label>
+      <input type="text" class="form-control" id="wu_address" placeholder="ที่อยู่ปัจจุบัน">
+    </div>
+    <div class="form-group">
+      <label class="form-label">URL รูปถ่าย</label>
+      <input type="url" class="form-control" id="wu_photoUrl" placeholder="https://...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">สถานะ</label>
+      <select class="form-control" id="wu_driverStatus">
+        <option value="active">✅ ใช้งาน</option>
+        <option value="inactive">⛔ ไม่ใช้งาน</option>
+      </select>
     </div>` : `
     <div class="form-group">
       <label class="form-label">ประเภท Admin <span style="color:var(--danger)">*</span></label>
@@ -1489,6 +2143,14 @@ function openWithUserModal(section) {
         <label class="form-label">Email</label>
         <input type="email" class="form-control" id="wu_email" placeholder="email@example.com">
       </div>
+      <div class="form-group">
+        <label class="form-label">เบอร์โทร</label>
+        <input type="tel" class="form-control" id="wu_phone" placeholder="0812345678">
+      </div>
+      <div class="form-group">
+        <label class="form-label">รหัสผ่าน <small style="color:var(--muted)">(ต้องใส่เพื่อให้ login ได้)</small></label>
+        <input type="password" class="form-control" id="wu_password" placeholder="รหัสผ่าน (ขั้นต่ำ 6 ตัว)" autocomplete="new-password">
+      </div>
     </div>
     <div style="background:var(--bg);border-radius:8px;padding:12px">
       <div style="font-weight:600;margin-bottom:10px;color:var(--primary)">${isDriver ? '🚌 ขั้นตอนที่ 2 — ข้อมูลคนขับ' : '👤 ขั้นตอนที่ 2 — ข้อมูล Admin'}</div>
@@ -1502,9 +2164,20 @@ function openWithUserModal(section) {
 
   // Populate async selects
   if (isDriver) {
-    initAsyncSelect('wu_routeId_ss', '/admin/routes',
-      r => [r.route_code, r.route_name].filter(Boolean).join(' — '),
-      r => r.id, '');
+    if (_isSuperAdmin) {
+      // super_admin: zone dropdown → on select → filter routes
+      initAsyncSelect('wu_driverZone_ss', '/admin/zones',
+        z => [z.zone_code, z.zone_name].filter(Boolean).join(' — '),
+        z => z.id, '',
+        (zoneId) => filterDriverRoutesByZone(zoneId));
+      // Pre-cache routes silently so cascade is instant
+      apiFetch('/admin/routes').then(r => { if (!_ssCache['/admin/routes']) _ssCache['/admin/routes'] = extractList(r); }).catch(() => {});
+    } else {
+      // zone_admin: routes already filtered by backend
+      initAsyncSelect('wu_routeId_ss', '/admin/routes',
+        r => [r.route_code, r.route_name].filter(Boolean).join(' — '),
+        r => r.id, '', (routeId) => autoGenEmployeeCode(routeId));
+    }
   } else {
     // Super Admin เท่านั้นที่ต้องเลือกโซน — Zone Admin ใช้ static display แทน
     if (state.adminType !== 'zone_admin') {
@@ -1682,14 +2355,54 @@ async function submitWithUser(section) {
   const username = document.getElementById('wu_username')?.value?.trim();
   if (!username) { toast('กรุณากรอก Username', 'error'); return; }
 
+  // super_admin adding driver: must select zone first (so routes are filtered)
+  if (isDriver && state.adminType === 'super_admin') {
+    const driverZone = document.getElementById('wu_driverZone')?.value?.trim();
+    if (!driverZone) { toast('กรุณาเลือกโซนก่อน', 'error'); return; }
+  }
+
+  if (!(await checkUsernameUnique(username))) {
+    alertDialog('Username นี้ถูกใช้งานแล้ว กรุณาใช้ Username อื่น', 'Username ซ้ำ');
+    return;
+  }
+
+  const email = document.getElementById('wu_email')?.value?.trim() || null;
+  if (email && !(await checkEmailUnique(email))) {
+    alertDialog('Email นี้ถูกใช้งานแล้ว กรุณาใช้ Email อื่น', 'Email ซ้ำ');
+    return;
+  }
+
+  const phone = document.getElementById('wu_phone')?.value?.trim() || null;
+  if (phone && !(await checkPhoneUnique(phone))) {
+    alertDialog('เบอร์โทรนี้ถูกใช้งานแล้ว กรุณาใช้เบอร์โทรอื่น', 'เบอร์โทรซ้ำ');
+    return;
+  }
+
+  if (isDriver) {
+    const licenseNo = document.getElementById('wu_licenseNo')?.value?.trim() || null;
+    if (licenseNo && !(await checkLicenseNoUnique(licenseNo))) {
+      alertDialog('เลขที่ใบขับขี่นี้ถูกใช้งานในระบบแล้ว', 'ใบขับขี่ซ้ำ');
+      return;
+    }
+  }
+
   const body = {
-    fullName: document.getElementById('wu_fullName')?.value?.trim() || null,
+    fullName:    document.getElementById('wu_fullName')?.value?.trim() || null,
     username,
-    email: document.getElementById('wu_email')?.value?.trim() || null,
+    email,
+    phoneNumber: document.getElementById('wu_phone')?.value?.trim() || null,
+    password:    document.getElementById('wu_password')?.value?.trim() || null,
     ...(isDriver ? {
-      employeeCode: document.getElementById('wu_employeeCode')?.value?.trim() || null,
-      licenseNo:    document.getElementById('wu_licenseNo')?.value?.trim() || null,
-      assignedRouteId: document.getElementById('wu_routeId')?.value?.trim() || null,
+      employeeCode:      document.getElementById('wu_employeeCode')?.value?.trim() || null,
+      licenseNo:         document.getElementById('wu_licenseNo')?.value?.trim() || null,
+      licenseType:       document.getElementById('wu_licenseType')?.value || null,
+      licenseIssueDate:  document.getElementById('wu_licenseIssueDate')?.value || null,
+      licenseExpiryDate: document.getElementById('wu_licenseExpiryDate')?.value || null,
+      dateOfBirth:       document.getElementById('wu_dateOfBirth')?.value || null,
+      address:           document.getElementById('wu_address')?.value?.trim() || null,
+      photoUrl:          document.getElementById('wu_photoUrl')?.value?.trim() || null,
+      status:            document.getElementById('wu_driverStatus')?.value || 'active',
+      assignedRouteId:   document.getElementById('wu_routeId')?.value?.trim() || null,
     } : {
       adminType: document.getElementById('wu_adminType')?.value || 'zone_admin',
       zoneId:    document.getElementById('wu_zoneId')?.value?.trim() || null,
@@ -1705,7 +2418,7 @@ async function submitWithUser(section) {
     if (section === 'drivers') renderBusDriver('drivers');
     else loadSection('admins');
   } catch (err) {
-    toast(err.message, 'error');
+    alertDialog(err.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง', 'บันทึกไม่สำเร็จ');
   } finally {
     document.getElementById('modalSubmitBtn').disabled = false;
   }
@@ -1740,6 +2453,11 @@ function logout() {
    ===================================================== */
 async function init() {
   if (!getToken()) { window.location.replace('login.html'); return; }
+  try { await _init(); } finally { document.getElementById('appLoader')?.classList.add('hidden'); }
+}
+
+async function _init() {
+  scheduleTokenExpiry();
 
   // Try to restore user from localStorage first (instant)
   const saved = localStorage.getItem(USER_KEY);
@@ -1790,7 +2508,7 @@ async function init() {
 
   renderNav();
   checkHealth();
-  navigate('dashboard');
+  await navigate('dashboard');
 }
 
 function setUserUI(u) {
@@ -1826,11 +2544,14 @@ window.loadSection    = loadSection;
 window.renderDashboard = renderDashboard;
 window.renderAnalytics = renderAnalytics;
 window.renderBusDriver = renderBusDriver;
-window.submitWithUser       = submitWithUser;
-window.openWithUserModal    = openWithUserModal;
+window.submitWithUser          = submitWithUser;
+window.openWithUserModal       = openWithUserModal;
+window.filterDriverRoutesByZone = filterDriverRoutesByZone;
+window.genRouteCode            = genRouteCode;
 window.openAssignAdminModal = openAssignAdminModal;
 window.toggleAssignZone     = toggleAssignZone;
 window.gotoPage             = gotoPage;
 window.changePageSize  = changePageSize;
 window.ssToggle        = ssToggle;
 window.ssFilter        = ssFilter;
+window.openResetPasswordModal = openResetPasswordModal;

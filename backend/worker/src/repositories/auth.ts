@@ -120,8 +120,10 @@ export async function loginWithPassword(env: Env, body: { identifier: string; pa
 
   // Auto-link auth_user_id if not yet set (first Supabase login after account was manually created)
   if (profile && !profile.auth_user_id && session.user?.id) {
-    await updateUser(env, profile.id, { authUserId: session.user.id });
+    await updateUser(env, profile.id, { authUserId: session.user.id, lastLoginAt: new Date().toISOString() });
     profile.auth_user_id = session.user.id;
+  } else if (profile) {
+    await updateUser(env, profile.id, { lastLoginAt: new Date().toISOString() });
   }
 
   return {

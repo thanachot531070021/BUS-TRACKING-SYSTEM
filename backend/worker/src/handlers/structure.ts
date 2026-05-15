@@ -15,8 +15,8 @@ export async function handleGetStructure(env: Env) {
   // Fetch sequentially to avoid hitting Supabase connection pool limit (error 1016)
   const zones      = await supabaseFetch<any[]>(env, 'zones?select=*&order=zone_name.asc');
   const routes     = await supabaseFetch<any[]>(env, 'routes?select=*&order=route_name.asc');
-  const admins     = await supabaseFetch<any[]>(env, 'admins?select=id,admin_type,zone_id,status,created_at,user:users(id,username,full_name,email,phone_number,auth_provider,status,created_at,last_login_at)&order=created_at.asc');
-  const drivers    = await supabaseFetch<any[]>(env, 'drivers?select=id,employee_code,license_no,assigned_route_id,assigned_bus_id,status,created_at,user:users(id,username,full_name,email,phone_number,auth_provider,status,created_at,last_login_at)&order=created_at.asc');
+  const admins     = await supabaseFetch<any[]>(env, 'admins?select=id,admin_type,zone_id,status,created_at,user:users!admins_user_id_fkey(id,username,full_name,email,phone_number,auth_provider,status,created_at,last_login_at)&order=created_at.asc');
+  const drivers    = await supabaseFetch<any[]>(env, 'drivers?select=id,employee_code,license_no,assigned_route_id,assigned_bus_id,status,created_at,user:users!drivers_user_id_fkey(id,username,full_name,email,phone_number,auth_provider,status,created_at,last_login_at)&order=created_at.asc');
   const passengers = await supabaseFetch<any[]>(env, 'users?select=id,username,full_name,email,phone_number,auth_provider,status,created_at,last_login_at&role=eq.passenger&order=created_at.asc');
 
   // Index for fast lookup

@@ -25,22 +25,30 @@ export async function getBusById(env: Env, busId: string) {
   return rows[0] ?? null;
 }
 
+const BUS_SELECT = 'id,plate_number,route_id,driver_id,status,current_lat,current_lng,current_speed,last_seen_at,created_at,updated_at,created_by,updated_by,created_by_user:users!fk_buses_created_by(id,full_name,username),updated_by_user:users!fk_buses_updated_by(id,full_name,username)';
+
 export async function listAdminBuses(env: Env, routeIds?: string[]) {
   if (!usingSupabase(env)) return sampleBuses;
   if (routeIds && routeIds.length === 0) return [];
-  let query = 'buses?select=*&order=created_at.desc';
+  let query = `buses?select=${BUS_SELECT}&order=created_at.desc`;
   if (routeIds && routeIds.length > 0) query += `&route_id=in.(${routeIds.join(',')})`;
   return supabaseFetch<JsonRecord[]>(env, query);
 }
 
-export async function createBus(env: Env, body: CreateBusBody) {
+export async function findBusByDriverId(env: Env, driverUserId: string) {
+  if (!usingSupabase(env)) return null;
+  const rows = await supabaseFetch<JsonRecord[]>(env, `buses?driver_id=eq.${driverUserId}&limit=1`);
+  return rows[0] ?? null;
+}
+
+export async function createBus(env: Env, body: CreateBusBody, userId?: string | null) {
   if (!usingSupabase(env)) {
     return {
       id: crypto.randomUUID(),
       plate_number: body.plateNumber,
-      route_id: body.routeId ?? null,
-      driver_id: body.driverId ?? null,
-      status: body.status ?? 'off',
+      route_id:     body.routeId ?? null,
+      driver_id:    body.driverId ?? null,
+      status:       body.status ?? 'off',
     };
   }
 
@@ -48,27 +56,28 @@ export async function createBus(env: Env, body: CreateBusBody) {
     method: 'POST',
     body: JSON.stringify([{
       plate_number: body.plateNumber,
-      route_id: body.routeId ?? null,
-      driver_id: body.driverId ?? null,
-      status: body.status ?? 'off',
+      route_id:    body.routeId ?? null,
+      driver_id:   body.driverId ?? null,
+      status:      body.status ?? 'off',
+      created_by:  userId ?? null,
+      updated_by:  userId ?? null,
     }]),
   });
 
   return created[0];
 }
 
-export async function updateBus(env: Env, busId: string, body: UpdateBusBody) {
-  if (!usingSupabase(env)) {
-    return { id: busId, ...body };
-  }
+export async function updateBus(env: Env, busId: string, body: UpdateBusBody, userId?: string | null) {
+  if (!usingSupabase(env)) return { id: busId, ...body };
 
   const updated = await supabaseFetch<JsonRecord[]>(env, `buses?id=eq.${busId}`, {
     method: 'PATCH',
     body: JSON.stringify({
       plate_number: body.plateNumber,
-      route_id: body.routeId,
-      driver_id: body.driverId,
-      status: body.status,
+      route_id:    body.routeId,
+      driver_id:   body.driverId,
+      status:      body.status,
+      updated_by:  userId ?? null,
     }),
   });
 

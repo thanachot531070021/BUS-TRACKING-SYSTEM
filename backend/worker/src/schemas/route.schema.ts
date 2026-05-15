@@ -7,12 +7,13 @@ export function validateCreateRouteBody(body: any) {
   return {
     ok: true as const,
     data: {
-      routeCode: optionalString(body?.routeCode),
-      routeName: routeName.data,
+      routeCode:     optionalString(body?.routeCode),
+      routeName:     routeName.data,
       startLocation: optionalString(body?.startLocation),
-      endLocation: optionalString(body?.endLocation),
+      endLocation:   optionalString(body?.endLocation),
       routePolyline: optionalString(body?.routePolyline),
-      status: optionalString(body?.status),
+      zoneId:        optionalString(body?.zoneId),
+      status:        optionalString(body?.status),
     },
   };
 }
