@@ -1,63 +1,100 @@
-# BUS TRACKING SYSTEM Architecture
+# BUS TRACKING SYSTEM — Architecture
 
 ## Stack
 
-- Frontend Mobile: Flutter
-- Frontend Admin: Web Dashboard
-- Backend API: Cloudflare Workers
-- Database: Supabase PostgreSQL
-- Realtime: Supabase Realtime
-- Map: Google Maps API
+| Layer | Technology |
+|-------|-----------|
+| Mobile App | Flutter (Passenger + Driver) |
+| Admin Web | Vanilla JS SPA (index.html + script.js) |
+| Backend API | Cloudflare Workers (TypeScript) |
+| Database | Supabase (PostgreSQL) |
+| Auth | Supabase Auth (email/password) |
+| Realtime | Supabase Realtime (planned) |
+| Map | Google Maps API |
+
+---
+
+## Data Hierarchy
+
+```
+Zone
+ └── Route(s)
+      └── Bus(es)        ← 1 bus per driver
+      └── Driver(s)      ← assigned via assigned_route_id
+```
+
+---
 
 ## Core Modules
 
-### 1. Route Management
-Entities:
-- routes
-- route_admins
+### 1. Zone Management
+Entities: `zones`
+- Super Admin manages all zones
+- Zone Admin is scoped to one zone
 
-### 2. Bus Management
-Entities:
-- buses
-- drivers
+### 2. Route Management
+Entities: `routes`
+- Each route belongs to a zone (`zone_id`)
+- Route code auto-generated from zone code
 
-### 3. Location Tracking
-Entities:
-- bus_locations
-- buses.current_lat / current_lng / last_seen_at
+### 3. Bus & Driver Management
+Entities: `buses`, `drivers`
+- One driver per bus (`buses.driver_id = users.id`)
+- Bus route auto-derived from driver's `assigned_route_id`
+- Driver created alongside a User account (2-step flow)
 
-Driver app sends location every 5–10 seconds.
-Cloudflare Worker validates request and stores latest location.
-Supabase Realtime broadcasts updates to passenger and admin clients.
+### 4. Location Tracking
+Entities: `bus_locations`, `buses.current_lat/lng/last_seen_at`
+- Driver app sends GPS every 5–10 seconds
+- Cloudflare Worker stores latest location in `buses` and history in `bus_locations`
+- Supabase Realtime broadcasts updates (to be enabled)
 
-### 4. Passenger Waiting
-Entities:
-- passenger_waiting
+### 5. Passenger Waiting
+Entities: `passenger_waiting`
+- Passenger marks "waiting" on a route
+- Driver sees waiting points and count
+- Passenger can cancel
 
-Passenger can create or cancel waiting request for a route.
-Driver sees waiting points and total waiting passengers.
+### 6. Authentication & RBAC
+Entities: `users`, `admins`
+- Supabase Auth for identity (email/password)
+- `public.users` stores role + business profile
+- `public.admins` stores `admin_type` (super_admin / zone_admin) + `zone_id`
+- 4 roles: `super_admin`, `zone_admin`, `driver`, `passenger`
 
-### 5. Authentication
-- Passenger: guest or phone login
-- Driver: authenticated login
-- Admin: authenticated login with role restrictions
+---
 
-## Recommended API Groups
+## API Groups
 
-- `/auth/*`
-- `/routes/*`
-- `/buses/*`
-- `/locations/*`
-- `/waiting/*`
-- `/admin/*`
+| Path | Description |
+|------|-------------|
+| `/auth/*` | Login, register, me |
+| `/routes/*` | Public route list |
+| `/buses/*` | Live bus data |
+| `/waiting/*` | Passenger waiting |
+| `/driver/*` | Driver duty + GPS + waiting view |
+| `/admin/*` | Admin CRUD (zones, routes, buses, drivers, admins, users) |
+| `/structure` | Public zone/route/bus tree |
+| `/health` | System health check |
 
-## Suggested Realtime Channels
+---
 
-- `route:{routeId}:buses`
-- `route:{routeId}:waiting`
+## Realtime Channels (planned)
 
-## Notes
+- `route:{routeId}:buses` — live bus positions
+- `route:{routeId}:waiting` — waiting passenger updates
 
-- Use row-level security in Supabase for admin/driver separation.
-- Route Admin should only access assigned routes.
-- Passenger reads should be public but filtered by active route/bus state.
+---
+
+## Zone Isolation (RBAC)
+
+| Role | Access Scope |
+|------|-------------|
+| super_admin | All zones, no restrictions |
+| zone_admin | Own zone only (enforced at API middleware) |
+| driver | Own assigned route (zone implied) |
+| passenger | Read-only, all zones |
+
+Zone isolation enforced via `enrichAdminScope()` middleware:
+- loads `zone_id` + all `routeIds[]` in the zone
+- all driver/bus/route queries filtered to those routeIds

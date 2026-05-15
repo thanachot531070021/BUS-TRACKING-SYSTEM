@@ -1,5 +1,7 @@
 # BUS TRACKING SYSTEM — Status Checklist
 
+Last updated: 2026-05-15
+
 ---
 
 ## Backend (`C:\Web Source\backend\worker`)
@@ -9,107 +11,166 @@
 - [x] `requireAuth` — Bearer token → profile lookup by `auth_user_id`
 - [x] Auto-link fallback — if no `auth_user_id` match, finds by email from JWT and links automatically
 - [x] `requireRole` — role-based guard
-- [x] `enrichAdminScope` — loads admin type + zone + route IDs for zone_admin
+- [x] `enrichAdminScope` — loads admin type + zone + routeIds[] for zone_admin
 - [x] `requireAdminScope` — combines role check + zone enforcement
 - [x] zone_admin cannot create super_admin (403 Forbidden)
 - [x] zone_admin cannot assign drivers to routes outside their zone
 - [ ] JWT `exp` (expiry) not yet validated — expired tokens still pass
 
+### Zone Management
+- [x] List zones
+- [x] Create zone
+- [x] Update zone
+- [x] Delete zone
+- [x] Public `GET /zones` and `GET /zones/:id`
+- [x] Public `GET /structure` — full zone/route/driver/bus tree
+
 ### User Management
 - [x] List users (with admin_profile join)
 - [x] Get user by ID
-- [x] Create user — **also creates Supabase Auth user** if password + service_role_key present
+- [x] Create user — also creates Supabase Auth user via service_role_key
 - [x] Update user
 - [x] Delete user
 
 ### Admin Management
 - [x] List admins
-- [x] Create admin (assign existing user as admin)
+- [x] Create admin
 - [x] Update admin
 - [x] Delete admin
-- [x] Admin with-user creation (legacy — use Users page instead)
+- [x] `POST /admin/admins/with-user` — 2-step: creates user + admin record
 
-### Driver / Bus / Route
-- [x] Full CRUD for drivers (zone-scoped for zone_admin)
-- [x] Full CRUD for buses
-- [x] Full CRUD for routes
-- [x] Zone filtering on all list endpoints
+### Driver Management
+- [x] List drivers (zone-scoped for zone_admin)
+- [x] Create driver
+- [x] Update driver (also updates linked user fields)
+- [x] Delete driver
+- [x] `POST /admin/drivers/with-user` — 2-step: creates user + driver record
+- [x] Password reset endpoint
 
-### Public Endpoints (no auth)
-- [x] `GET /structure` — full zone/route/driver/passenger tree
-- [x] `GET /zones` — list all zones
-- [x] `GET /zones/:id` — zone detail
+### Bus Management
+- [x] List buses (zone-scoped, with embedded route + driver_user)
+- [x] Create bus
+- [x] Update bus
+- [x] Delete bus
+- [x] `active_buses_live` view for live tracking
+
+### Route Management
+- [x] Full CRUD for routes (zone-scoped)
+
+### Public Endpoints
+- [x] `GET /structure`
+- [x] `GET /zones`, `GET /zones/:id`
+- [x] `GET /routes`, `GET /routes/:id`
+- [x] `GET /buses/live`, `GET /buses/:id`
+- [x] `GET /waiting`, `POST /waiting`, `DELETE /waiting/:id`
 
 ### Infrastructure
 - [x] Deployed to Cloudflare Workers
-- [x] `SUPABASE_URL` — set as env var in `wrangler.toml`
-- [x] `SUPABASE_ANON_KEY` — set as env var in `wrangler.toml`
-- [x] `SUPABASE_SERVICE_ROLE_KEY` — set as Wrangler secret (`wrangler secret put`)
-- [x] `supabaseAdminAuthFetch()` helper using service_role_key
-- [x] Sequential Supabase fetches in `/structure` (avoids connection pool error 1016)
+- [x] `SUPABASE_URL` set in `wrangler.toml`
+- [x] `SUPABASE_ANON_KEY` set in `wrangler.toml`
+- [x] `SUPABASE_SERVICE_ROLE_KEY` set as Wrangler secret
 
 ---
 
 ## Admin Dashboard (`C:\Web Source\apps\admin_dashboard`)
 
 ### Login
-- [x] Login page with email/password
+- [x] Login page (`login.html`) — email/password
 - [x] Token stored in localStorage
 - [x] Redirect to dashboard on success
-- [x] Logout
+- [x] Logout button
 
-### Users Page
-- [x] List all users with correct role badges (⭐ Super Admin / 🗺️ Zone Admin / 🚌 Driver / 🧑 Passenger)
-- [x] Create user (all roles including super_admin)
-- [x] Create super_admin → auto-creates `admins` record
-- [x] Edit user role → super_admin: upserts admin record
-- [x] Edit user role → admin (from super_admin): deletes admin record
-- [x] Edit user role → passenger/driver: deletes admin record
-- [x] Delete user
+### Layout & Navigation
+- [x] Sidebar with role-based nav items (super_admin sees all; zone_admin sees subset)
+- [x] Topbar with page title, user info, health badge
+- [x] Mobile responsive sidebar (toggle/overlay)
+- [x] App loader on startup
+- [x] Grouped tables with collapse/expand per section
+
+### Dashboard
+- [x] Summary stats cards (zones, routes, buses, drivers)
+- [x] Zone-scoped stats for zone_admin
+
+### Zones Page (super_admin only)
+- [x] List all zones
+- [x] Create zone
+- [x] Edit zone
+- [x] Delete zone
+
+### Routes Page
+- [x] List routes, grouped by zone (collapse/expand)
+- [x] Create route — zone selector → auto-generate route_code (with 🔄 regenerate button)
+- [x] Zone Admin: zone locked to own zone
+- [x] Edit route
+- [x] Delete route
+
+### Drivers Page (busDriver tab)
+- [x] List drivers, grouped by assigned route (collapse/expand)
+- [x] Columns: ชื่อ, รหัสพนักงาน, ใบขับขี่, เส้นทาง, ทะเบียนรถ, สถานะ, สร้างโดย, แก้ไขล่าสุดโดย
+- [x] Create driver — 2-step modal (User account → Driver info)
+  - [x] Auto-generate employee_code from route selection
+  - [x] Optional plate number → auto-creates bus (status = on) and links driver
+- [x] Edit driver
+  - [x] Bus section in edit form: shows current plate / create new bus if none
+  - [x] Plate number change updates linked bus
+- [x] Delete driver
+- [x] Reset password (generates temp password, shows to admin)
+
+### Buses Page (busDriver tab)
+- [x] List buses, grouped by route (collapse/expand)
+- [x] Columns: ทะเบียนรถ, เส้นทาง, คนขับ, สถานะ, สร้างโดย, แก้ไขล่าสุดโดย
+- [x] Create bus — route auto-derived from driver selection (not manually editable)
+- [x] Driver dropdown shows only unassigned drivers
+- [x] Edit bus — same route auto-derive logic
+- [x] Delete bus
 
 ### Admins Page
 - [x] List admins with zone info
-- [x] "เพิ่มรายการ" — assign existing admin-role user as admin (modal with user picker, type, zone)
+- [x] Create admin — 2-step modal (User account → Admin type + zone)
 - [x] Edit admin record
 - [x] Delete admin
-- [ ] zone_admin cannot see admins outside their zone (frontend filter not yet added — backend enforces it)
+- [ ] zone_admin filter on list (backend enforces; frontend shows all for now)
 
-### Zones / Routes / Buses / Drivers Pages
-- [x] Full CRUD UI for zones
-- [x] Full CRUD UI for routes (with zone selector)
-- [x] Full CRUD UI for buses (with route selector)
-- [x] Full CRUD UI for drivers (with route selector)
-- [x] zone_admin sees/edits only their zone's data (enforced by backend)
+### Users Page (super_admin only)
+- [x] List all users with role badges
+- [x] Create user (all roles, including super_admin → auto-creates admins record)
+- [x] Edit user role (promotes/demotes admins record accordingly)
+- [x] Delete user
+- [x] Reset password
 
-### Public Pages (no login required)
-- [x] `zones.html` — zone/route/bus tree, search, expand all, Google Maps link
-- [x] `users.html` — user structure by zone, tab filter, copy email, detail drawer
+### Waiting Page
+- [x] Read-only list of passenger_waiting records
+
+### Searchable Async Select (SS)
+- [x] Reusable async dropdown with search
+- [x] filterFn support (hide already-assigned drivers in bus form)
+- [x] Auto-fill current value on open (hidden input written on initial load)
 
 ### Infrastructure
-- [x] Vite multi-entry build (index, login, zones, users)
-- [x] `wrangler.jsonc` created for static asset deploy
-- [x] Deployed to Cloudflare Workers (static assets)
-- [x] All modal functions exported to `window.*` (required for Vite tree-shaking)
+- [x] Vanilla JS ES module (no build step)
+- [x] All modal/handler functions on `window.*`
+- [x] Deployed to Cloudflare Workers (static assets via `wrangler.jsonc`)
 
 ---
 
 ## Supabase
 
-- [x] `public.users` — main user profile table (with `auth_user_id` linking to `auth.users`)
-- [x] `public.admins` — admin type + zone assignment
-- [x] `public.drivers` — driver profile + route/bus assignment
-- [x] `public.routes` — route definitions
-- [x] `public.buses` — bus fleet
+- [x] `public.users` — user profile + role + auth_user_id link
+- [x] `public.admins` — admin_type + zone_id
+- [x] `public.drivers` — driver profile + assigned_route_id
+- [x] `public.routes` — route definitions + zone_id
+- [x] `public.buses` — bus fleet + driver_id + route_id
 - [x] `public.zones` — zone definitions
 - [x] `public.passenger_waiting` — waiting requests
+- [x] `public.bus_locations` — GPS history
 - [ ] Supabase Realtime not yet enabled on bus_locations / passenger_waiting
-- [ ] RLS policies — currently bypassed by service_role_key (review before production)
+- [ ] RLS policies currently bypassed by service_role_key (review before production)
 
 ---
 
 ## Flutter Mobile App
 
-- [x] App scaffold created (Passenger + Driver flows)
+- [x] App scaffold (Passenger + Driver flows) — all phases complete
 - [ ] Not yet connected to real Supabase auth
 - [ ] Not yet connected to real API
 - [ ] Google Maps integration not yet complete
@@ -117,15 +178,14 @@
 
 ---
 
-## Known Issues / Gotchas
+## Known Issues
 
 | Issue | Status | Notes |
 |-------|--------|-------|
-| Users created before `SUPABASE_SERVICE_ROLE_KEY` was set cannot login | Workaround available | Delete + recreate user, or add via Supabase Auth dashboard |
 | JWT expiry not validated | Open | Expired tokens still pass `requireAuth` |
-| Supabase Free tier auto-pauses after inactivity | Known | Restore from Supabase dashboard if 530 error appears |
-| Supabase connection pool error 1016 | Fixed | Changed `/structure` to sequential awaits instead of Promise.all |
-| `openWithUserModal` / `openAssignAdminModal` tree-shaken by Vite | Fixed | All functions now explicitly assigned to `window.*` |
+| Supabase Free tier auto-pauses | Known | Restore from Supabase dashboard if 530 error |
+| RLS policies not active | Open | Service role key bypasses all RLS |
+| Flutter not wired to backend | Open | Scaffold complete; needs API integration |
 
 ---
 

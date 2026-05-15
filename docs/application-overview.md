@@ -163,14 +163,15 @@ Purpose:
 
 ### H. Admin Web Application
 Must support:
-- dashboard summary
-- route management UI
-- bus management UI
-- user management UI
-- driver management UI
-- admin management UI
-- route-admin assignment UI
-- monitoring views
+- dashboard summary (stats per zone)
+- zone management UI (super_admin only)
+- route management UI (grouped by zone)
+- bus management UI (grouped by route, route auto-derived from driver)
+- driver management UI (grouped by route, with bus plate linkage)
+- admin management UI (zone_admin / super_admin)
+- user management UI (super_admin only)
+- passenger waiting monitoring (read-only)
+- role-based visibility (zone_admin sees own zone only)
 
 Purpose:
 - give administrators a central operational control panel
@@ -220,9 +221,9 @@ Used for:
 ### Application Database Tables
 Used for business logic and roles:
 - `public.users`
-- `public.drivers`
 - `public.admins`
-- `public.route_admins`
+- `public.drivers`
+- `public.zones`
 - `public.routes`
 - `public.buses`
 - `public.bus_locations`
@@ -288,8 +289,9 @@ For more detail, check these files:
 ---
 
 ## 9. Recommended Next Steps
-1. finish linking `auth_user_id` correctly for all users
-2. complete real Supabase JWT verification in middleware
-3. continue improving admin web UX/UI and data-management flows
-4. connect Flutter app to auth + API + realtime + maps
-5. test the full end-to-end flow with real data
+1. Enable Supabase Realtime on `bus_locations` and `passenger_waiting`
+2. Connect Flutter mobile app to real Supabase auth + API
+3. Add JWT `exp` validation in `requireAuth` middleware
+4. Review and enable RLS policies (currently bypassed by service_role_key)
+5. Implement password change endpoint for admin-managed users
+6. Wire Google Maps in Flutter app
