@@ -2835,10 +2835,13 @@ async function openWaypointEditor(routeId) {
   try { const p = route.waypoints ? JSON.parse(route.waypoints) : []; if (Array.isArray(p)) _wpPoints = p.map(pt => ({lat: Number(pt.lat), lng: Number(pt.lng)})); } catch {}
 
   document.getElementById('wpTitle').textContent = `วาดเส้นทาง: ${route.route_name}`;
+  document.getElementById('wpMeta').textContent = 'กำลังโหลดแผนที่...';
   const overlay = document.getElementById('wpOverlay');
   overlay.style.display = 'flex';
 
   await _loadGoogleMaps();
+  // Wait for browser to lay out the flex container before Google Maps measures the div
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
   _wpInitMap(route);
 }
 
@@ -2861,6 +2864,8 @@ function _wpInitMap(route) {
     streetViewControl: false,
     fullscreenControl: false,
   });
+  // Force map to recalculate its size after container is laid out
+  google.maps.event.trigger(_wpMap, 'resize');
 
   // Reference markers: start (green) / end (red)
   const endPt = _parseCoords(route.end_coords);
