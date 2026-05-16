@@ -11,17 +11,27 @@ function getIdFromPath(pathname: string, prefix: string) {
 export async function driverRouter(request: Request, env: Env) {
   const { pathname } = new URL(request.url);
 
+  // Public driver login
   if (pathname === '/auth/driver/login' && request.method === 'POST') return handleDriverLogin(env, request);
 
-  if (pathname === '/drivers/duty' || pathname === '/locations' || pathname === '/driver/waiting' || pathname === '/driver/waiting-summary' || pathname === '/driver/me' || pathname.startsWith('/driver/waiting/')) {
-    const auth = requireRole(request, ['driver', 'admin']);
-    if (auth instanceof Response) return auth;
+  // All other driver routes — check if this router should handle them first
+  const isDriverRoute =
+    pathname === '/driver/me' ||
+    pathname === '/drivers/duty' ||
+    pathname === '/locations' ||
+    pathname === '/driver/waiting' ||
+    pathname === '/driver/waiting-summary' ||
+    pathname.startsWith('/driver/waiting/');
 
-    if (pathname === '/driver/me' && request.method === 'GET') {
-      return handleDriverProfile(env, request, auth.userId);
-    }
+  if (!isDriverRoute) return notFound();
+
+  // Require auth for all authenticated driver routes
+  const auth = await requireRole(env, request, ['driver', 'admin']);
+  if (auth instanceof Response) return auth;
+
+  if (pathname === '/driver/me' && request.method === 'GET') {
+    return handleDriverProfile(env, request, auth.userId);
   }
-
   if (pathname === '/drivers/duty' && request.method === 'POST') return handleDriverDuty(env, request);
   if (pathname === '/locations' && request.method === 'POST') return handleDriverLocation(env, request);
   if (pathname === '/driver/waiting' && request.method === 'GET') return handleDriverWaiting(env, request);

@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import '../../models/route_model.dart';
@@ -14,7 +16,13 @@ class HomeTab extends StatefulWidget {
 }
 
 class _HomeTabState extends State<HomeTab> {
-  static const _defaultCenter = LatLng(13.7563, 100.5018); // Bangkok
+  static const _defaultCenter = LatLng(13.7563, 100.5018);
+  static const _nearbyThresholdKm = 80.0; // ≈ province radius
+
+  GoogleMapController? _mapController;
+  Position? _myPosition;
+  bool _filterNearby = false;
+  bool _locating = false;
 
   @override
   void initState() {
@@ -29,14 +37,92 @@ class _HomeTabState extends State<HomeTab> {
 
   @override
   void dispose() {
+    _mapController?.dispose();
     context.read<RouteProvider>().stopZoneBusPolling();
     super.dispose();
+  }
+
+  // ── Locate me ──────────────────────────────────────────────────────────────
+  Future<void> _locateMe() async {
+    setState(() => _locating = true);
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        _showSnack('กรุณาเปิด GPS ในอุปกรณ์ของคุณ');
+        return;
+      }
+      LocationPermission perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied) {
+        perm = await Geolocator.requestPermission();
+        if (perm == LocationPermission.denied) {
+          _showSnack('ไม่ได้รับอนุญาตให้ใช้ตำแหน่ง');
+          return;
+        }
+      }
+      if (perm == LocationPermission.deniedForever) {
+        _showSnack('กรุณาอนุญาตตำแหน่งในการตั้งค่าอุปกรณ์');
+        return;
+      }
+
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings:
+            const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _myPosition = pos;
+        _filterNearby = true;
+      });
+
+      _mapController?.animateCamera(
+        CameraUpdate.newLatLngZoom(LatLng(pos.latitude, pos.longitude), 13),
+      );
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
+  }
+
+  void _showSnack(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(msg), duration: const Duration(seconds: 2)));
+  }
+
+  // ── Route filtering by proximity ───────────────────────────────────────────
+  bool _isRouteNearby(RouteModel route) {
+    final pos = _myPosition;
+    if (pos == null) return true;
+
+    final start = route.startLatLng;
+    final end = route.endLatLng;
+
+    // ถ้า route ไม่มี coords แสดงเสมอ (ไม่รู้จะ filter ยังไง)
+    if (start == null && end == null) return true;
+
+    final thresholdM = _nearbyThresholdKm * 1000;
+
+    if (start != null) {
+      final d = Geolocator.distanceBetween(
+          pos.latitude, pos.longitude, start.latitude, start.longitude);
+      if (d <= thresholdM) return true;
+    }
+    if (end != null) {
+      final d = Geolocator.distanceBetween(
+          pos.latitude, pos.longitude, end.latitude, end.longitude);
+      if (d <= thresholdM) return true;
+    }
+    return false;
   }
 
   @override
   Widget build(BuildContext context) {
     final rp = context.watch<RouteProvider>();
     final buses = rp.allLiveBuses;
+    final allActive = rp.routes.where((r) => r.isActive).toList();
+    final displayed = _filterNearby
+        ? allActive.where(_isRouteNearby).toList()
+        : allActive;
 
     final markers = <Marker>{
       for (final bus in buses)
@@ -55,7 +141,7 @@ class _HomeTabState extends State<HomeTab> {
 
     return Stack(
       children: [
-        // ── Full-screen map ──────────────────────────────────────────
+        // ── Full-screen map ────────────────────────────────────────────────
         GoogleMap(
           initialCameraPosition: const CameraPosition(
             target: _defaultCenter,
@@ -66,9 +152,26 @@ class _HomeTabState extends State<HomeTab> {
           myLocationButtonEnabled: false,
           zoomControlsEnabled: false,
           mapToolbarEnabled: false,
+          onMapCreated: (ctrl) => _mapController = ctrl,
         ),
 
-        // ── DraggableScrollableSheet — route list ────────────────────
+        // ── "ที่ฉันอยู่" button ────────────────────────────────────────────
+        Positioned(
+          right: 16,
+          bottom: 300,
+          child: _LocateMeButton(
+            loading: _locating,
+            active: _filterNearby,
+            onTap: _filterNearby
+                ? () {
+                    // กด refresh ตำแหน่ง ถ้า active อยู่แล้ว
+                    _locateMe();
+                  }
+                : _locateMe,
+          ),
+        ),
+
+        // ── DraggableScrollableSheet — route list ─────────────────────────
         DraggableScrollableSheet(
           initialChildSize: 0.28,
           minChildSize: 0.12,
@@ -77,13 +180,66 @@ class _HomeTabState extends State<HomeTab> {
           snapSizes: const [0.12, 0.28, 0.6, 0.85],
           builder: (context, scrollCtrl) => _BottomSheet(
             scrollCtrl: scrollCtrl,
-            routes: rp.routes,
+            routes: displayed,
+            allCount: allActive.length,
             loading: rp.loading,
             error: rp.error,
+            filterNearby: _filterNearby,
+            myPosition: _myPosition,
             onRefresh: () => rp.loadRoutes(),
+            onClearFilter: () => setState(() => _filterNearby = false),
           ),
         ),
       ],
+    );
+  }
+}
+
+// ─── Locate Me FAB ───────────────────────────────────────────────────────────
+
+class _LocateMeButton extends StatelessWidget {
+  final bool loading;
+  final bool active;
+  final VoidCallback onTap;
+
+  const _LocateMeButton({
+    required this.loading,
+    required this.active,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: loading ? null : onTap,
+      child: Container(
+        width: 46,
+        height: 46,
+        decoration: BoxDecoration(
+          color: active ? const Color(0xFF2563EB) : Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.18),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: loading
+            ? Padding(
+                padding: const EdgeInsets.all(12),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: active ? Colors.white : const Color(0xFF2563EB),
+                ),
+              )
+            : Icon(
+                Icons.my_location,
+                size: 22,
+                color: active ? Colors.white : const Color(0xFF2563EB),
+              ),
+      ),
     );
   }
 }
@@ -93,22 +249,28 @@ class _HomeTabState extends State<HomeTab> {
 class _BottomSheet extends StatelessWidget {
   final ScrollController scrollCtrl;
   final List<RouteModel> routes;
+  final int allCount;
   final bool loading;
   final String? error;
+  final bool filterNearby;
+  final Position? myPosition;
   final VoidCallback onRefresh;
+  final VoidCallback onClearFilter;
 
   const _BottomSheet({
     required this.scrollCtrl,
     required this.routes,
+    required this.allCount,
     required this.loading,
     required this.error,
+    required this.filterNearby,
+    required this.myPosition,
     required this.onRefresh,
+    required this.onClearFilter,
   });
 
   @override
   Widget build(BuildContext context) {
-    final active = routes.where((r) => r.isActive).toList();
-
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -136,7 +298,7 @@ class _BottomSheet extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Row(
@@ -145,30 +307,81 @@ class _BottomSheet extends StatelessWidget {
                           style: TextStyle(
                               fontSize: 16, fontWeight: FontWeight.w700)),
                       const Spacer(),
-                      if (active.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFDCFCE7),
-                            borderRadius: BorderRadius.circular(20),
+                      if (!loading) ...[
+                        if (filterNearby)
+                          // "ใกล้ฉัน" chip with dismiss
+                          GestureDetector(
+                            onTap: onClearFilter,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2563EB),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.my_location,
+                                      size: 11, color: Colors.white),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'ใกล้ฉัน ${routes.length} สาย',
+                                    style: const TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.close,
+                                      size: 11, color: Colors.white),
+                                ],
+                              ),
+                            ),
+                          )
+                        else
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text('$allCount สาย',
+                                style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF16A34A))),
                           ),
-                          child: Text('${active.length} สาย',
-                              style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF16A34A))),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: onRefresh,
+                          child: Icon(Icons.refresh,
+                              size: 20, color: Colors.grey[500]),
                         ),
-                      const SizedBox(width: 8),
-                      GestureDetector(
-                        onTap: onRefresh,
-                        child: Icon(Icons.refresh,
-                            size: 20, color: Colors.grey[500]),
-                      ),
+                      ],
                     ],
                   ),
                 ),
-                const SizedBox(height: 12),
+
+                // Nearby filter note
+                if (filterNearby && myPosition != null)
+                  Padding(
+                    padding:
+                        const EdgeInsets.fromLTRB(20, 6, 20, 0),
+                    child: Row(children: [
+                      const Icon(Icons.info_outline,
+                          size: 13, color: Color(0xFF6B7280)),
+                      const SizedBox(width: 5),
+                      Text(
+                        'แสดงเส้นทางที่ต้นทางหรือปลายทางอยู่ใกล้คุณ',
+                        style: TextStyle(
+                            fontSize: 11, color: Colors.grey[500]),
+                      ),
+                    ]),
+                  ),
+
+                const SizedBox(height: 10),
               ],
             ),
           ),
@@ -189,11 +402,22 @@ class _BottomSheet extends StatelessWidget {
                 ),
               ),
             )
-          else if (active.isEmpty)
-            const SliverFillRemaining(
+          else if (routes.isEmpty)
+            SliverFillRemaining(
               child: _EmptyState(
-                icon: Icons.directions_bus_outlined,
-                message: 'ยังไม่มีสายรถที่เปิดให้บริการ',
+                icon: filterNearby
+                    ? Icons.location_off
+                    : Icons.directions_bus_outlined,
+                message: filterNearby
+                    ? 'ไม่พบเส้นทางในบริเวณใกล้เคียง'
+                    : 'ยังไม่มีสายรถที่เปิดให้บริการ',
+                action: filterNearby
+                    ? TextButton.icon(
+                        onPressed: onClearFilter,
+                        icon: const Icon(Icons.close, size: 14),
+                        label: const Text('ดูทุกเส้นทาง'),
+                      )
+                    : null,
               ),
             )
           else
@@ -201,8 +425,8 @@ class _BottomSheet extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
               sliver: SliverList(
                 delegate: SliverChildBuilderDelegate(
-                  (ctx, i) => _RouteCard(route: active[i]),
-                  childCount: active.length,
+                  (ctx, i) => _RouteCard(route: routes[i]),
+                  childCount: routes.length,
                 ),
               ),
             ),
@@ -309,7 +533,6 @@ class _RouteCard extends StatelessWidget {
                     ]),
               ),
               const SizedBox(width: 8),
-              // Quick waiting button
               GestureDetector(
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => RouteDetail(route: route)),
@@ -352,7 +575,7 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(height: 12),
           Text(message,
               style: TextStyle(fontSize: 14, color: Colors.grey[500])),
-          if (action != null) action!,
+          if (action != null) ...[const SizedBox(height: 8), action!],
         ]),
       );
 }

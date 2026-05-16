@@ -1,6 +1,6 @@
 import { badRequest, json, readJson } from '../lib/http';
 import { driverLoginService } from '../services/auth.service';
-import { createBusLocationService, getBusByIdService, updateDriverDutyService } from '../services/buses.service';
+import { createBusLocationService, findBusByDriverIdService, getBusByIdService, updateDriverDutyService } from '../services/buses.service';
 import { getDriverByUserIdService } from '../services/drivers.service';
 import { getWaitingSummaryService, listWaitingService, markWaitingPickedUpService } from '../services/waiting.service';
 import type { Env } from '../types';
@@ -41,7 +41,16 @@ export async function handleDriverProfile(env: Env, request: Request, userId: st
   const driver = await getDriverByUserIdService(env, userId);
   if (!driver) return json({ data: null }, 404);
 
-  const assignedBus = driver.assigned_bus_id ? await getBusByIdService(env, driver.assigned_bus_id) : null;
+  // Try assigned_bus_id first (explicit link in drivers table)
+  // Fallback: look up by buses.driver_id === user_id (same logic as admin dashboard)
+  let assignedBus = driver.assigned_bus_id
+    ? await getBusByIdService(env, driver.assigned_bus_id)
+    : null;
+
+  if (!assignedBus) {
+    assignedBus = await findBusByDriverIdService(env, userId);
+  }
+
   return json({ data: { ...driver, assigned_bus: assignedBus } });
 }
 

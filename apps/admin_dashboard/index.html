@@ -6,7 +6,7 @@
   <title>Admin Dashboard — Bus Tracking System</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
@@ -97,7 +97,7 @@
     }
     #appLoader .loader-text {
       font-size: 13.5px; color: var(--muted, #607080); font-weight: 500;
-      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      font-family: 'Inter', system-ui, sans-serif;
       letter-spacing: -0.01em;
     }
     #appLoader.hidden { display: none; }
@@ -122,19 +122,29 @@
   <aside class="sidebar" id="sidebar">
 
     <div class="sidebar-logo">
-      <div class="logo-icon">
+      <div class="logo-tile">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
              fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="1" y="3" width="15" height="13" rx="2"/>
-          <path d="M16 8h4l3 3v5h-7V8z"/>
-          <circle cx="5.5" cy="18.5" r="2.5"/>
-          <circle cx="18.5" cy="18.5" r="2.5"/>
+          <path d="M8 6v6"/><path d="M15 6v6"/>
+          <path d="M2 12h19.6"/>
+          <path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3"/>
+          <circle cx="7" cy="18" r="2"/>
+          <path d="M9 18h5"/>
+          <circle cx="16" cy="18" r="2"/>
         </svg>
       </div>
-      <div>
-        <div class="logo-text">BusTrack</div>
-        <div class="logo-sub">Admin Portal</div>
+      <div class="logo-text-wrap">
+        <span class="logo-name">Bus Tracking</span>
+        <span class="logo-sub">Admin · v2</span>
       </div>
+      <button class="sidebar-collapse-btn" id="collapseBtn" onclick="toggleCollapse()" title="ย่อแถบเมนู">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <path d="M9 3v18"/>
+          <path d="m16 15-3-3 3-3"/>
+        </svg>
+      </button>
     </div>
 
     <nav class="sidebar-nav" id="sidebarNav"></nav>
@@ -163,17 +173,33 @@
         <button class="menu-toggle" id="menuToggle" onclick="toggleSidebar()" aria-label="เปิดเมนู">
           <span></span><span></span><span></span>
         </button>
+        <div class="topbar-page-tile" id="topbarPageTile">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="9" rx="1"/>
+            <rect x="14" y="3" width="7" height="5" rx="1"/>
+            <rect x="14" y="12" width="7" height="9" rx="1"/>
+            <rect x="3" y="16" width="7" height="5" rx="1"/>
+          </svg>
+        </div>
         <div style="min-width:0">
           <div class="page-title" id="pageTitle">Dashboard</div>
           <div class="page-subtitle" id="pageSubtitle">ภาพรวมระบบ Bus Tracking</div>
         </div>
       </div>
       <div class="topbar-right">
-        <div class="health-badge" id="healthBadge" style="display:none">
+        <div class="health-pill" id="healthBadge">
           <span class="health-dot"></span>
           <span class="health-text">ระบบออนไลน์</span>
         </div>
-        <button class="btn-logout" onclick="logout()">
+        <button class="topbar-icon-btn" title="การแจ้งเตือน">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+          </svg>
+        </button>
+        <button class="btn btn-secondary" onclick="logout()">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>

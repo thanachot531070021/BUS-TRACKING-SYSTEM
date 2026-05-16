@@ -18,8 +18,23 @@ class RouteDetail extends StatefulWidget {
 class _RouteDetailState extends State<RouteDetail> {
   bool _waitingLoading = false;
   GoogleMapController? _mapController;
-  // Default center: Thailand
   static const _defaultCenter = LatLng(13.7563, 100.5018);
+
+  // Decode Google encoded polyline → list of LatLng
+  static List<LatLng> _decodePolyline(String encoded) {
+    final pts = <LatLng>[];
+    int idx = 0, lat = 0, lng = 0;
+    while (idx < encoded.length) {
+      int shift = 0, r = 0, b;
+      do { b = encoded.codeUnitAt(idx++) - 63; r |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+      lat += (r & 1) != 0 ? ~(r >> 1) : (r >> 1);
+      shift = 0; r = 0;
+      do { b = encoded.codeUnitAt(idx++) - 63; r |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+      lng += (r & 1) != 0 ? ~(r >> 1) : (r >> 1);
+      pts.add(LatLng(lat / 1e5, lng / 1e5));
+    }
+    return pts;
+  }
 
   @override
   void initState() {
@@ -81,7 +96,7 @@ class _RouteDetailState extends State<RouteDetail> {
     ));
   }
 
-  // Build markers: blue for buses, orange for user's waiting position
+  // Build markers: blue for buses, green/red for start/end, orange for waiting
   Set<Marker> _buildMarkers(RouteProvider rp) {
     final markers = <Marker>{};
 
@@ -98,6 +113,31 @@ class _RouteDetailState extends State<RouteDetail> {
       ));
     }
 
+    final start = widget.route.startLatLng;
+    final end = widget.route.endLatLng;
+    if (start != null) {
+      markers.add(Marker(
+        markerId: const MarkerId('route_start'),
+        position: start,
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        infoWindow: InfoWindow(
+          title: '▶ ${widget.route.startLocation}',
+          snippet: 'จุดต้นทาง',
+        ),
+      ));
+    }
+    if (end != null) {
+      markers.add(Marker(
+        markerId: const MarkerId('route_end'),
+        position: end,
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        infoWindow: InfoWindow(
+          title: '⏹ ${widget.route.endLocation}',
+          snippet: 'จุดปลายทาง',
+        ),
+      ));
+    }
+
     if (rp.myWaiting?.lat != null && rp.myWaiting?.lng != null) {
       markers.add(Marker(
         markerId: const MarkerId('my_waiting'),
@@ -110,51 +150,77 @@ class _RouteDetailState extends State<RouteDetail> {
     return markers;
   }
 
+  Set<Polyline> _buildPolylines() {
+    final route = widget.route;
+    List<LatLng> pts = [];
+
+    if (route.hasPolyline) {
+      pts = _decodePolyline(route.routePolyline!);
+    } else {
+      final s = route.startLatLng;
+      final e = route.endLatLng;
+      if (s != null) pts.add(s);
+      if (e != null) pts.add(e);
+    }
+
+    if (pts.length < 2) return {};
+    return {
+      Polyline(
+        polylineId: const PolylineId('route'),
+        points: pts,
+        color: const Color(0xFF2563EB),
+        width: 4,
+        patterns: route.hasPolyline ? [] : [PatternItem.dash(12), PatternItem.gap(6)],
+      ),
+    };
+  }
+
   LatLng _getMapCenter(List<BusModel> buses) {
     for (final bus in buses) {
       if (bus.hasLocation) return LatLng(bus.currentLat!, bus.currentLng!);
     }
-    return _defaultCenter;
+    return widget.route.startLatLng ?? widget.route.endLatLng ?? _defaultCenter;
   }
 
-  // Move camera to show all bus markers after new buses load
-  void _fitBusMarkers(List<BusModel> buses) {
-    if (_mapController == null || buses.isEmpty) return;
-    final withLocation = buses.where((b) => b.hasLocation).toList();
-    if (withLocation.isEmpty) return;
-    if (withLocation.length == 1) {
-      _mapController!.animateCamera(
-        CameraUpdate.newLatLng(
-          LatLng(withLocation.first.currentLat!, withLocation.first.currentLng!),
-        ),
-      );
-    } else {
-      double minLat = withLocation.first.currentLat!;
-      double maxLat = minLat;
-      double minLng = withLocation.first.currentLng!;
-      double maxLng = minLng;
-      for (final b in withLocation) {
-        if (b.currentLat! < minLat) minLat = b.currentLat!;
-        if (b.currentLat! > maxLat) maxLat = b.currentLat!;
-        if (b.currentLng! < minLng) minLng = b.currentLng!;
-        if (b.currentLng! > maxLng) maxLng = b.currentLng!;
-      }
-      _mapController!.animateCamera(
-        CameraUpdate.newLatLngBounds(
-          LatLngBounds(
-            southwest: LatLng(minLat - 0.005, minLng - 0.005),
-            northeast: LatLng(maxLat + 0.005, maxLng + 0.005),
-          ),
-          60,
-        ),
-      );
+  // Fit camera to show buses + route start/end
+  void _fitCamera(List<BusModel> buses) {
+    if (_mapController == null) return;
+    final pts = <LatLng>[];
+    for (final b in buses) {
+      if (b.hasLocation) pts.add(LatLng(b.currentLat!, b.currentLng!));
     }
+    final start = widget.route.startLatLng;
+    final end = widget.route.endLatLng;
+    if (start != null) pts.add(start);
+    if (end != null) pts.add(end);
+
+    if (pts.isEmpty) return;
+    if (pts.length == 1) {
+      _mapController!.animateCamera(CameraUpdate.newLatLngZoom(pts.first, 14));
+      return;
+    }
+    double minLat = pts.first.latitude, maxLat = minLat;
+    double minLng = pts.first.longitude, maxLng = minLng;
+    for (final p in pts) {
+      if (p.latitude < minLat) minLat = p.latitude;
+      if (p.latitude > maxLat) maxLat = p.latitude;
+      if (p.longitude < minLng) minLng = p.longitude;
+      if (p.longitude > maxLng) maxLng = p.longitude;
+    }
+    _mapController!.animateCamera(CameraUpdate.newLatLngBounds(
+      LatLngBounds(
+        southwest: LatLng(minLat - 0.008, minLng - 0.008),
+        northeast: LatLng(maxLat + 0.008, maxLng + 0.008),
+      ),
+      60,
+    ));
   }
 
   @override
   Widget build(BuildContext context) {
     final rp = context.watch<RouteProvider>();
     final markers = _buildMarkers(rp);
+    final polylines = _buildPolylines();
     final initialCenter = _getMapCenter(rp.liveBuses);
 
     return Scaffold(
@@ -185,14 +251,14 @@ class _RouteDetailState extends State<RouteDetail> {
                     zoom: 14,
                   ),
                   markers: markers,
+                  polylines: polylines,
                   myLocationEnabled: true,
                   myLocationButtonEnabled: false,
                   zoomControlsEnabled: false,
                   onMapCreated: (ctrl) {
                     _mapController = ctrl;
-                    // Fit buses once map is ready
                     WidgetsBinding.instance.addPostFrameCallback((_) {
-                      _fitBusMarkers(rp.liveBuses);
+                      _fitCamera(rp.liveBuses);
                     });
                   },
                 ),
@@ -243,7 +309,7 @@ class _RouteDetailState extends State<RouteDetail> {
                     backgroundColor: Colors.white,
                     foregroundColor: const Color(0xFF2563EB),
                     elevation: 2,
-                    onPressed: () => _fitBusMarkers(rp.liveBuses),
+                    onPressed: () => _fitCamera(rp.liveBuses),
                     child: const Icon(Icons.directions_bus, size: 18),
                   ),
                 ),

@@ -69,6 +69,11 @@ const SECTIONS = {
   users: {
     title: 'ผู้ใช้งาน', icon: '👥',
     subtitle: 'จัดการข้อมูลผู้ใช้งานทั้งหมด',
+    groupBy: item => {
+      const labels = { passenger: '👤 ผู้โดยสาร', driver: '🚌 คนขับรถ', admin: '🛡️ Admin', super_admin: '⭐ Super Admin' };
+      return labels[item.role] || item.role || 'ไม่ระบุบทบาท';
+    },
+    groupByWhen: () => state.adminType === 'super_admin',
     listPath:   '/admin/users',
     createPath: '/admin/users',
     updatePath: id => `/admin/users/${id}`,
@@ -210,6 +215,10 @@ const SECTIONS = {
   admins: {
     title: 'ผู้ดูแลระบบ', icon: '👤',
     subtitle: 'จัดการบัญชีผู้ดูแลระบบ',
+    groupBy: item => {
+      const labels = { super_admin: '⭐ Super Admin', zone_admin: '🗺️ Zone Admin' };
+      return labels[item.admin_type] || item.admin_type || 'ไม่ระบุประเภท';
+    },
     listPath:   '/admin/admins',
     createPath: '/admin/admins',
     updatePath: id => `/admin/admins/${id}`,
@@ -823,6 +832,33 @@ function toggleSidebar() {
   isOpen ? closeSidebar() : openSidebar();
 }
 
+const SECTION_ICONS_SVG = {
+  dashboard: `<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>`,
+  analytics: `<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>`,
+  zones:     `<polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="22" x2="12" y2="15.5"/><line x1="22" y1="8.5" x2="12" y2="15.5"/><line x1="2" y1="8.5" x2="12" y2="15.5"/>`,
+  users:     `<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>`,
+  admins:    `<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>`,
+  routes:    `<circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/>`,
+  drivers:   `<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/>`,
+  buses:     `<path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3"/><circle cx="7" cy="18" r="2"/><path d="M9 18h5"/><circle cx="16" cy="18" r="2"/>`,
+  waiting:   `<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>`,
+  settings:  `<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>`,
+};
+
+function _sectionSvg(section, size = 19, stroke = 1.75) {
+  const paths = SECTION_ICONS_SVG[section] || SECTION_ICONS_SVG.dashboard;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+}
+
+function toggleCollapse() {
+  const sidebar = document.getElementById('sidebar');
+  const btn     = document.getElementById('collapseBtn');
+  const collapsed = sidebar.classList.toggle('collapsed');
+  if (btn) btn.innerHTML = collapsed
+    ? `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="m14 9 3 3-3 3"/></svg>`
+    : `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="m16 15-3-3 3-3"/></svg>`;
+}
+
 /* =====================================================
    NAVIGATION
    ===================================================== */
@@ -832,8 +868,10 @@ function navigate(section) {
     el.classList.toggle('active', el.dataset.section === section)
   );
   const cfg = SECTIONS[section];
-  document.getElementById('pageTitle').textContent    = `${cfg.icon} ${cfg.title}`;
+  document.getElementById('pageTitle').textContent    = cfg.title;
   document.getElementById('pageSubtitle').textContent = cfg.subtitle;
+  const tile = document.getElementById('topbarPageTile');
+  if (tile) tile.innerHTML = _sectionSvg(section, 22, 1.75);
   // Auto-close sidebar on mobile after navigation
   if (window.innerWidth <= 900) closeSidebar();
   return loadSection(section);
@@ -902,9 +940,10 @@ function renderTable(section, allItems) {
   // Pagination state
   if (!state.pagination[section]) state.pagination[section] = { page: 1, pageSize: 25 };
   const pg = state.pagination[section];
-  const sortedItems = cfg.groupBy
+  const effectiveGroupBy = cfg.groupBy && (!cfg.groupByWhen || cfg.groupByWhen()) ? cfg.groupBy : null;
+  const sortedItems = effectiveGroupBy
     ? [...allItems].sort((a, b) => {
-        const ka = cfg.groupBy(a), kb = cfg.groupBy(b);
+        const ka = effectiveGroupBy(a), kb = effectiveGroupBy(b);
         return ka < kb ? -1 : ka > kb ? 1 : 0;
       })
     : allItems;
@@ -936,10 +975,10 @@ function renderTable(section, allItems) {
     rows = `<tr><td colspan="${colCount}" style="text-align:center;padding:44px;color:var(--muted)">
       <div style="font-size:34px;margin-bottom:10px">📭</div>ยังไม่มีข้อมูล
     </td></tr>`;
-  } else if (cfg.groupBy) {
+  } else if (effectiveGroupBy) {
     const groupMap = new Map();
     for (const item of sortedItems) {
-      const key = cfg.groupBy(item);
+      const key = effectiveGroupBy(item);
       if (!groupMap.has(key)) groupMap.set(key, []);
       groupMap.get(key).push(item);
     }
@@ -949,7 +988,7 @@ function renderTable(section, allItems) {
     rows = '';
     let lastGroup = null;
     for (const item of items) {
-      const key = cfg.groupBy(item);
+      const key = effectiveGroupBy(item);
       if (key !== lastGroup) {
         const groupCount = groupMap.get(key)?.length ?? 0;
         const gid = groupKeyList.indexOf(key);
@@ -2081,11 +2120,10 @@ function renderNav() {
         <div class="nav-group-label">${g.label}</div>
         ${g.items.map(item => `
           <button class="nav-item${state.section === item.section ? ' active' : ''}" data-section="${item.section}" onclick="navigate('${item.section}')">
-            <i data-lucide="${item.icon}" class="nav-icon"></i><span>${item.label}</span>
+            <span class="nav-icon">${_sectionSvg(item.section, 19, state.section === item.section ? 2 : 1.75)}</span>
+            <span class="nav-label">${item.label}</span>
           </button>`).join('')}
       </div>`).join('');
-
-  if (window.lucide) lucide.createIcons({ nodes: [nav] });
 
   const roleEl = document.getElementById('userRole');
   if (roleEl && state.adminType) {

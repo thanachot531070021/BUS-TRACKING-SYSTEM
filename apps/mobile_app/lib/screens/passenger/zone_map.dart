@@ -38,8 +38,10 @@ class _ZoneMapScreenState extends State<ZoneMapScreen> {
     super.dispose();
   }
 
-  Set<Marker> _buildMarkers(List<BusModel> buses) {
+  Set<Marker> _buildMarkers(List<BusModel> buses, List<RouteModel> routes) {
     final markers = <Marker>{};
+
+    // Bus markers (blue)
     for (final bus in buses) {
       if (!bus.hasLocation || !bus.isOnDuty) continue;
       markers.add(Marker(
@@ -52,37 +54,89 @@ class _ZoneMapScreenState extends State<ZoneMapScreen> {
         ),
       ));
     }
+
+    // Route start/end markers
+    for (final route in routes) {
+      final start = route.startLatLng;
+      final end = route.endLatLng;
+      if (start != null) {
+        markers.add(Marker(
+          markerId: MarkerId('start_${route.id}'),
+          position: start,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          infoWindow: InfoWindow(
+            title: '▶ ${route.name}',
+            snippet: route.startLocation.isNotEmpty ? route.startLocation : 'จุดต้นทาง',
+          ),
+        ));
+      }
+      if (end != null) {
+        markers.add(Marker(
+          markerId: MarkerId('end_${route.id}'),
+          position: end,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          infoWindow: InfoWindow(
+            title: '⏹ ${route.name}',
+            snippet: route.endLocation.isNotEmpty ? route.endLocation : 'จุดปลายทาง',
+          ),
+        ));
+      }
+    }
+
     return markers;
   }
 
-  void _fitMarkers(List<BusModel> buses) {
+  // Collect all LatLng points (buses + route coords) for fitting camera
+  List<LatLng> _allPoints(List<BusModel> buses, List<RouteModel> routes) {
+    final pts = <LatLng>[];
+    for (final b in buses) {
+      if (b.hasLocation && b.isOnDuty) pts.add(LatLng(b.currentLat!, b.currentLng!));
+    }
+    for (final r in routes) {
+      if (r.startLatLng != null) pts.add(r.startLatLng!);
+      if (r.endLatLng != null) pts.add(r.endLatLng!);
+    }
+    return pts;
+  }
+
+  void _fitMarkers(List<BusModel> buses, [List<RouteModel>? routes]) {
     if (_mapController == null) return;
-    final active = buses.where((b) => b.hasLocation && b.isOnDuty).toList();
-    if (active.isEmpty) return;
-    if (active.length == 1) {
-      _mapController!.animateCamera(CameraUpdate.newLatLngZoom(
-        LatLng(active.first.currentLat!, active.first.currentLng!),
-        14,
-      ));
+    final pts = _allPoints(buses, routes ?? []);
+    if (pts.isEmpty) return;
+    if (pts.length == 1) {
+      _mapController!.animateCamera(
+          CameraUpdate.newLatLngZoom(pts.first, 14));
       return;
     }
-    double minLat = active.first.currentLat!;
-    double maxLat = minLat;
-    double minLng = active.first.currentLng!;
-    double maxLng = minLng;
-    for (final b in active) {
-      if (b.currentLat! < minLat) minLat = b.currentLat!;
-      if (b.currentLat! > maxLat) maxLat = b.currentLat!;
-      if (b.currentLng! < minLng) minLng = b.currentLng!;
-      if (b.currentLng! > maxLng) maxLng = b.currentLng!;
+    double minLat = pts.first.latitude, maxLat = minLat;
+    double minLng = pts.first.longitude, maxLng = minLng;
+    for (final p in pts) {
+      if (p.latitude < minLat) minLat = p.latitude;
+      if (p.latitude > maxLat) maxLat = p.latitude;
+      if (p.longitude < minLng) minLng = p.longitude;
+      if (p.longitude > maxLng) maxLng = p.longitude;
     }
     _mapController!.animateCamera(CameraUpdate.newLatLngBounds(
       LatLngBounds(
-        southwest: LatLng(minLat - 0.01, minLng - 0.01),
-        northeast: LatLng(maxLat + 0.01, maxLng + 0.01),
+        southwest: LatLng(minLat - 0.008, minLng - 0.008),
+        northeast: LatLng(maxLat + 0.008, maxLng + 0.008),
       ),
       60,
     ));
+  }
+
+  // Navigate map to a specific route's start point
+  void _focusRoute(RouteModel route) {
+    final start = route.startLatLng;
+    final end = route.endLatLng;
+    if (start == null && end == null) return;
+    setState(() => _showRouteSheet = false);
+    if (start != null && end != null) {
+      _fitMarkers([], [route]);
+    } else {
+      _mapController?.animateCamera(
+          CameraUpdate.newLatLngZoom(start ?? end!, 15));
+    }
   }
 
   @override
@@ -90,7 +144,7 @@ class _ZoneMapScreenState extends State<ZoneMapScreen> {
     final rp = context.watch<RouteProvider>();
     final zoneBuses = rp.busesInZone(widget.zone.id);
     final zoneRoutes = rp.routesInZone(widget.zone.id);
-    final markers = _buildMarkers(zoneBuses);
+    final markers = _buildMarkers(zoneBuses, zoneRoutes);
     final onDutyCount = zoneBuses.where((b) => b.isOnDuty).length;
 
     return Scaffold(
@@ -138,7 +192,7 @@ class _ZoneMapScreenState extends State<ZoneMapScreen> {
             onMapCreated: (ctrl) {
               _mapController = ctrl;
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                _fitMarkers(zoneBuses);
+                _fitMarkers(zoneBuses, zoneRoutes);
               });
             },
           ),
@@ -191,8 +245,8 @@ class _ZoneMapScreenState extends State<ZoneMapScreen> {
               backgroundColor: Colors.white,
               foregroundColor: const Color(0xFF2563EB),
               elevation: 2,
-              onPressed: () => _fitMarkers(zoneBuses),
-              child: const Icon(Icons.my_location, size: 20),
+              onPressed: () => _fitMarkers(zoneBuses, zoneRoutes),
+              child: const Icon(Icons.fit_screen, size: 20),
             ),
           ),
 
@@ -206,6 +260,7 @@ class _ZoneMapScreenState extends State<ZoneMapScreen> {
                 routes: zoneRoutes,
                 buses: zoneBuses,
                 onClose: () => setState(() => _showRouteSheet = false),
+                onTapRoute: _focusRoute,
                 onTapBus: (bus) {
                   if (!bus.hasLocation) return;
                   setState(() => _showRouteSheet = false);
@@ -231,12 +286,14 @@ class _RouteSheet extends StatelessWidget {
   final List<BusModel> buses;
   final VoidCallback onClose;
   final ValueChanged<BusModel> onTapBus;
+  final ValueChanged<RouteModel> onTapRoute;
 
   const _RouteSheet({
     required this.routes,
     required this.buses,
     required this.onClose,
     required this.onTapBus,
+    required this.onTapRoute,
   });
 
   @override
@@ -284,14 +341,18 @@ class _RouteSheet extends StatelessWidget {
                       final routeBuses = buses
                           .where((b) => b.routeId == route.id && b.isOnDuty)
                           .toList();
+                      final hasCoords =
+                          route.startLatLng != null || route.endLatLng != null;
                       return _RouteRow(
                         route: route,
                         onDutyBuses: routeBuses,
+                        hasCoords: hasCoords,
                         onTapBus: onTapBus,
                         onTapRoute: () => Navigator.of(context).push(
                           MaterialPageRoute(
                               builder: (_) => RouteDetail(route: route)),
                         ),
+                        onTapPin: hasCoords ? () => onTapRoute(route) : null,
                       );
                     },
                   ),
@@ -305,14 +366,18 @@ class _RouteSheet extends StatelessWidget {
 class _RouteRow extends StatelessWidget {
   final RouteModel route;
   final List<BusModel> onDutyBuses;
+  final bool hasCoords;
   final ValueChanged<BusModel> onTapBus;
   final VoidCallback onTapRoute;
+  final VoidCallback? onTapPin;
 
   const _RouteRow({
     required this.route,
     required this.onDutyBuses,
+    required this.hasCoords,
     required this.onTapBus,
     required this.onTapRoute,
+    this.onTapPin,
   });
 
   @override
@@ -386,6 +451,18 @@ class _RouteRow extends StatelessWidget {
                       fontWeight: FontWeight.w600)),
             ),
           const SizedBox(width: 4),
+          // Pin button — focus route on map
+          if (hasCoords)
+            GestureDetector(
+              onTap: onTapPin,
+              child: const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4),
+                child: Icon(Icons.location_on,
+                    size: 18, color: Color(0xFF16A34A)),
+              ),
+            )
+          else
+            const SizedBox(width: 4),
           const Icon(Icons.chevron_right, size: 16, color: Colors.grey),
         ]),
       ),

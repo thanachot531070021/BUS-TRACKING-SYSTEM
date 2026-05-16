@@ -23,6 +23,8 @@ class DriverProvider extends ChangeNotifier {
   List<WaitingModel> _waitingPassengers = [];
   Timer? _gpsTimer;
   Timer? _waitingPollingTimer;
+  DateTime? _dutyStartedAt;
+  DateTime? _dutyEndedAt;
 
   UserModel? get driverUser => _driverUser;
   Map<String, dynamic>? get driverProfile => _driverProfile;
@@ -30,9 +32,18 @@ class DriverProvider extends ChangeNotifier {
   bool get loading => _loading;
   String? get error => _error;
   List<WaitingModel> get waitingPassengers => _waitingPassengers;
+  DateTime? get dutyStartedAt => _dutyStartedAt;
+  DateTime? get dutyEndedAt => _dutyEndedAt;
 
-  // Bus UUID in the driver record (used to send duty toggle)
-  String? get assignedBusId => _driverProfile?['assigned_bus_id']?.toString();
+  // Bus UUID — try drivers.assigned_bus_id first, fall back to assigned_bus.id
+  // (admin may have set buses.driver_id without setting drivers.assigned_bus_id)
+  String? get assignedBusId {
+    final direct = _driverProfile?['assigned_bus_id']?.toString();
+    if (direct != null && direct.isNotEmpty) return direct;
+    final bus = _driverProfile?['assigned_bus'];
+    if (bus is Map) return bus['id']?.toString();
+    return null;
+  }
 
   // Plate number from the nested assigned_bus object
   String? get assignedBusPlate {
@@ -96,9 +107,12 @@ class DriverProvider extends ChangeNotifier {
         _onDuty = !_onDuty;
       }
       if (_onDuty) {
+        _dutyStartedAt = DateTime.now();
+        _dutyEndedAt = null;
         _startGps();
         _startWaitingPolling();
       } else {
+        _dutyEndedAt = DateTime.now();
         _stopGps();
         _stopWaitingPolling();
       }
