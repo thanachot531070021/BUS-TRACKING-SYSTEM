@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class RouteModel {
@@ -12,6 +13,7 @@ class RouteModel {
   final String? routePolyline;
   final String? startCoords;
   final String? endCoords;
+  final String? waypoints; // JSON: [{"lat":x,"lng":y},...]
 
   const RouteModel({
     required this.id,
@@ -25,6 +27,7 @@ class RouteModel {
     this.routePolyline,
     this.startCoords,
     this.endCoords,
+    this.waypoints,
   });
 
   factory RouteModel.fromJson(Map<String, dynamic> json) {
@@ -46,13 +49,41 @@ class RouteModel {
       routePolyline: json['route_polyline']?.toString(),
       startCoords: json['start_coords']?.toString(),
       endCoords: json['end_coords']?.toString(),
+      waypoints: json['waypoints']?.toString(),
     );
   }
 
   bool get isActive => status == 'active';
   bool get hasPolyline => routePolyline != null && routePolyline!.isNotEmpty;
 
-  // Parse "lat,lng" → LatLng, returns null if invalid
+  bool get hasWaypoints {
+    if (waypoints == null || waypoints!.isEmpty) return false;
+    try {
+      final pts = jsonDecode(waypoints!) as List;
+      return pts.length >= 2;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // Parse waypoints JSON → list of LatLng (priority over encoded polyline)
+  List<LatLng>? get waypointLatLngs {
+    if (waypoints == null || waypoints!.isEmpty) return null;
+    try {
+      final list = jsonDecode(waypoints!) as List;
+      final pts = list.map((e) {
+        final lat = (e['lat'] as num?)?.toDouble();
+        final lng = (e['lng'] as num?)?.toDouble();
+        if (lat == null || lng == null) return null;
+        return LatLng(lat, lng);
+      }).whereType<LatLng>().toList();
+      return pts.length >= 2 ? pts : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Parse "lat,lng" → LatLng
   LatLng? get startLatLng => _parseCoords(startCoords);
   LatLng? get endLatLng => _parseCoords(endCoords);
 

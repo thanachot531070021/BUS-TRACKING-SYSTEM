@@ -171,6 +171,7 @@ export type CreateRouteBody = {
   startCoords?: string | null;
   endCoords?: string | null;
   routePolyline?: string;
+  waypoints?: string | null;  // JSON string: [{"lat":x,"lng":y},...]
   zoneId?: string | null;
   status?: 'active' | 'inactive';
 };

@@ -285,10 +285,15 @@ const SECTIONS = {
         if (z) return `<span style="font-weight:500" title="${esc(v||'')}">${esc([z.zone_code, z.zone_name].filter(Boolean).join(' — '))}</span>`;
         return lookupLabel('/admin/zones', v, zz => [zz.zone_code, zz.zone_name].filter(Boolean).join(' — '));
       }},
+      { key: 'waypoints', label: 'เส้นทาง', r: v => {
+        try { const n = v ? JSON.parse(v).length : 0; return n >= 2 ? `<span class="badge b-blue">${n} จุด</span>` : '<span style="color:#9ca3af">—</span>'; }
+        catch { return '<span style="color:#9ca3af">—</span>'; }
+      }},
       { key: 'status',         label: 'สถานะ',          r: statusBadge },
       { key: 'created_by', label: 'สร้างโดย', r: (v, row) => row?.created_by_user ? esc(row.created_by_user.full_name || row.created_by_user.username || v) : (v ? chip(v) : '—') },
       { key: 'updated_by', label: 'แก้ไขล่าสุดโดย', r: (v, row) => row?.updated_by_user ? esc(row.updated_by_user.full_name || row.updated_by_user.username || v) : (v ? chip(v) : '—') },
     ],
+    extraRowBtns: item => `<button class="btn btn-icon btn-sm" style="background:#eff6ff;color:#2563eb;border:1.5px solid #bfdbfe" title="วาดเส้นทาง" onclick="openWaypointEditor('${esc(String(item.id))}')">🗺️</button>`,
     formFields: [
       { n: 'zoneId', rk: 'zone_id', label: 'โซน', type: 'async-select', req: true,
         fetchPath: '/admin/zones',
@@ -964,6 +969,7 @@ function renderTable(section, allItems) {
       cells += `<td><div class="td-actions">
         ${!noEdit ? `<button class="btn btn-warning btn-icon btn-sm" title="แก้ไข" onclick="openEdit('${section}','${esc(String(id))}')">✏️</button>` : ''}
         ${cfg.resetPassword ? `<button class="btn btn-icon btn-sm" title="Reset Password" style="background:#eff6ff;color:#3b82f6;border:1.5px solid #bfdbfe" onclick="openResetPasswordModal('${section}','${esc(String(id))}')">🔑</button>` : ''}
+        ${cfg.extraRowBtns ? cfg.extraRowBtns(item) : ''}
         <button class="btn btn-danger btn-icon btn-sm" title="ลบ" onclick="askDelete('${section}','${esc(String(id))}')">🗑️</button>
       </div></td>`;
     }
@@ -2797,6 +2803,156 @@ function setUserUI(u) {
   document.getElementById('userRole').textContent   = u.role || 'admin';
 }
 
+/* =====================================================
+   WAYPOINT EDITOR
+   ===================================================== */
+let _wpMap = null;
+let _wpPolyline = null;
+let _wpMarkers = [];
+let _wpPoints = [];
+let _wpRouteId = null;
+let _wpSaving = false;
+const MAPS_API_KEY = 'AIzaSyBG7rWo1ajJ1fMzjIi_ZrCW2SPaI5H5ze8';
+
+function _loadGoogleMaps() {
+  return new Promise(resolve => {
+    if (window.google?.maps) { resolve(); return; }
+    window._googleMapsReady = resolve;
+    const s = document.createElement('script');
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_API_KEY}&callback=_googleMapsReady`;
+    s.async = true;
+    document.head.appendChild(s);
+  });
+}
+
+async function openWaypointEditor(routeId) {
+  const route = (state.cache['routes'] || []).find(r => r.id === routeId);
+  if (!route) return;
+  _wpRouteId = routeId;
+  _wpPoints = [];
+  try { const p = route.waypoints ? JSON.parse(route.waypoints) : []; if (Array.isArray(p)) _wpPoints = p.map(pt => ({lat: Number(pt.lat), lng: Number(pt.lng)})); } catch {}
+
+  document.getElementById('wpTitle').textContent = `วาดเส้นทาง: ${route.route_name}`;
+  const overlay = document.getElementById('wpOverlay');
+  overlay.style.display = 'flex';
+
+  await _loadGoogleMaps();
+  _wpInitMap(route);
+}
+
+function _parseCoords(str) {
+  if (!str) return null;
+  const [la, ln] = str.split(',').map(Number);
+  if (isNaN(la) || isNaN(ln)) return null;
+  return {lat: la, lng: ln};
+}
+
+function _wpInitMap(route) {
+  const mapEl = document.getElementById('wpMap');
+  const startPt = _parseCoords(route.start_coords);
+  const center = _wpPoints[0] ?? startPt ?? {lat: 13.7563, lng: 100.5018};
+
+  _wpMap = new google.maps.Map(mapEl, {
+    center,
+    zoom: _wpPoints.length > 0 ? 13 : 12,
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: false,
+  });
+
+  // Reference markers: start (green) / end (red)
+  const endPt = _parseCoords(route.end_coords);
+  if (startPt) new google.maps.Marker({ position: startPt, map: _wpMap, title: 'จุดต้นทาง', icon: { url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"><circle cx="9" cy="9" r="8" fill="%2316a34a" stroke="white" stroke-width="2"/><text x="9" y="13" text-anchor="middle" font-size="9" fill="white">S</text></svg>' }});
+  if (endPt)   new google.maps.Marker({ position: endPt,   map: _wpMap, title: 'จุดปลายทาง', icon: { url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"><circle cx="9" cy="9" r="8" fill="%23dc2626" stroke="white" stroke-width="2"/><text x="9" y="13" text-anchor="middle" font-size="9" fill="white">E</text></svg>' }});
+
+  _wpPolyline = new google.maps.Polyline({
+    path: _wpPoints,
+    map: _wpMap,
+    strokeColor: '#2563EB',
+    strokeWeight: 4,
+    strokeOpacity: 0.9,
+  });
+
+  _wpMap.addListener('click', e => {
+    _wpPoints.push({lat: e.latLng.lat(), lng: e.latLng.lng()});
+    _wpRedraw();
+  });
+
+  _wpRedraw();
+  _wpFitPoints(route);
+}
+
+function _wpMarkerIcon(idx, total) {
+  const isFirst = idx === 0, isLast = idx === total - 1;
+  const fill = isFirst ? '%2316a34a' : isLast ? '%23dc2626' : '%232563eb';
+  const label = isFirst ? '▶' : isLast ? '⏹' : String(idx + 1);
+  return { url: `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36"><rect x="1" y="1" width="26" height="26" rx="7" fill="${fill}" stroke="white" stroke-width="2"/><polygon points="9,26 19,26 14,35" fill="${fill}"/><text x="14" y="18" text-anchor="middle" font-size="${label.length > 1 ? 9 : 13}" fill="white" font-weight="bold">${label}</text></svg>`, anchor: new google.maps.Point(14, 35) };
+}
+
+function _wpRedraw() {
+  _wpMarkers.forEach(m => m.setMap(null));
+  _wpMarkers = [];
+  const n = _wpPoints.length;
+  _wpPoints.forEach((pt, i) => {
+    const m = new google.maps.Marker({ position: pt, map: _wpMap, icon: _wpMarkerIcon(i, n), zIndex: i + 10 });
+    m.addListener('click', () => { _wpPoints.splice(i, 1); _wpRedraw(); });
+    _wpMarkers.push(m);
+  });
+  _wpPolyline?.setPath(_wpPoints);
+  document.getElementById('wpMeta').textContent = n > 0 ? `${n} จุด` : 'ยังไม่มีจุด — คลิกบนแผนที่เพื่อเริ่ม';
+  document.getElementById('wpPointCount').textContent = n >= 2 ? `${n} จุด พร้อมบันทึก` : n === 1 ? 'ต้องการอย่างน้อย 2 จุด' : '';
+}
+
+function _wpFitPoints(route) {
+  const allPts = [..._wpPoints];
+  const s = _parseCoords(route?.start_coords), e = _parseCoords(route?.end_coords);
+  if (s) allPts.push(s);
+  if (e) allPts.push(e);
+  if (allPts.length === 0) return;
+  if (allPts.length === 1) { _wpMap.setCenter(allPts[0]); _wpMap.setZoom(14); return; }
+  const bounds = new google.maps.LatLngBounds();
+  allPts.forEach(p => bounds.extend(p));
+  _wpMap.fitBounds(bounds, 60);
+}
+
+function wpUndo() {
+  if (_wpPoints.length > 0) { _wpPoints.pop(); _wpRedraw(); }
+}
+
+function wpClear() {
+  if (_wpPoints.length === 0) return;
+  if (!confirm(`ล้าง ${_wpPoints.length} จุดทั้งหมด?`)) return;
+  _wpPoints = [];
+  _wpRedraw();
+}
+
+async function wpSave() {
+  if (_wpSaving) return;
+  if (_wpPoints.length < 2) { alert('ต้องมีอย่างน้อย 2 จุด'); return; }
+  _wpSaving = true;
+  const btn = document.getElementById('wpSaveBtn');
+  btn.textContent = '⏳ กำลังบันทึก...'; btn.disabled = true;
+  try {
+    await apiFetch(`/admin/routes/${_wpRouteId}`, { method: 'PUT', body: JSON.stringify({ waypoints: JSON.stringify(_wpPoints) }) });
+    showToast('✅ บันทึกเส้นทางสำเร็จ', 'success');
+    // Update local cache
+    const cached = state.cache['routes'];
+    if (cached) { const r = cached.find(x => x.id === _wpRouteId); if (r) r.waypoints = JSON.stringify(_wpPoints); }
+    renderTable('routes');
+    closeWaypointEditor();
+  } catch (err) {
+    showToast('❌ บันทึกไม่สำเร็จ: ' + err.message, 'error');
+  } finally {
+    _wpSaving = false; btn.textContent = '💾 บันทึกเส้นทาง'; btn.disabled = false;
+  }
+}
+
+function closeWaypointEditor() {
+  document.getElementById('wpOverlay').style.display = 'none';
+  _wpMarkers.forEach(m => m.setMap(null));
+  _wpMarkers = []; _wpPoints = []; _wpMap = null; _wpPolyline = null; _wpRouteId = null;
+}
+
 window.addEventListener('DOMContentLoaded', init);
 
 /* =====================================================
@@ -2834,3 +2990,8 @@ window.changePageSize  = changePageSize;
 window.ssToggle        = ssToggle;
 window.ssFilter        = ssFilter;
 window.openResetPasswordModal = openResetPasswordModal;
+window.openWaypointEditor  = openWaypointEditor;
+window.closeWaypointEditor = closeWaypointEditor;
+window.wpUndo  = wpUndo;
+window.wpClear = wpClear;
+window.wpSave  = wpSave;

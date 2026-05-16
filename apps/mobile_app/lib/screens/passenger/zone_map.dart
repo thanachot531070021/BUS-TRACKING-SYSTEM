@@ -91,6 +91,32 @@ class _ZoneMapScreenState extends State<ZoneMapScreen> {
     return markers;
   }
 
+  Set<Polyline> _buildPolylines(List<RouteModel> routes) {
+    final polylines = <Polyline>{};
+    for (final route in routes) {
+      List<LatLng>? pts;
+      bool defined = false;
+      if (route.hasWaypoints) {
+        pts = route.waypointLatLngs;
+        defined = true;
+      } else {
+        final s = route.startLatLng;
+        final e = route.endLatLng;
+        if (s != null && e != null) pts = [s, e];
+      }
+      if (pts != null && pts.length >= 2) {
+        polylines.add(Polyline(
+          polylineId: PolylineId('route_${route.id}'),
+          points: pts,
+          color: const Color(0xFF2563EB),
+          width: defined ? 4 : 2,
+          patterns: defined ? [] : [PatternItem.dash(10), PatternItem.gap(6)],
+        ));
+      }
+    }
+    return polylines;
+  }
+
   // Collect all LatLng points (buses + route coords) for fitting camera
   List<LatLng> _allPoints(List<BusModel> buses, List<RouteModel> routes) {
     final pts = <LatLng>[];
@@ -150,6 +176,7 @@ class _ZoneMapScreenState extends State<ZoneMapScreen> {
     final zoneBuses = rp.busesInZone(widget.zone.id);
     final zoneRoutes = rp.routesInZone(widget.zone.id);
     final markers = _buildMarkers(zoneBuses, zoneRoutes);
+    final polylines = _buildPolylines(zoneRoutes);
     final onDutyCount = zoneBuses.where((b) => b.isOnDuty).length;
 
     return Scaffold(
@@ -191,6 +218,7 @@ class _ZoneMapScreenState extends State<ZoneMapScreen> {
               zoom: 12,
             ),
             markers: markers,
+            polylines: polylines,
             myLocationEnabled: true,
             myLocationButtonEnabled: true,
             zoomControlsEnabled: false,

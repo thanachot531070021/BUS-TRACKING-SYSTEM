@@ -158,9 +158,14 @@ class _RouteDetailState extends State<RouteDetail> {
   Set<Polyline> _buildPolylines() {
     final route = widget.route;
     List<LatLng> pts = [];
+    bool isDefined = false; // true = waypoints/polyline, false = straight fallback
 
-    if (route.hasPolyline) {
+    if (route.hasWaypoints) {
+      pts = route.waypointLatLngs!;
+      isDefined = true;
+    } else if (route.hasPolyline) {
       pts = _decodePolyline(route.routePolyline!);
+      isDefined = true;
     } else {
       final s = route.startLatLng;
       final e = route.endLatLng;
@@ -174,8 +179,8 @@ class _RouteDetailState extends State<RouteDetail> {
         polylineId: const PolylineId('route'),
         points: pts,
         color: const Color(0xFF2563EB),
-        width: 4,
-        patterns: route.hasPolyline ? [] : [PatternItem.dash(12), PatternItem.gap(6)],
+        width: isDefined ? 5 : 3,
+        patterns: isDefined ? [] : [PatternItem.dash(12), PatternItem.gap(6)],
       ),
     };
   }
