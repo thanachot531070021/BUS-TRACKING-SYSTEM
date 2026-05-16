@@ -2816,15 +2816,27 @@ let _wpSaving = false;
 let _wpEncoded = null; // encoded polyline string from Directions API
 const MAPS_API_KEY = 'AIzaSyBG7rWo1ajJ1fMzjIi_ZrCW2SPaI5H5ze8';
 
+let _mapsLoadPromise = null;
 function _loadGoogleMaps() {
-  return new Promise(resolve => {
+  if (_mapsLoadPromise) return _mapsLoadPromise;
+  _mapsLoadPromise = new Promise((resolve, reject) => {
     if (window.google?.maps) { resolve(); return; }
-    window._googleMapsReady = resolve;
+    const timeout = setTimeout(() => {
+      reject(new Error('Google Maps ใช้เวลาโหลดนานเกินไป — ตรวจสอบ API key และการเชื่อมต่ออินเตอร์เน็ต'));
+    }, 15000);
+    window._googleMapsReady = () => { clearTimeout(timeout); resolve(); };
     const s = document.createElement('script');
-    s.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_API_KEY}&callback=_googleMapsReady`;
+    s.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_API_KEY}&callback=_googleMapsReady&loading=async`;
     s.async = true;
+    s.onerror = () => {
+      clearTimeout(timeout);
+      _mapsLoadPromise = null;
+      reject(new Error('โหลด Google Maps ไม่สำเร็จ — อาจเกิดจาก API key ถูก restrict หรือ Maps JavaScript API ไม่ได้เปิดใช้งาน'));
+    };
     document.head.appendChild(s);
   });
+  _mapsLoadPromise.catch(() => { _mapsLoadPromise = null; }); // allow retry on error
+  return _mapsLoadPromise;
 }
 
 async function openWaypointEditor(routeId) {
@@ -2836,10 +2848,27 @@ async function openWaypointEditor(routeId) {
 
   document.getElementById('wpTitle').textContent = `วาดเส้นทาง: ${route.route_name}`;
   document.getElementById('wpMeta').textContent = 'กำลังโหลดแผนที่...';
+  document.getElementById('wpSnapStatus').textContent = '';
+  document.getElementById('wpMap').innerHTML = `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:#f8fafc;color:#64748b;font-size:13px">
+    <div style="width:32px;height:32px;border:3px solid #e2e8f0;border-top-color:#2563eb;border-radius:50%;animation:spin .8s linear infinite"></div>
+    <span>กำลังโหลดแผนที่...</span>
+  </div>`;
   const overlay = document.getElementById('wpOverlay');
   overlay.style.display = 'flex';
 
-  await _loadGoogleMaps();
+  try {
+    await _loadGoogleMaps();
+  } catch (err) {
+    document.getElementById('wpMeta').textContent = `❌ ${err.message}`;
+    document.getElementById('wpMap').innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;padding:24px;text-align:center;color:#dc2626">
+      <div style="font-size:48px">🗺️</div>
+      <div style="font-weight:700;font-size:16px">โหลด Google Maps ไม่สำเร็จ</div>
+      <div style="font-size:13px;color:#64748b;max-width:400px">${err.message}</div>
+      <div style="font-size:12px;color:#94a3b8;max-width:420px;line-height:1.6">วิธีแก้ไข: ไปที่ <b>Google Cloud Console → APIs & Services → Credentials</b> → เลือก API key → ตั้ง Application restrictions เป็น <b>None</b> หรือเพิ่ม HTTP referrer สำหรับ localhost/domain ของคุณ แล้วตรวจสอบว่าเปิด <b>Maps JavaScript API</b> และ <b>Directions API</b> แล้ว</div>
+    </div>`;
+    return;
+  }
+
   // Wait for browser to lay out the flex container before Google Maps measures the div
   await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
   _wpInitMap(route);
@@ -2854,6 +2883,7 @@ function _parseCoords(str) {
 
 function _wpInitMap(route) {
   const mapEl = document.getElementById('wpMap');
+  mapEl.innerHTML = ''; // clear loading overlay / previous error message
   const startPt = _parseCoords(route.start_coords);
   const center = _wpPoints[0] ?? startPt ?? {lat: 13.7563, lng: 100.5018};
 
@@ -2864,8 +2894,9 @@ function _wpInitMap(route) {
     streetViewControl: false,
     fullscreenControl: false,
   });
-  // Force map to recalculate its size after container is laid out
+  // Force map to recalculate its size after container is laid out (immediate + delayed)
   google.maps.event.trigger(_wpMap, 'resize');
+  setTimeout(() => { google.maps.event.trigger(_wpMap, 'resize'); _wpFitPoints(route); }, 300);
 
   // Reference markers: start (green) / end (red)
   const endPt = _parseCoords(route.end_coords);
