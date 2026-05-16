@@ -22,21 +22,6 @@ class _RouteDetailState extends State<RouteDetail> {
   BitmapDescriptor? _busIcon;
   static const _defaultCenter = LatLng(13.7563, 100.5018);
 
-  // Decode Google encoded polyline → list of LatLng
-  static List<LatLng> _decodePolyline(String encoded) {
-    final pts = <LatLng>[];
-    int idx = 0, lat = 0, lng = 0;
-    while (idx < encoded.length) {
-      int shift = 0, r = 0, b;
-      do { b = encoded.codeUnitAt(idx++) - 63; r |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
-      lat += (r & 1) != 0 ? ~(r >> 1) : (r >> 1);
-      shift = 0; r = 0;
-      do { b = encoded.codeUnitAt(idx++) - 63; r |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
-      lng += (r & 1) != 0 ? ~(r >> 1) : (r >> 1);
-      pts.add(LatLng(lat / 1e5, lng / 1e5));
-    }
-    return pts;
-  }
 
   @override
   void initState() {
@@ -160,11 +145,12 @@ class _RouteDetailState extends State<RouteDetail> {
     List<LatLng> pts = [];
     bool isDefined = false; // true = waypoints/polyline, false = straight fallback
 
-    if (route.hasWaypoints) {
-      pts = route.waypointLatLngs!;
+    if (route.hasPolyline) {
+      pts = RouteModel.decodePolyline(route.routePolyline!);
       isDefined = true;
-    } else if (route.hasPolyline) {
-      pts = _decodePolyline(route.routePolyline!);
+    } else if (route.hasWaypoints) {
+      // manual key-point waypoints — straight lines between
+      pts = route.waypointLatLngs!;
       isDefined = true;
     } else {
       final s = route.startLatLng;

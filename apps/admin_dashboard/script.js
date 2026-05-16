@@ -2808,10 +2808,12 @@ function setUserUI(u) {
    ===================================================== */
 let _wpMap = null;
 let _wpPolyline = null;
+let _wpRoadPolyline = null;
 let _wpMarkers = [];
 let _wpPoints = [];
 let _wpRouteId = null;
 let _wpSaving = false;
+let _wpEncoded = null; // encoded polyline string from Directions API
 const MAPS_API_KEY = 'AIzaSyBG7rWo1ajJ1fMzjIi_ZrCW2SPaI5H5ze8';
 
 function _loadGoogleMaps() {
@@ -2926,6 +2928,54 @@ function wpClear() {
   _wpRedraw();
 }
 
+function wpSnapToRoads() {
+  if (_wpPoints.length < 2) { alert('ต้องมีอย่างน้อย 2 จุดก่อนจับเส้นตามถนน'); return; }
+  if (_wpPoints.length > 25) { alert('รองรับสูงสุด 25 จุด (Directions API limit)'); return; }
+
+  const btn = document.getElementById('wpSnapBtn');
+  const status = document.getElementById('wpSnapStatus');
+  btn.textContent = '⏳ กำลังคำนวณ...'; btn.disabled = true;
+  status.textContent = ''; status.style.color = '';
+
+  const svc = new google.maps.DirectionsService();
+  const origin = new google.maps.LatLng(_wpPoints[0].lat, _wpPoints[0].lng);
+  const dest   = new google.maps.LatLng(_wpPoints[_wpPoints.length - 1].lat, _wpPoints[_wpPoints.length - 1].lng);
+  const via    = _wpPoints.slice(1, -1).map(p => ({ location: new google.maps.LatLng(p.lat, p.lng), stopover: false }));
+
+  svc.route({ origin, destination: dest, waypoints: via, travelMode: google.maps.TravelMode.DRIVING, optimizeWaypoints: false }, (result, stat) => {
+    btn.textContent = '🚗 จับเส้นตามถนน'; btn.disabled = false;
+    if (stat !== 'OK') {
+      status.textContent = `❌ ไม่สำเร็จ: ${stat}`; status.style.color = '#dc2626';
+      return;
+    }
+    const route = result.routes[0];
+    _wpEncoded = route.overview_polyline.points; // encoded polyline string
+
+    // Show road polyline (green) over the straight preview (blue)
+    if (_wpRoadPolyline) _wpRoadPolyline.setMap(null);
+    _wpRoadPolyline = new google.maps.Polyline({
+      path: route.overview_path,
+      map: _wpMap,
+      strokeColor: '#10b981',
+      strokeWeight: 5,
+      strokeOpacity: 0.9,
+      zIndex: 5,
+    });
+
+    // Fade out the straight-line preview
+    _wpPolyline.setOptions({ strokeOpacity: 0.25, strokeColor: '#94a3b8' });
+
+    const totalKm = (route.legs.reduce((s, l) => s + l.distance.value, 0) / 1000).toFixed(1);
+    status.textContent = `✅ จับเส้นตามถนนแล้ว · ${totalKm} km`; status.style.color = '#16a34a';
+    document.getElementById('wpMeta').textContent = `${_wpPoints.length} จุดอ้างอิง · ระยะทางประมาณ ${totalKm} km`;
+
+    // Fit bounds to road route
+    const bounds = new google.maps.LatLngBounds();
+    route.overview_path.forEach(p => bounds.extend(p));
+    _wpMap.fitBounds(bounds, 60);
+  });
+}
+
 async function wpSave() {
   if (_wpSaving) return;
   if (_wpPoints.length < 2) { alert('ต้องมีอย่างน้อย 2 จุด'); return; }
@@ -2933,11 +2983,16 @@ async function wpSave() {
   const btn = document.getElementById('wpSaveBtn');
   btn.textContent = '⏳ กำลังบันทึก...'; btn.disabled = true;
   try {
-    await apiFetch(`/admin/routes/${_wpRouteId}`, { method: 'PUT', body: JSON.stringify({ waypoints: JSON.stringify(_wpPoints) }) });
-    showToast('✅ บันทึกเส้นทางสำเร็จ', 'success');
+    const body = { waypoints: JSON.stringify(_wpPoints) };
+    if (_wpEncoded) body.routePolyline = _wpEncoded; // road-snapped encoded polyline
+    await apiFetch(`/admin/routes/${_wpRouteId}`, { method: 'PUT', body: JSON.stringify(body) });
+    showToast(_wpEncoded ? '✅ บันทึกเส้นทาง (ตามถนน) สำเร็จ' : '✅ บันทึกเส้นทางสำเร็จ', 'success');
     // Update local cache
     const cached = state.cache['routes'];
-    if (cached) { const r = cached.find(x => x.id === _wpRouteId); if (r) r.waypoints = JSON.stringify(_wpPoints); }
+    if (cached) {
+      const r = cached.find(x => x.id === _wpRouteId);
+      if (r) { r.waypoints = JSON.stringify(_wpPoints); if (_wpEncoded) r.route_polyline = _wpEncoded; }
+    }
     renderTable('routes');
     closeWaypointEditor();
   } catch (err) {
@@ -2950,7 +3005,9 @@ async function wpSave() {
 function closeWaypointEditor() {
   document.getElementById('wpOverlay').style.display = 'none';
   _wpMarkers.forEach(m => m.setMap(null));
-  _wpMarkers = []; _wpPoints = []; _wpMap = null; _wpPolyline = null; _wpRouteId = null;
+  if (_wpRoadPolyline) _wpRoadPolyline.setMap(null);
+  _wpMarkers = []; _wpPoints = []; _wpMap = null; _wpPolyline = null;
+  _wpRoadPolyline = null; _wpEncoded = null; _wpRouteId = null;
 }
 
 window.addEventListener('DOMContentLoaded', init);
@@ -2992,6 +3049,7 @@ window.ssFilter        = ssFilter;
 window.openResetPasswordModal = openResetPasswordModal;
 window.openWaypointEditor  = openWaypointEditor;
 window.closeWaypointEditor = closeWaypointEditor;
-window.wpUndo  = wpUndo;
-window.wpClear = wpClear;
-window.wpSave  = wpSave;
+window.wpUndo        = wpUndo;
+window.wpClear       = wpClear;
+window.wpSave        = wpSave;
+window.wpSnapToRoads = wpSnapToRoads;

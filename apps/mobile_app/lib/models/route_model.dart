@@ -83,6 +83,22 @@ class RouteModel {
     }
   }
 
+  // Decode Google encoded polyline → list of LatLng
+  static List<LatLng> decodePolyline(String encoded) {
+    final pts = <LatLng>[];
+    int idx = 0, lat = 0, lng = 0;
+    while (idx < encoded.length) {
+      int shift = 0, r = 0, b;
+      do { b = encoded.codeUnitAt(idx++) - 63; r |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+      lat += (r & 1) != 0 ? ~(r >> 1) : (r >> 1);
+      shift = 0; r = 0;
+      do { b = encoded.codeUnitAt(idx++) - 63; r |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+      lng += (r & 1) != 0 ? ~(r >> 1) : (r >> 1);
+      pts.add(LatLng(lat / 1e5, lng / 1e5));
+    }
+    return pts;
+  }
+
   // Parse "lat,lng" → LatLng
   LatLng? get startLatLng => _parseCoords(startCoords);
   LatLng? get endLatLng => _parseCoords(endCoords);

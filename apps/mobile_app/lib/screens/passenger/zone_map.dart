@@ -96,7 +96,11 @@ class _ZoneMapScreenState extends State<ZoneMapScreen> {
     for (final route in routes) {
       List<LatLng>? pts;
       bool defined = false;
-      if (route.hasWaypoints) {
+      if (route.hasPolyline) {
+        final decoded = RouteModel.decodePolyline(route.routePolyline!);
+        pts = decoded.length >= 2 ? decoded : null;
+        defined = true;
+      } else if (route.hasWaypoints) {
         pts = route.waypointLatLngs;
         defined = true;
       } else {
