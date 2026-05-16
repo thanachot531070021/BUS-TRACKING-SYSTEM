@@ -20,6 +20,12 @@ export function requiredNumber(value: unknown, field: string): ValidationResult<
   return { ok: true, data: value };
 }
 
+export function optionalFloat(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const n = typeof value === 'number' ? value : parseFloat(String(value));
+  return Number.isFinite(n) ? n : null;
+}
+
 export function oneOf<T extends string>(value: unknown, field: string, allowed: T[]): ValidationResult<T> {
   if (typeof value !== 'string' || !allowed.includes(value as T)) {
     return { ok: false, error: `${field} must be one of: ${allowed.join(', ')}` };

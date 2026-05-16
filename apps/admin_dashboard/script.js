@@ -267,8 +267,10 @@ const SECTIONS = {
     columns: [
       { key: 'route_code',     label: 'รหัสเส้นทาง',  bold: true },
       { key: 'route_name',     label: 'ชื่อเส้นทาง'  },
-      { key: 'start_location', label: 'จุดเริ่มต้น'   },
-      { key: 'end_location',   label: 'จุดสิ้นสุด'    },
+      { key: 'start_location', label: 'จุดเริ่มต้น'  },
+      { key: 'start_coords',  label: 'พิกัดเริ่ม',   r: v => v ? `<code style="font-size:11px">${esc(v)}</code>` : '—' },
+      { key: 'end_location',  label: 'จุดสิ้นสุด'   },
+      { key: 'end_coords',    label: 'พิกัดปลาย',    r: v => v ? `<code style="font-size:11px">${esc(v)}</code>` : '—' },
       { key: 'zone_id',        label: 'โซน',           r: (v, row) => {
         const z = row?.zone;
         if (z) return `<span style="font-weight:500" title="${esc(v||'')}">${esc([z.zone_code, z.zone_name].filter(Boolean).join(' — '))}</span>`;
@@ -288,8 +290,10 @@ const SECTIONS = {
         hint: 'สร้างอัตโนมัติเมื่อเลือกโซน หรือกรอกเอง'
       },
       { n: 'routeName',     rk: 'route_name',     label: 'ชื่อเส้นทาง',   type: 'text', req: true  },
-      { n: 'startLocation', rk: 'start_location', label: 'จุดเริ่มต้น',   type: 'text', req: false },
-      { n: 'endLocation',   rk: 'end_location',   label: 'จุดสิ้นสุด',    type: 'text', req: false },
+      { n: 'startLocation', rk: 'start_location', label: 'จุดเริ่มต้น (ชื่อ)', type: 'text', req: false },
+      { n: 'startCoords',   rk: 'start_coords',   label: 'พิกัดจุดเริ่มต้น',  type: 'text', req: false, hint: 'เช่น 13.756331,100.501765' },
+      { n: 'endLocation',   rk: 'end_location',   label: 'จุดสิ้นสุด (ชื่อ)', type: 'text', req: false },
+      { n: 'endCoords',     rk: 'end_coords',     label: 'พิกัดจุดสิ้นสุด',   type: 'text', req: false, hint: 'เช่น 13.756331,100.501765' },
       { n: 'status', rk: 'status', label: 'สถานะ', type: 'select', req: false,
         options: [{ v: 'active', l: '✅ ใช้งาน' }, { v: 'inactive', l: '⛔ ไม่ใช้งาน' }]
       },
@@ -1973,7 +1977,8 @@ function buildForm(fields, data, mode, defaults = {}) {
       return `<div class="form-group">
         <label class="form-label">${esc(f.label)}${req}</label>
         <input id="f_${esc(f.n)}" type="${f.type}" name="${esc(f.n)}" class="form-control"
-          value="${esc(String(val))}" placeholder="${esc(f.label)}" ${f.req ? 'required' : ''}>
+          value="${esc(String(val))}" placeholder="${esc(f.hint || f.label)}"
+          ${f.type === 'number' ? 'step="any"' : ''} ${f.req ? 'required' : ''}>
         ${hint}</div>`;
     }).join('');
 }

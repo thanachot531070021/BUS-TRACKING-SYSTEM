@@ -112,6 +112,8 @@ export type RouteSummary = {
   route_name: string;
   start_location: string;
   end_location: string;
+  start_coords?: string | null;
+  end_coords?: string | null;
   route_polyline?: string;
   status: 'active' | 'inactive';
 };
@@ -166,6 +168,8 @@ export type CreateRouteBody = {
   routeName: string;
   startLocation?: string;
   endLocation?: string;
+  startCoords?: string | null;
+  endCoords?: string | null;
   routePolyline?: string;
   zoneId?: string | null;
   status?: 'active' | 'inactive';

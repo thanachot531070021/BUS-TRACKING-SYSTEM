@@ -2,7 +2,7 @@ import { sampleRoutes } from '../data/mock';
 import { supabaseFetch, usingSupabase } from '../lib/supabase';
 import type { CreateRouteBody, Env, JsonRecord, RouteSummary, UpdateRouteBody } from '../types';
 
-const ROUTE_SELECT = 'id,route_code,route_name,start_location,end_location,route_polyline,status,zone_id,created_by,updated_by,zone:zones(id,zone_code,zone_name),created_by_user:users!fk_routes_created_by(id,full_name,username),updated_by_user:users!fk_routes_updated_by(id,full_name,username)';
+const ROUTE_SELECT = 'id,route_code,route_name,start_location,end_location,start_coords,end_coords,route_polyline,status,zone_id,created_by,updated_by,zone:zones(id,zone_code,zone_name),created_by_user:users!fk_routes_created_by(id,full_name,username),updated_by_user:users!fk_routes_updated_by(id,full_name,username)';
 
 export async function listRoutes(env: Env, zoneId?: string) {
   if (!usingSupabase(env)) return sampleRoutes;
@@ -39,6 +39,8 @@ export async function createRoute(env: Env, body: CreateRouteBody, userId?: stri
       route_name:     body.routeName,
       start_location: body.startLocation ?? null,
       end_location:   body.endLocation ?? null,
+      start_coords:   body.startCoords ?? null,
+      end_coords:     body.endCoords ?? null,
       route_polyline: body.routePolyline ?? null,
       zone_id:        body.zoneId ?? null,
       status:         body.status ?? 'active',
@@ -60,6 +62,8 @@ export async function updateRoute(env: Env, routeId: string, body: UpdateRouteBo
       route_name:     body.routeName,
       start_location: body.startLocation,
       end_location:   body.endLocation,
+      start_coords:   body.startCoords,
+      end_coords:     body.endCoords,
       route_polyline: body.routePolyline,
       zone_id:        body.zoneId,
       status:         body.status,

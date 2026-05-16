@@ -11,6 +11,8 @@ export function validateCreateRouteBody(body: any) {
       routeName:     routeName.data,
       startLocation: optionalString(body?.startLocation),
       endLocation:   optionalString(body?.endLocation),
+      startCoords:   optionalString(body?.startCoords),
+      endCoords:     optionalString(body?.endCoords),
       routePolyline: optionalString(body?.routePolyline),
       zoneId:        optionalString(body?.zoneId),
       status:        optionalString(body?.status),
