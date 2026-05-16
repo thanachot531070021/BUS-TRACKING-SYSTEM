@@ -291,25 +291,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 );
                               },
                       ),
-                      const SizedBox(height: 10),
-                      SocialLoginButton(
-                        label: 'สมัครด้วย Facebook',
-                        iconWidget: const FacebookIcon(),
-                        onTap: auth.loading
-                            ? null
-                            : () async {
-                                final ap = context.read<AuthProvider>();
-                                final nav = Navigator.of(context);
-                                final ok = await ap.loginWithFacebook();
-                                if (!mounted || !ok) return;
-                                nav.pushAndRemoveUntil(
-                                  MaterialPageRoute(
-                                      builder: (_) =>
-                                          const PassengerMainScreen()),
-                                  (_) => false,
-                                );
-                              },
-                      ),
 
                       const SizedBox(height: 20),
                       Row(mainAxisAlignment: MainAxisAlignment.center, children: [

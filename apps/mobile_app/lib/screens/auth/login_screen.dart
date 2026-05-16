@@ -258,14 +258,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           () => context.read<AuthProvider>().loginWithGoogle(),
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      SocialLoginButton(
-                        label: 'เข้าสู่ระบบด้วย Facebook',
-                        iconWidget: const FacebookIcon(),
-                        onTap: auth.loading ? null : () => _socialLogin(
-                          () => context.read<AuthProvider>().loginWithFacebook(),
-                        ),
-                      ),
 
                       const SizedBox(height: 20),
                       Row(
