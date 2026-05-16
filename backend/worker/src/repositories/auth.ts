@@ -14,7 +14,7 @@ type SupabaseAuthSession = {
   };
 };
 
-export async function registerWithPassword(env: Env, body: { email: string; password: string; username?: string; fullName?: string; role?: 'passenger' | 'driver' | 'admin' }) {
+export async function registerWithPassword(env: Env, body: { email: string; password: string; username?: string; fullName?: string; role?: 'passenger' | 'driver' | 'admin'; phoneNumber?: string }) {
   if (!usingSupabase(env)) {
     const userPayload: CreateUserBody = {
       authProvider: 'email',
@@ -22,6 +22,7 @@ export async function registerWithPassword(env: Env, body: { email: string; pass
       emailVerified: false,
       username: body.username ?? body.email,
       fullName: body.fullName ?? body.username ?? body.email,
+      phoneNumber: body.phoneNumber ?? null,
       role: body.role ?? 'passenger',
       status: 'active',
     };
@@ -57,6 +58,7 @@ export async function registerWithPassword(env: Env, body: { email: string; pass
     emailVerified: false,
     username: body.username ?? body.email,
     fullName: body.fullName ?? body.username ?? body.email,
+    phoneNumber: body.phoneNumber ?? null,
     role: body.role ?? 'passenger',
     status: 'active',
   };
@@ -143,6 +145,50 @@ export async function loginDriver(env: Env, phoneOrUsername: string, password: s
 
 export async function loginAdmin(env: Env, username: string, password: string) {
   return loginWithPassword(env, { identifier: username, password, expectedRole: 'admin' });
+}
+
+export async function loginWithFacebook(env: Env, body: { accessToken: string }) {
+  let email: string | undefined;
+  let fullName: string | undefined;
+  let avatarUrl: string | undefined;
+  let providerUserId: string;
+
+  if (usingSupabase(env)) {
+    try {
+      const res = await fetch(
+        `https://graph.facebook.com/me?access_token=${body.accessToken}&fields=id,name,email,picture.type(large)`,
+      );
+      const fb = await res.json() as any;
+      providerUserId = fb.id ?? `fb-${body.accessToken.slice(0, 12)}`;
+      email = fb.email;
+      fullName = fb.name;
+      avatarUrl = fb.picture?.data?.url;
+    } catch {
+      providerUserId = `fb-${body.accessToken.slice(0, 12)}`;
+    }
+  } else {
+    providerUserId = `fb-mock-${body.accessToken.slice(0, 12)}`;
+    email = `fb-user-${providerUserId}@mock.local`;
+    fullName = 'Facebook User';
+  }
+
+  const userPayload: CreateUserBody = {
+    authProvider: 'facebook',
+    providerUserId,
+    email: email ?? null,
+    emailVerified: !!email,
+    fullName: fullName ?? 'Facebook User',
+    avatarUrl: avatarUrl ?? null,
+    role: 'passenger',
+    status: 'active',
+  };
+
+  const user = await createUser(env, userPayload);
+  return {
+    role: 'passenger',
+    token: `mock-passenger-token:${providerUserId}`,
+    user,
+  };
 }
 
 export async function loginWithGoogle(env: Env, body: { googleIdToken: string; email?: string; fullName?: string; avatarUrl?: string }) {

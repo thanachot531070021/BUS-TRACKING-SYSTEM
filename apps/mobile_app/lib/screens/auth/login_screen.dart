@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import '../passenger/zone_picker.dart';
+import '../../widgets/social_login_widgets.dart';
+import '../passenger/passenger_main.dart';
 import '../driver/driver_home.dart';
 import '../admin_info_screen.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -23,6 +25,13 @@ class _LoginScreenState extends State<LoginScreen> {
     _identifierCtrl.dispose();
     _passwordCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _socialLogin(Future<bool> Function() fn) async {
+    final ok = await fn();
+    if (!mounted || !ok) return;
+    final auth = context.read<AuthProvider>();
+    _navigateByRole(auth.user?.role ?? 'passenger');
   }
 
   Future<void> _submit() async {
@@ -47,7 +56,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } else if (role == 'admin' || role == 'super_admin') {
       dest = const AdminInfoScreen();
     } else {
-      dest = const ZonePickerScreen();
+      dest = const PassengerMainScreen();
     }
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => dest),
@@ -195,6 +204,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                       // Login button
                       SizedBox(
+
                         height: 52,
                         child: ElevatedButton(
                           onPressed: auth.loading ? null : _submit,
@@ -223,6 +233,61 @@ class _LoginScreenState extends State<LoginScreen> {
                                       fontWeight: FontWeight.w700),
                                 ),
                         ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Divider
+                      Row(children: [
+                        const Expanded(child: Divider()),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text('หรือเข้าสู่ระบบด้วย',
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.grey[500])),
+                        ),
+                        const Expanded(child: Divider()),
+                      ]),
+                      const SizedBox(height: 16),
+
+                      // Social buttons
+                      SocialLoginButton(
+                        label: 'เข้าสู่ระบบด้วย Google',
+                        iconWidget: const GoogleIcon(),
+                        onTap: auth.loading ? null : () => _socialLogin(
+                          () => context.read<AuthProvider>().loginWithGoogle(),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      SocialLoginButton(
+                        label: 'เข้าสู่ระบบด้วย Facebook',
+                        iconWidget: const FacebookIcon(),
+                        onTap: auth.loading ? null : () => _socialLogin(
+                          () => context.read<AuthProvider>().loginWithFacebook(),
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text('ยังไม่มีบัญชี? ',
+                              style: TextStyle(
+                                  fontSize: 13, color: Colors.grey[600])),
+                          GestureDetector(
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                  builder: (_) => const RegisterScreen()),
+                            ),
+                            child: const Text(
+                              'สมัครสมาชิก',
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF2563EB),
+                                  fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -271,3 +336,4 @@ class _LoginScreenState extends State<LoginScreen> {
             const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       );
 }
+

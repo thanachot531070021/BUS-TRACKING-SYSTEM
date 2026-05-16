@@ -3,8 +3,11 @@ class ApiConfig {
       'https://bus-tracking-worker.thanachot-jo888.workers.dev';
 
   // Auth
+  static const String register = '/auth/register';
   static const String login = '/auth/login';
   static const String me = '/auth/me';
+  static const String googleLogin = '/auth/google/login';
+  static const String facebookLogin = '/auth/facebook/login';
 
   // Zones
   static const String zones = '/zones';

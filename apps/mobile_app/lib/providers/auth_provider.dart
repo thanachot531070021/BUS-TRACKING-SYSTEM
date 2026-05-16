@@ -43,6 +43,81 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<String?> register({
+    required String email,
+    required String password,
+    String? fullName,
+    String? phoneNumber,
+  }) async {
+    _loading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final resp = await _authService.register(
+        email: email,
+        password: password,
+        fullName: fullName,
+        phoneNumber: phoneNumber,
+      );
+      if (resp.token.isNotEmpty) {
+        _token = resp.token;
+        _user = resp.user;
+        apiService.setToken(_token);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(_tokenKey, _token!);
+      }
+      _loading = false;
+      notifyListeners();
+      return null; // success
+    } on ApiException catch (e) {
+      _error = e.message;
+      _loading = false;
+      notifyListeners();
+      return e.message;
+    } catch (_) {
+      _error = 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้';
+      _loading = false;
+      notifyListeners();
+      return 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้';
+    }
+  }
+
+  // ─── Social Login (shared logic) ────────────────────────────────────────────
+
+  Future<bool> _socialLogin(Future<AuthResponse> Function() fn) async {
+    _loading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      final resp = await fn();
+      _token = resp.token;
+      _user = resp.user;
+      apiService.setToken(_token);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_tokenKey, _token!);
+      _loading = false;
+      notifyListeners();
+      return true;
+    } on ApiException catch (e) {
+      _error = e.message;
+      _loading = false;
+      notifyListeners();
+      return false;
+    } catch (_) {
+      _error = 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้';
+      _loading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> loginWithGoogle() =>
+      _socialLogin(_authService.loginWithGoogle);
+
+  Future<bool> loginWithFacebook() =>
+      _socialLogin(_authService.loginWithFacebook);
+
   Future<bool> login(String identifier, String password) async {
     _loading = true;
     _error = null;

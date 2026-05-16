@@ -1,9 +1,18 @@
 import { badRequest, json, readJson } from '../lib/http';
-import { currentUserService, googleLoginService, passwordLoginService, registerService } from '../services/auth.service';
+import { currentUserService, facebookLoginService, googleLoginService, passwordLoginService, registerService } from '../services/auth.service';
 import { findAdminByUserId } from '../repositories/admins';
 import { requireAuth } from '../middleware/auth.middleware';
 import { validateLoginBody, validateRegisterBody } from '../schemas/auth.schema';
 import type { Env } from '../types';
+
+export async function handleFacebookLogin(env: Env, request: Request) {
+  const body = await readJson<{ accessToken?: string }>(request);
+  if (!body?.accessToken) return badRequest('accessToken is required');
+  return json({
+    message: 'Facebook login success',
+    data: await facebookLoginService(env, body.accessToken),
+  });
+}
 
 export async function handleGoogleLogin(env: Env, request: Request) {
   const body = await readJson<{ googleIdToken?: string; email?: string; fullName?: string; avatarUrl?: string }>(request);
@@ -24,7 +33,7 @@ export async function handleRegister(env: Env, request: Request) {
 
   return json({
     message: 'Register success',
-    data: await registerService(env, validated.data.email, validated.data.password, validated.data.username, validated.data.fullName, validated.data.role as any),
+    data: await registerService(env, validated.data.email, validated.data.password, validated.data.username, validated.data.fullName, validated.data.role as any, validated.data.phoneNumber),
   }, 201);
 }
 

@@ -1,4 +1,4 @@
-import { handleCurrentUser, handleGoogleLogin, handlePasswordLogin, handleRegister } from '../handlers/auth';
+import { handleCurrentUser, handleFacebookLogin, handleGoogleLogin, handlePasswordLogin, handleRegister } from '../handlers/auth';
 import { handleDbHealth, handleHealth } from '../handlers/health';
 import { handleCancelWaiting, handleCreateWaiting, handleGetBusById, handleGetRouteById, handleGetWaitingById, handleListRoutes, handleListWaiting, handleLiveBuses } from '../handlers/passenger';
 import { handleAdminListZones, handleAdminGetZoneById } from '../handlers/zones';
@@ -22,6 +22,7 @@ export async function publicRouter(request: Request, env: Env) {
   if (pathname === '/auth/login' && request.method === 'POST') return handlePasswordLogin(env, request);
   if (pathname === '/auth/me' && request.method === 'GET') return handleCurrentUser(env, request);
   if (pathname === '/auth/google/login' && request.method === 'POST') return handleGoogleLogin(env, request);
+  if (pathname === '/auth/facebook/login' && request.method === 'POST') return handleFacebookLogin(env, request);
   if (pathname === '/structure' && request.method === 'GET') return handleGetStructure(env);
   if (pathname === '/provinces' && request.method === 'GET') return handleListProvinces(env);
   if (pathname === '/zones' && request.method === 'GET') return handleAdminListZones(env);

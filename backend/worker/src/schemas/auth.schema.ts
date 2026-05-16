@@ -11,8 +11,9 @@ export function validateRegisterBody(body: any) {
     data: {
       email: email.data,
       password: password.data,
-      username: optionalString(body?.username),
-      fullName: optionalString(body?.fullName),
+      username:    optionalString(body?.username),
+      fullName:    optionalString(body?.fullName),
+      phoneNumber: optionalString(body?.phoneNumber),
       role: typeof body?.role === 'string' ? body.role : undefined,
     },
   };

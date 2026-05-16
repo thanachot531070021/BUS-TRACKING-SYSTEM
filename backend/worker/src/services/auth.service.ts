@@ -1,4 +1,4 @@
-import { loginAdmin, loginDriver, loginWithGoogle, loginWithPassword, registerWithPassword } from '../repositories/auth';
+import { loginAdmin, loginDriver, loginWithFacebook, loginWithGoogle, loginWithPassword, registerWithPassword } from '../repositories/auth';
 import { findUserByUsernameOrEmail, getUserByAuthUserId, getUserById } from '../repositories/users';
 import type { Env } from '../types';
 
@@ -14,12 +14,16 @@ export async function passwordLoginService(env: Env, identifier: string, passwor
   return loginWithPassword(env, { identifier, password, expectedRole });
 }
 
-export async function registerService(env: Env, email: string, password: string, username?: string, fullName?: string, role?: 'passenger' | 'driver' | 'admin') {
-  return registerWithPassword(env, { email, password, username, fullName, role });
+export async function registerService(env: Env, email: string, password: string, username?: string, fullName?: string, role?: 'passenger' | 'driver' | 'admin', phoneNumber?: string) {
+  return registerWithPassword(env, { email, password, username, fullName, role, phoneNumber });
 }
 
 export async function googleLoginService(env: Env, googleIdToken: string, email?: string, fullName?: string, avatarUrl?: string) {
   return loginWithGoogle(env, { googleIdToken, email, fullName, avatarUrl });
+}
+
+export async function facebookLoginService(env: Env, accessToken: string) {
+  return loginWithFacebook(env, { accessToken });
 }
 
 export async function currentUserService(env: Env, identifier: string, mode: 'profile-id' | 'auth-user-id' = 'profile-id') {

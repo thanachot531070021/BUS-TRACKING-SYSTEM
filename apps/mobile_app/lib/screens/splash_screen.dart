@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import 'auth/login_screen.dart';
-import 'passenger/zone_picker.dart';
+import 'passenger/passenger_main.dart';
 import 'driver/driver_home.dart';
 import 'admin_info_screen.dart';
 
@@ -37,7 +37,7 @@ class _SplashScreenState extends State<SplashScreen> {
     } else if (role == 'admin' || role == 'super_admin') {
       _go(const AdminInfoScreen());
     } else {
-      _go(const ZonePickerScreen());
+      _go(const PassengerMainScreen());
     }
   }
 
