@@ -5,6 +5,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
 import '../../models/route_model.dart';
 import '../../providers/route_provider.dart';
+import '../../utils/map_markers.dart';
 import 'route_detail.dart';
 
 class HomeTab extends StatefulWidget {
@@ -17,9 +18,10 @@ class HomeTab extends StatefulWidget {
 
 class _HomeTabState extends State<HomeTab> {
   static const _defaultCenter = LatLng(13.7563, 100.5018);
-  static const _nearbyThresholdKm = 80.0; // ≈ province radius
+  static const _nearbyThresholdKm = 80.0;
 
   GoogleMapController? _mapController;
+  BitmapDescriptor? _busIcon;
   Position? _myPosition;
   bool _filterNearby = false;
   bool _locating = false;
@@ -27,6 +29,9 @@ class _HomeTabState extends State<HomeTab> {
   @override
   void initState() {
     super.initState();
+    createBusMarker().then((icon) {
+      if (mounted) setState(() => _busIcon = icon);
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final rp = context.read<RouteProvider>();
@@ -134,8 +139,7 @@ class _HomeTabState extends State<HomeTab> {
               title: bus.plateNumber,
               snippet: bus.routeId,
             ),
-            icon: BitmapDescriptor.defaultMarkerWithHue(
-                BitmapDescriptor.hueBlue),
+            icon: _busIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
           ),
     };
 

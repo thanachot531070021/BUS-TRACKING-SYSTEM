@@ -5,6 +5,7 @@ import '../../models/bus_model.dart';
 import '../../models/route_model.dart';
 import '../../models/zone_model.dart';
 import '../../providers/route_provider.dart';
+import '../../utils/map_markers.dart';
 import 'route_detail.dart';
 
 class ZoneMapScreen extends StatefulWidget {
@@ -17,12 +18,16 @@ class ZoneMapScreen extends StatefulWidget {
 
 class _ZoneMapScreenState extends State<ZoneMapScreen> {
   GoogleMapController? _mapController;
+  BitmapDescriptor? _busIcon;
   static const _defaultCenter = LatLng(13.7563, 100.5018);
   bool _showRouteSheet = false;
 
   @override
   void initState() {
     super.initState();
+    createBusMarker().then((icon) {
+      if (mounted) setState(() => _busIcon = icon);
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final rp = context.read<RouteProvider>();
@@ -41,13 +46,13 @@ class _ZoneMapScreenState extends State<ZoneMapScreen> {
   Set<Marker> _buildMarkers(List<BusModel> buses, List<RouteModel> routes) {
     final markers = <Marker>{};
 
-    // Bus markers (blue)
+    // Bus markers
     for (final bus in buses) {
       if (!bus.hasLocation || !bus.isOnDuty) continue;
       markers.add(Marker(
         markerId: MarkerId('bus_${bus.id}'),
         position: LatLng(bus.currentLat!, bus.currentLng!),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+        icon: _busIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
         infoWindow: InfoWindow(
           title: bus.plateNumber,
           snippet: 'กำลังวิ่ง',

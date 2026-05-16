@@ -6,6 +6,7 @@ import '../../models/route_model.dart';
 import '../../providers/route_provider.dart';
 import '../../services/location_service.dart';
 import '../../services/api_service.dart';
+import '../../utils/map_markers.dart';
 
 class RouteDetail extends StatefulWidget {
   final RouteModel route;
@@ -18,6 +19,7 @@ class RouteDetail extends StatefulWidget {
 class _RouteDetailState extends State<RouteDetail> {
   bool _waitingLoading = false;
   GoogleMapController? _mapController;
+  BitmapDescriptor? _busIcon;
   static const _defaultCenter = LatLng(13.7563, 100.5018);
 
   // Decode Google encoded polyline → list of LatLng
@@ -39,6 +41,9 @@ class _RouteDetailState extends State<RouteDetail> {
   @override
   void initState() {
     super.initState();
+    createBusMarker().then((icon) {
+      if (mounted) setState(() => _busIcon = icon);
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final rp = context.read<RouteProvider>();
@@ -105,7 +110,7 @@ class _RouteDetailState extends State<RouteDetail> {
       markers.add(Marker(
         markerId: MarkerId('bus_${bus.id}'),
         position: LatLng(bus.currentLat!, bus.currentLng!),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+        icon: _busIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
         infoWindow: InfoWindow(
           title: bus.plateNumber,
           snippet: bus.isOnDuty ? 'กำลังวิ่ง' : 'หยุด',
