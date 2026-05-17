@@ -3058,14 +3058,9 @@ async function wpSave() {
     if (_wpEncoded) body.routePolyline = _wpEncoded; // road-snapped encoded polyline
     await apiFetch(`/admin/routes/${_wpRouteId}`, { method: 'PUT', body: JSON.stringify(body) });
     showToast(_wpEncoded ? '✅ บันทึกเส้นทาง (ตามถนน) สำเร็จ' : '✅ บันทึกเส้นทางสำเร็จ', 'success');
-    // Update local cache
-    const cached = state.cache['routes'];
-    if (cached) {
-      const r = cached.find(x => x.id === _wpRouteId);
-      if (r) { r.waypoints = JSON.stringify(_wpPoints); if (_wpEncoded) r.route_polyline = _wpEncoded; }
-    }
-    renderTable('routes');
     closeWaypointEditor();
+    delete state.cache['routes'];
+    await loadSection('routes');
   } catch (err) {
     showToast('❌ บันทึกไม่สำเร็จ: ' + err.message, 'error');
   } finally {
