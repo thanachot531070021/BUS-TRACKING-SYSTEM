@@ -2814,7 +2814,7 @@ let _wpPoints = [];
 let _wpRouteId = null;
 let _wpSaving = false;
 let _wpEncoded = null; // encoded polyline string from Directions API
-const MAPS_API_KEY = 'AIzaSyBG7rWo1ajJ1fMzjIi_ZrCW2SPaI5H5ze8';
+const MAPS_API_KEY = 'AIzaSyD7S9gqNZQ4rQDbNlDdCr0uDGz1RhWvwwM';
 
 let _mapsLoadPromise = null;
 function _loadGoogleMaps() {
@@ -2964,33 +2964,46 @@ function wpClear() {
   _wpRedraw();
 }
 
-function wpSnapToRoads() {
+function _decodePolyline5(encoded) {
+  const pts = [];
+  let idx = 0, lat = 0, lng = 0;
+  while (idx < encoded.length) {
+    let shift = 0, r = 0, b;
+    do { b = encoded.charCodeAt(idx++) - 63; r |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+    lat += (r & 1) ? ~(r >> 1) : (r >> 1);
+    shift = 0; r = 0;
+    do { b = encoded.charCodeAt(idx++) - 63; r |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+    lng += (r & 1) ? ~(r >> 1) : (r >> 1);
+    pts.push({ lat: lat / 1e5, lng: lng / 1e5 });
+  }
+  return pts;
+}
+
+async function wpSnapToRoads() {
   if (_wpPoints.length < 2) { alert('ต้องมีอย่างน้อย 2 จุดก่อนจับเส้นตามถนน'); return; }
-  if (_wpPoints.length > 25) { alert('รองรับสูงสุด 25 จุด (Directions API limit)'); return; }
 
   const btn = document.getElementById('wpSnapBtn');
   const status = document.getElementById('wpSnapStatus');
   btn.textContent = '⏳ กำลังคำนวณ...'; btn.disabled = true;
   status.textContent = ''; status.style.color = '';
 
-  const svc = new google.maps.DirectionsService();
-  const origin = new google.maps.LatLng(_wpPoints[0].lat, _wpPoints[0].lng);
-  const dest   = new google.maps.LatLng(_wpPoints[_wpPoints.length - 1].lat, _wpPoints[_wpPoints.length - 1].lng);
-  const via    = _wpPoints.slice(1, -1).map(p => ({ location: new google.maps.LatLng(p.lat, p.lng), stopover: false }));
+  try {
+    // OSRM — free routing engine, no API key needed
+    const coords = _wpPoints.map(p => `${p.lng},${p.lat}`).join(';');
+    const res = await fetch(`https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=polyline`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data.code !== 'Ok' || !data.routes?.[0]) throw new Error(data.message || 'ไม่พบเส้นทาง');
 
-  svc.route({ origin, destination: dest, waypoints: via, travelMode: google.maps.TravelMode.DRIVING, optimizeWaypoints: false }, (result, stat) => {
-    btn.textContent = '🚗 จับเส้นตามถนน'; btn.disabled = false;
-    if (stat !== 'OK') {
-      status.textContent = `❌ ไม่สำเร็จ: ${stat}`; status.style.color = '#dc2626';
-      return;
-    }
-    const route = result.routes[0];
-    _wpEncoded = route.overview_polyline.points; // encoded polyline string
+    const route = data.routes[0];
+    _wpEncoded = route.geometry; // encoded polyline5 string
+
+    const path = _decodePolyline5(_wpEncoded);
 
     // Show road polyline (green) over the straight preview (blue)
     if (_wpRoadPolyline) _wpRoadPolyline.setMap(null);
     _wpRoadPolyline = new google.maps.Polyline({
-      path: route.overview_path,
+      path,
       map: _wpMap,
       strokeColor: '#10b981',
       strokeWeight: 5,
@@ -3001,15 +3014,37 @@ function wpSnapToRoads() {
     // Fade out the straight-line preview
     _wpPolyline.setOptions({ strokeOpacity: 0.25, strokeColor: '#94a3b8' });
 
-    const totalKm = (route.legs.reduce((s, l) => s + l.distance.value, 0) / 1000).toFixed(1);
+    const totalKm = (route.distance / 1000).toFixed(1);
     status.textContent = `✅ จับเส้นตามถนนแล้ว · ${totalKm} km`; status.style.color = '#16a34a';
     document.getElementById('wpMeta').textContent = `${_wpPoints.length} จุดอ้างอิง · ระยะทางประมาณ ${totalKm} km`;
 
     // Fit bounds to road route
     const bounds = new google.maps.LatLngBounds();
-    route.overview_path.forEach(p => bounds.extend(p));
+    path.forEach(p => bounds.extend(p));
     _wpMap.fitBounds(bounds, 60);
-  });
+  } catch (err) {
+    status.textContent = `❌ ไม่สำเร็จ: ${err.message}`; status.style.color = '#dc2626';
+  } finally {
+    btn.textContent = '🚗 จับเส้นตามถนน'; btn.disabled = false;
+  }
+}
+
+function wpLocateMe() {
+  if (!navigator.geolocation) { alert('เบราว์เซอร์นี้ไม่รองรับ Geolocation'); return; }
+  const btn = document.getElementById('wpLocateBtn');
+  btn.textContent = '⏳'; btn.disabled = true;
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      btn.textContent = '📍 ตำแหน่งของฉัน'; btn.disabled = false;
+      _wpMap.setCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      _wpMap.setZoom(16);
+    },
+    err => {
+      btn.textContent = '📍 ตำแหน่งของฉัน'; btn.disabled = false;
+      alert('ระบุตำแหน่งไม่ได้: ' + err.message);
+    },
+    { timeout: 10000 }
+  );
 }
 
 async function wpSave() {
@@ -3089,3 +3124,4 @@ window.wpUndo        = wpUndo;
 window.wpClear       = wpClear;
 window.wpSave        = wpSave;
 window.wpSnapToRoads = wpSnapToRoads;
+window.wpLocateMe    = wpLocateMe;
