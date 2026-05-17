@@ -293,7 +293,7 @@ const SECTIONS = {
       { key: 'created_by', label: 'สร้างโดย', r: (v, row) => row?.created_by_user ? esc(row.created_by_user.full_name || row.created_by_user.username || v) : (v ? chip(v) : '—') },
       { key: 'updated_by', label: 'แก้ไขล่าสุดโดย', r: (v, row) => row?.updated_by_user ? esc(row.updated_by_user.full_name || row.updated_by_user.username || v) : (v ? chip(v) : '—') },
     ],
-    extraRowBtns: item => `<button class="btn btn-icon btn-sm" style="background:#eff6ff;color:#2563eb;border:1.5px solid #bfdbfe" title="วาดเส้นทาง" onclick="openWaypointEditor('${esc(String(item.id))}')">🗺️</button>`,
+    extraRowBtns: item => `<button class="btn btn-icon btn-sm" style="background:#eff6ff;color:#2563eb;border:1.5px solid #bfdbfe" title="วาดเส้นทาง" data-wp-id="${esc(String(item.id))}">🗺️</button>`,
     formFields: [
       { n: 'zoneId', rk: 'zone_id', label: 'โซน', type: 'async-select', req: true,
         fetchPath: '/admin/zones',
@@ -3101,6 +3101,12 @@ function closeWaypointEditor() {
 }
 
 window.addEventListener('DOMContentLoaded', init);
+
+// Event delegation for dynamically-generated waypoint editor buttons
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[data-wp-id]');
+  if (btn) openWaypointEditor(btn.dataset.wpId);
+});
 
 /* =====================================================
    EXPOSE GLOBALS (required for inline onclick in HTML
