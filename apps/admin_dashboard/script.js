@@ -2843,6 +2843,7 @@ async function openWaypointEditor(routeId) {
   const route = (state.cache['routes'] || []).find(r => r.id === routeId);
   if (!route) return;
   _wpRouteId = routeId;
+  _wpEncoded = route.route_polyline || null; // restore saved road polyline
   _wpPoints = [];
   try { const p = route.waypoints ? JSON.parse(route.waypoints) : []; if (Array.isArray(p)) _wpPoints = p.map(pt => ({lat: Number(pt.lat), lng: Number(pt.lng)})); } catch {}
 
@@ -2917,7 +2918,27 @@ function _wpInitMap(route) {
   });
 
   _wpRedraw();
-  _wpFitPoints(route);
+
+  // Restore saved road polyline (from previous snap-to-roads)
+  if (_wpEncoded) {
+    const path = _decodePolyline5(_wpEncoded);
+    _wpRoadPolyline = new google.maps.Polyline({
+      path,
+      map: _wpMap,
+      strokeColor: '#10b981',
+      strokeWeight: 5,
+      strokeOpacity: 0.9,
+      zIndex: 5,
+    });
+    _wpPolyline.setOptions({ strokeOpacity: 0.25, strokeColor: '#94a3b8' });
+    const bounds = new google.maps.LatLngBounds();
+    path.forEach(p => bounds.extend(p));
+    _wpMap.fitBounds(bounds, 60);
+    const status = document.getElementById('wpSnapStatus');
+    status.textContent = '✅ เส้นทางตามถนน (บันทึกแล้ว)'; status.style.color = '#16a34a';
+  } else {
+    _wpFitPoints(route);
+  }
 }
 
 function _wpMarkerIcon(idx, total) {
@@ -3055,15 +3076,15 @@ async function wpSave() {
   btn.textContent = '⏳ กำลังบันทึก...'; btn.disabled = true;
   try {
     const body = { waypoints: JSON.stringify(_wpPoints) };
-    if (_wpEncoded) body.routePolyline = _wpEncoded; // road-snapped encoded polyline
+    if (_wpEncoded) body.routePolyline = _wpEncoded;
     await apiFetch(`/admin/routes/${_wpRouteId}`, { method: 'PUT', body: JSON.stringify(body) });
     showToast(_wpEncoded ? '✅ บันทึกเส้นทาง (ตามถนน) สำเร็จ' : '✅ บันทึกเส้นทางสำเร็จ', 'success');
     closeWaypointEditor();
+    // reload routes table in background — don't let reload errors affect save result
     delete state.cache['routes'];
-    await loadSection('routes');
+    loadSection('routes').catch(e => console.warn('reload routes:', e));
   } catch (err) {
     showToast('❌ บันทึกไม่สำเร็จ: ' + err.message, 'error');
-  } finally {
     _wpSaving = false; btn.textContent = '💾 บันทึกเส้นทาง'; btn.disabled = false;
   }
 }
