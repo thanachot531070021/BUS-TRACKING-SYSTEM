@@ -3068,24 +3068,27 @@ function wpLocateMe() {
   );
 }
 
+function _wpSetSaving(on) {
+  _wpSaving = on;
+  const ov = document.getElementById('wpSaveOverlay');
+  if (ov) ov.style.display = on ? 'flex' : 'none';
+}
+
 async function wpSave() {
   if (_wpSaving) return;
   if (_wpPoints.length < 2) { alert('ต้องมีอย่างน้อย 2 จุด'); return; }
-  _wpSaving = true;
-  const btn = document.getElementById('wpSaveBtn');
-  btn.textContent = '⏳ กำลังบันทึก...'; btn.disabled = true;
+  _wpSetSaving(true);
   try {
     const body = { waypoints: JSON.stringify(_wpPoints) };
     if (_wpEncoded) body.routePolyline = _wpEncoded;
     await apiFetch(`/admin/routes/${_wpRouteId}`, { method: 'PUT', body: JSON.stringify(body) });
     showToast(_wpEncoded ? '✅ บันทึกเส้นทาง (ตามถนน) สำเร็จ' : '✅ บันทึกเส้นทางสำเร็จ', 'success');
     closeWaypointEditor();
-    // reload routes table in background — don't let reload errors affect save result
     delete state.cache['routes'];
     loadSection('routes').catch(e => console.warn('reload routes:', e));
   } catch (err) {
+    _wpSetSaving(false);
     showToast('❌ บันทึกไม่สำเร็จ: ' + err.message, 'error');
-    _wpSaving = false; btn.textContent = '💾 บันทึกเส้นทาง'; btn.disabled = false;
   }
 }
 
@@ -3134,6 +3137,7 @@ window.changePageSize  = changePageSize;
 window.ssToggle        = ssToggle;
 window.ssFilter        = ssFilter;
 window.openResetPasswordModal = openResetPasswordModal;
+window.showToast           = showToast;
 window.openWaypointEditor  = openWaypointEditor;
 window.closeWaypointEditor = closeWaypointEditor;
 window.wpUndo        = wpUndo;
