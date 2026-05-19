@@ -1,5 +1,6 @@
+import { handleAdminCreateAnnouncement, handleAdminDeleteAnnouncement, handleAdminGetAnnouncementById, handleAdminListAnnouncements, handleAdminUpdateAnnouncement } from '../handlers/announcements';
 import { handleAdminCreateBus, handleAdminCreateRoute, handleAdminDashboardSummary, handleAdminDeleteBus, handleAdminDeleteRoute, handleAdminGetBusById, handleAdminGetRouteById, handleAdminListBuses, handleAdminListRoutes, handleAdminLogin, handleAdminRouteBuses, handleAdminRouteWaitingSummary, handleAdminUpdateBus, handleAdminUpdateRoute, handleAdminWaiting, handleAdminWaitingSummary } from '../handlers/admin';
-import { handleAdminCreateAdmin, handleAdminCreateAdminWithUser, handleAdminCreateDriver, handleAdminCreateDriverWithUser, handleAdminCreateRouteAdmin, handleAdminCreateUser, handleAdminDeleteAdmin, handleAdminDeleteDriver, handleAdminDeleteRouteAdmin, handleAdminDeleteUser, handleAdminGetAdminById, handleAdminGetDriverById, handleAdminGetRouteAdminById, handleAdminGetUserById, handleAdminListAdmins, handleAdminListDrivers, handleAdminListRouteAdmins, handleAdminListUsers, handleAdminResetPassword, handleAdminUpdateAdmin, handleAdminUpdateDriver, handleAdminUpdateUser } from '../handlers/admin-users';
+import { handleAdminCreateAdmin, handleAdminCreateAdminWithUser, handleAdminCreateDriver, handleAdminCreateDriverWithUser, handleAdminCreateRouteAdmin, handleAdminCreateUser, handleAdminDeleteAdmin, handleAdminDeleteDriver, handleAdminDeleteRouteAdmin, handleAdminDeleteUser, handleAdminGetAdminById, handleAdminGetDriverById, handleAdminGetRouteAdminById, handleAdminGetUserById, handleAdminListAdmins, handleAdminListDrivers, handleAdminListRouteAdmins, handleAdminListUsers, handleAdminResetPassword, handleAdminUpdateAdmin, handleAdminUpdateDriver, handleAdminUpdateUser, handleAdminVerifyEmail } from '../handlers/admin-users';
 import { handleAdminCreateZone, handleAdminDeleteZone, handleAdminGetZoneById, handleAdminListZones, handleAdminUpdateZone } from '../handlers/zones';
 import { handleListProvinces } from '../handlers/provinces';
 import { handleGetAnalytics, handleLogEvent } from '../handlers/analytics';
@@ -44,6 +45,17 @@ export async function adminRouter(request: Request, env: Env) {
     if (auth instanceof Response) return auth;
     const userId = pathname.split('/')[3] ?? '';
     return handleAdminResetPassword(env, request, userId, auth);
+  }
+
+  // ── Verify Email (super admin only) ──────────────────────────────────────
+  if (pathname.startsWith('/admin/users/') && pathname.endsWith('/verify-email') && request.method === 'POST') {
+    const auth = await requireRole(env, request, ['admin']);
+    if (auth instanceof Response) return auth;
+    const enriched = await enrichAdminScope(env, auth);
+    if (enriched instanceof Response) return enriched;
+    if (enriched.adminType !== 'super_admin') return json({ error: 'Forbidden: only super admin can verify emails' }, 403);
+    const userId = pathname.split('/')[3] ?? '';
+    return handleAdminVerifyEmail(env, userId);
   }
 
   // ── Users (Super Admin only) ─────────────────────────────────────────────
@@ -205,6 +217,20 @@ export async function adminRouter(request: Request, env: Env) {
     const auth = await requireAdminScope(env, request);
     if (auth instanceof Response) return auth;
     return handleListProvinces(env);
+  }
+
+  // ── Announcements (Super Admin only) ─────────────────────────────────────
+  if (pathname === '/admin/announcements' || pathname.startsWith('/admin/announcements/')) {
+    const auth = await requireRole(env, request, ['admin']);
+    if (auth instanceof Response) return auth;
+    const enriched = await enrichAdminScope(env, auth);
+    if (enriched instanceof Response) return enriched;
+    if (enriched.adminType !== 'super_admin') return json({ error: 'Forbidden: only super admin can manage announcements' }, 403);
+    if (pathname === '/admin/announcements' && request.method === 'GET')    return handleAdminListAnnouncements(env);
+    if (pathname === '/admin/announcements' && request.method === 'POST')   return handleAdminCreateAnnouncement(env, request, enriched);
+    if (pathname.startsWith('/admin/announcements/') && request.method === 'GET')    return handleAdminGetAnnouncementById(env, getIdFromPath(pathname, '/admin/announcements/') ?? '');
+    if (pathname.startsWith('/admin/announcements/') && request.method === 'PUT')    return handleAdminUpdateAnnouncement(env, request, getIdFromPath(pathname, '/admin/announcements/') ?? '', enriched);
+    if (pathname.startsWith('/admin/announcements/') && request.method === 'DELETE') return handleAdminDeleteAnnouncement(env, getIdFromPath(pathname, '/admin/announcements/') ?? '');
   }
 
   return notFound();

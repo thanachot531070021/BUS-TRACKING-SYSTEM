@@ -1,5 +1,5 @@
 import { createUser, findUserByUsernameOrEmail, updateUser } from './users';
-import { getSupabaseAnonKey, supabaseAuthFetch, usingSupabase } from '../lib/supabase';
+import { getSupabaseAnonKey, supabaseAdminAuthFetch, supabaseAuthFetch, usingSupabase } from '../lib/supabase';
 import type { CreateUserBody, Env } from '../types';
 
 type SupabaseAuthSession = {
@@ -110,13 +110,42 @@ export async function loginWithPassword(env: Env, body: { identifier: string; pa
     throw new Error('No email found for login identifier');
   }
 
-  const session = await supabaseAuthFetch<SupabaseAuthSession>(env, 'token?grant_type=password', {
-    method: 'POST',
-    body: JSON.stringify({
-      email: loginEmail,
-      password: body.password,
-    }),
-  });
+  // Attempt login; if Supabase rejects due to unconfirmed email but our DB says
+  // the admin already verified this user, confirm in Supabase on-the-fly and retry.
+  let session: SupabaseAuthSession;
+  try {
+    session = await supabaseAuthFetch<SupabaseAuthSession>(env, 'token?grant_type=password', {
+      method: 'POST',
+      body: JSON.stringify({ email: loginEmail, password: body.password }),
+    });
+  } catch (loginErr) {
+    const errMsg = String((loginErr as any)?.message ?? '');
+    const isEmailNotConfirmed = errMsg.includes('Email not confirmed') || errMsg.includes('email_not_confirmed');
+    if (isEmailNotConfirmed && env.SUPABASE_SERVICE_ROLE_KEY) {
+      // Re-fetch profile in case it wasn't loaded yet (identifier could be username)
+      const profile = user ?? await findUserByUsernameOrEmail(env, loginEmail).catch(() => null);
+      if (profile?.email_verified && profile.auth_user_id) {
+        // Admin has verified this in our DB — sync to Supabase Auth now and retry
+        try {
+          await supabaseAdminAuthFetch(env, `admin/users/${profile.auth_user_id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ email_confirm: true }),
+          });
+        } catch {
+          throw loginErr; // Supabase Admin call failed — surface the original error
+        }
+        // Retry the actual login now that email is confirmed in Supabase
+        session = await supabaseAuthFetch<SupabaseAuthSession>(env, 'token?grant_type=password', {
+          method: 'POST',
+          body: JSON.stringify({ email: loginEmail, password: body.password }),
+        });
+      } else {
+        throw loginErr;
+      }
+    } else {
+      throw loginErr;
+    }
+  }
 
   const profile = user ?? (session.user?.email ? await findUserByUsernameOrEmail(env, session.user.email) : null);
 

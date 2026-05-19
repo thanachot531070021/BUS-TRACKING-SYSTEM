@@ -10,7 +10,7 @@ import 'route_detail.dart';
 
 class HomeTab extends StatefulWidget {
   final double topBarHeight;
-  const HomeTab({super.key, required this.topBarHeight});
+  const HomeTab({super.key, this.topBarHeight = 0.0});
 
   @override
   State<HomeTab> createState() => _HomeTabState();

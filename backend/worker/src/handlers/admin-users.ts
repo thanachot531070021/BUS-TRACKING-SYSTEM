@@ -360,6 +360,41 @@ export async function handleAdminDeleteRouteAdmin(env: Env, assignmentId: string
   return json({ message: 'Route admin assignment deleted', data: await deleteRouteAdminService(env, assignmentId) });
 }
 
+// ===== VERIFY EMAIL =====
+export async function handleAdminVerifyEmail(env: Env, userId: string) {
+  if (!userId) return badRequest('userId is required');
+
+  const user = await getUserByIdService(env, userId) as any;
+  if (!user) return json({ error: 'ไม่พบผู้ใช้' }, 404);
+  if (user.email_verified) {
+    return json({ message: 'Email นี้ได้รับการยืนยันแล้ว', alreadyVerified: true });
+  }
+
+  // Mark email_verified = true in our DB
+  await updateUserService(env, userId, { emailVerified: true } as any);
+
+  // Also confirm in Supabase Auth when possible so the user can actually log in
+  let authWarning: string | undefined;
+  if (user.auth_user_id) {
+    if (env.SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        await supabaseAdminAuthFetch(env, `admin/users/${user.auth_user_id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ email_confirm: true }),
+        });
+      } catch (e) {
+        authWarning = `DB updated but Supabase Auth confirm failed: ${String((e as any)?.message ?? '')}`;
+      }
+    } else if (usingSupabase(env)) {
+      authWarning = 'SUPABASE_SERVICE_ROLE_KEY not configured — DB updated but Supabase Auth email not confirmed';
+    }
+  }
+
+  const resp: Record<string, unknown> = { message: 'ยืนยัน Email สำเร็จ' };
+  if (authWarning) resp.warning = authWarning;
+  return json(resp);
+}
+
 // ===== RESET PASSWORD =====
 export async function handleAdminResetPassword(env: Env, request: Request, userId: string, auth?: AuthContext) {
   if (!userId) return badRequest('userId is required');

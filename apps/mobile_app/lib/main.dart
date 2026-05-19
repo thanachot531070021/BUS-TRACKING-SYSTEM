@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config/supabase_config.dart';
+import 'providers/announcement_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/driver_provider.dart';
+import 'providers/favorites_provider.dart';
 import 'providers/route_provider.dart';
 import 'screens/splash_screen.dart';
 import 'services/api_service.dart';
@@ -59,6 +61,12 @@ class BusTrackingApp extends StatelessWidget {
             ctx.read<LocationService>(),
             ctx.read<WaitingService>(),
           ),
+        ),
+        ChangeNotifierProvider<AnnouncementProvider>(
+          create: (_) => AnnouncementProvider(),
+        ),
+        ChangeNotifierProvider<FavoritesProvider>(
+          create: (_) => FavoritesProvider(),
         ),
       ],
       child: MaterialApp(

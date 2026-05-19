@@ -4,6 +4,8 @@ import { handleCancelWaiting, handleCreateWaiting, handleGetBusById, handleGetRo
 import { handleAdminListZones, handleAdminGetZoneById } from '../handlers/zones';
 import { handleListProvinces } from '../handlers/provinces';
 import { handleGetStructure } from '../handlers/structure';
+import { handleListAnnouncements } from '../handlers/announcements';
+import { handleAddFavorite, handleListFavorites, handleListTripHistory, handleRemoveFavorite } from '../handlers/favorites';
 import { notFound } from '../lib/http';
 import { requireAuth } from '../middleware/auth.middleware';
 import type { Env } from '../types';
@@ -55,6 +57,34 @@ export async function publicRouter(request: Request, env: Env) {
     if (auth instanceof Response) return auth;
     const waitingId = getIdFromPath(pathname, '/waiting/');
     return handleCancelWaiting(env, waitingId ?? '');
+  }
+
+  // ── Announcements (public read) ──────────────────────────────────────────
+  if (pathname === '/announcements' && request.method === 'GET') return handleListAnnouncements(env);
+
+  // ── User: favorites (requires Bearer) ───────────────────────────────────
+  if (pathname === '/user/favorites' && request.method === 'GET') {
+    const auth = requireAuth(request);
+    if (auth instanceof Response) return auth;
+    return handleListFavorites(env, auth);
+  }
+  if (pathname === '/user/favorites' && request.method === 'POST') {
+    const auth = requireAuth(request);
+    if (auth instanceof Response) return auth;
+    return handleAddFavorite(env, request, auth);
+  }
+  if (pathname.startsWith('/user/favorites/') && request.method === 'DELETE') {
+    const auth = requireAuth(request);
+    if (auth instanceof Response) return auth;
+    const routeId = getIdFromPath(pathname, '/user/favorites/');
+    return handleRemoveFavorite(env, routeId ?? '', auth);
+  }
+
+  // ── User: trip history (requires Bearer) ────────────────────────────────
+  if (pathname === '/user/history' && request.method === 'GET') {
+    const auth = requireAuth(request);
+    if (auth instanceof Response) return auth;
+    return handleListTripHistory(env, request, auth);
   }
 
   return notFound();

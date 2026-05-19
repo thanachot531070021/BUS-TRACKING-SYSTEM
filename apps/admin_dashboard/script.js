@@ -45,7 +45,7 @@ async function apiFetch(path, opts = {}, auth = true) {
 function extractList(r) {
   if (Array.isArray(r)) return r;
   const keys = ['data','users','drivers','admins','routes','buses',
-                 'assignments','waiting','items','list','results'];
+                 'assignments','waiting','announcements','items','list','results'];
   for (const k of keys) if (Array.isArray(r?.[k])) return r[k];
   return Object.values(r || {}).find(v => Array.isArray(v)) || [];
 }
@@ -81,13 +81,19 @@ const SECTIONS = {
     idField: 'id',
     resetPassword: true,
     columns: [
-      { key: 'id',        label: 'ID',           r: chip },
-      { key: 'username',  label: 'Username',      bold: true },
-      { key: 'full_name', label: 'ชื่อ-นามสกุล' },
-      { key: 'email',     label: 'Email' },
-      { key: 'role',      label: 'บทบาท',         r: (v, row) => roleBadge(v, row) },
-      { key: 'status',    label: 'สถานะ',          r: statusBadge },
+      { key: 'id',             label: 'ID',              r: chip },
+      { key: 'username',       label: 'Username',         bold: true },
+      { key: 'full_name',      label: 'ชื่อ-นามสกุล' },
+      { key: 'email',          label: 'Email' },
+      { key: 'email_verified', label: 'Email ยืนยัน',    r: v => v
+          ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;background:#f0fdf4;color:#16a34a;font-size:12px;font-weight:600">✅ ยืนยันแล้ว</span>'
+          : '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:20px;background:#fff7ed;color:#d97706;font-size:12px;font-weight:600">⏳ รอยืนยัน</span>' },
+      { key: 'role',           label: 'บทบาท',            r: (v, row) => roleBadge(v, row) },
+      { key: 'status',         label: 'สถานะ',             r: statusBadge },
     ],
+    extraRowBtns: item => !item.email_verified
+      ? `<button class="btn btn-icon btn-sm" title="ยืนยัน Email" style="background:#eff6ff;color:#2563eb;border:1.5px solid #bfdbfe" onclick="verifyEmail('${esc(String(item.id))}')">✉️</button>`
+      : '',
     formFields: [
       { n: 'username',     rk: 'username',     label: 'Username',      type: 'text',     req: true  },
       { n: 'email',        rk: 'email',        label: 'Email',          type: 'email',    req: true  },
@@ -305,9 +311,7 @@ const SECTIONS = {
       },
       { n: 'routeName',     rk: 'route_name',     label: 'ชื่อเส้นทาง',   type: 'text', req: true  },
       { n: 'startLocation', rk: 'start_location', label: 'จุดเริ่มต้น (ชื่อ)', type: 'text', req: false },
-      { n: 'startCoords',   rk: 'start_coords',   label: 'พิกัดจุดเริ่มต้น',  type: 'text', req: false, hint: 'เช่น 13.756331,100.501765' },
       { n: 'endLocation',   rk: 'end_location',   label: 'จุดสิ้นสุด (ชื่อ)', type: 'text', req: false },
-      { n: 'endCoords',     rk: 'end_coords',     label: 'พิกัดจุดสิ้นสุด',   type: 'text', req: false, hint: 'เช่น 13.756331,100.501765' },
       { n: 'status', rk: 'status', label: 'สถานะ', type: 'select', req: false,
         options: [{ v: 'active', l: '✅ ใช้งาน' }, { v: 'inactive', l: '⛔ ไม่ใช้งาน' }]
       },
@@ -407,6 +411,64 @@ const SECTIONS = {
   busDriver: {
     title: 'รถและคนขับ', icon: '🚌',
     subtitle: 'จัดการรถโดยสารและคนขับรถ',
+  },
+
+  announcements: {
+    title: 'ข่าวสาร & โปรโมชั่น', icon: '📣',
+    subtitle: 'จัดการแบนเนอร์และข่าวสารที่แสดงในแอปผู้โดยสาร',
+    listPath:   '/admin/announcements',
+    createPath: '/admin/announcements',
+    updatePath: id => `/admin/announcements/${id}`,
+    deletePath: id => `/admin/announcements/${id}`,
+    idField: 'id',
+    columns: [
+      { key: 'sort_order', label: 'ลำดับ',      r: v => `<span style="font-weight:700;font-family:'JetBrains Mono',monospace">${v ?? 0}</span>` },
+      { key: 'type',       label: 'ประเภท',       r: v => {
+        const map = { promo: '<span class="badge b-purple">🎁 Promo Banner</span>', news: '<span class="badge b-blue">📰 ข่าวสาร</span>', announcement: '<span class="badge b-yellow">📢 ประกาศ</span>' };
+        return map[v] || `<span class="badge b-gray">${esc(v ?? '—')}</span>`;
+      }},
+      { key: 'tone', label: 'Tone', r: v => {
+        const map = { promo: '<span class="badge b-purple">promo</span>', warning: '<span class="badge b-yellow">warning</span>', success: '<span class="badge b-green">success</span>', info: '<span class="badge b-blue">info</span>' };
+        return map[v] || `<span class="badge b-gray">${esc(v ?? '—')}</span>`;
+      }},
+      { key: 'icon_emoji', label: 'ไอคอน', r: v => v ? `<span style="font-size:20px">${esc(v)}</span>` : '—' },
+      { key: 'title',      label: 'หัวข้อ',      bold: true },
+      { key: 'subtitle',   label: 'รายละเอียด',   r: v => v ? `<span style="color:var(--muted);font-size:12px">${esc(v)}</span>` : '—' },
+      { key: 'tag',        label: 'แท็ก',          r: v => v ? `<span class="badge b-gray">${esc(v)}</span>` : '—' },
+      { key: 'cta_text',   label: 'ปุ่ม CTA',      r: v => v ? `<span style="background:#eef2ff;color:#4f46e5;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600">${esc(v)}</span>` : '—' },
+      { key: 'is_active',  label: 'สถานะ',          r: v => v ? '<span class="badge b-green">✅ เผยแพร่</span>' : '<span class="badge b-gray">⛔ ซ่อน</span>' },
+      { key: 'ends_at',    label: 'หมดอายุ',        r: v => v ? fmtDate(v) : '<span style="color:var(--muted)">ไม่มีกำหนด</span>' },
+    ],
+    formFields: [
+      { n: 'type', rk: 'type', label: 'ประเภท', type: 'select', req: true,
+        options: [
+          { v: 'promo',        l: '🎁 Promo Banner (Carousel หน้าแรก)' },
+          { v: 'news',         l: '📰 ข่าวสาร (News Feed)' },
+          { v: 'announcement', l: '📢 ประกาศ (News Feed)' },
+        ]
+      },
+      { n: 'tone', rk: 'tone', label: 'Tone (สีธีม)', type: 'select', req: true,
+        options: [
+          { v: 'promo',   l: '🟣 Promo (ม่วง — สำหรับ Banner)' },
+          { v: 'success', l: '🟢 Success (เขียว)' },
+          { v: 'warning', l: '🟡 Warning (เหลือง)' },
+          { v: 'info',    l: '🔵 Info (น้ำเงิน)' },
+        ]
+      },
+      { n: 'title',     rk: 'title',     label: 'หัวข้อหลัก',     type: 'text', req: true  },
+      { n: 'subtitle',  rk: 'subtitle',  label: 'รายละเอียดสั้น',  type: 'text', req: false },
+      { n: 'tag',       rk: 'tag',       label: 'แท็ก/Badge',      type: 'text', req: false, hint: 'เช่น โปรโมชั่น, ข่าวสาร, ประกาศ' },
+      { n: 'iconEmoji', rk: 'icon_emoji',label: 'ไอคอน Emoji',     type: 'text', req: false, hint: 'เช่น 🎉 ⚡ 📢 ⚠️' },
+      { n: 'ctaText',   rk: 'cta_text',  label: 'ปุ่ม CTA (ข้อความ)', type: 'text', req: false, hint: 'เช่น รับเครดิต, ดูรายละเอียด' },
+      { n: 'ctaUrl',    rk: 'cta_url',   label: 'ลิงก์ CTA',       type: 'url',  req: false },
+      { n: 'imageUrl',  rk: 'image_url', label: 'URL รูปภาพ',       type: 'url',  req: false },
+      { n: 'sortOrder', rk: 'sort_order',label: 'ลำดับการแสดงผล',   type: 'number', req: false, hint: '0 = แสดงก่อน' },
+      { n: 'isActive',  rk: 'is_active', label: 'สถานะ', type: 'select', req: false,
+        options: [{ v: 'true', l: '✅ เผยแพร่' }, { v: 'false', l: '⛔ ซ่อน' }]
+      },
+      { n: 'startsAt',  rk: 'starts_at', label: 'เริ่มแสดง (วันเวลา)',   type: 'datetime-local', req: false },
+      { n: 'endsAt',    rk: 'ends_at',   label: 'หมดอายุ (วันเวลา)',     type: 'datetime-local', req: false },
+    ],
   },
 
   waiting: {
@@ -722,6 +784,36 @@ function alertDialog(msg, title = 'เกิดข้อผิดพลาด') 
 }
 
 /* =====================================================
+   VERIFY EMAIL
+   ===================================================== */
+async function verifyEmail(userId) {
+  const users = state.cache['users'] || [];
+  const user = users.find(u => String(u.id) === String(userId));
+  const label = user ? (user.full_name || user.username || user.email || userId) : userId;
+
+  if (!confirm(`ยืนยัน Email ของ "${label}" ใช่หรือไม่?\n\nหลังจากยืนยันแล้ว ผู้ใช้จะสามารถเข้าสู่ระบบได้ทันที`)) return;
+
+  try {
+    const res = await apiFetch(`/admin/users/${userId}/verify-email`, { method: 'POST' });
+    if (res?.alreadyVerified) {
+      toast('ℹ️ Email นี้ได้รับการยืนยันแล้ว', 'info');
+    } else {
+      const hasAuthWarning = res?.warning;
+      toast(
+        hasAuthWarning
+          ? '✅ บันทึกในระบบแล้ว — ผู้ใช้จะเข้าสู่ระบบได้ในครั้งถัดไป'
+          : '✅ ยืนยัน Email สำเร็จ ผู้ใช้เข้าสู่ระบบได้ทันที',
+        'success'
+      );
+    }
+    delete state.cache['users'];
+    loadSection('users').catch(e => console.warn('reload users:', e));
+  } catch (err) {
+    toast('❌ ยืนยัน Email ไม่สำเร็จ: ' + err.message, 'error');
+  }
+}
+
+/* =====================================================
    RESET PASSWORD MODAL
    ===================================================== */
 function openResetPasswordModal(section, itemId) {
@@ -846,8 +938,9 @@ const SECTION_ICONS_SVG = {
   routes:    `<circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/>`,
   drivers:   `<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/>`,
   buses:     `<path d="M8 6v6"/><path d="M15 6v6"/><path d="M2 12h19.6"/><path d="M18 18h3s.5-1.7.8-2.8c.1-.4.2-.8.2-1.2 0-.4-.1-.8-.2-1.2l-1.4-5C20.1 6.8 19.1 6 18 6H4a2 2 0 0 0-2 2v10h3"/><circle cx="7" cy="18" r="2"/><path d="M9 18h5"/><circle cx="16" cy="18" r="2"/>`,
-  waiting:   `<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>`,
-  settings:  `<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>`,
+  waiting:       `<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>`,
+  announcements: `<path d="M3 11l19-9-9 19-2-8-8-2z"/>`,
+  settings:      `<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>`,
 };
 
 function _sectionSvg(section, size = 19, stroke = 1.75) {
@@ -2125,6 +2218,13 @@ const NAV_GROUPS = [
     ],
   },
   {
+    label: 'เนื้อหาแอปผู้โดยสาร',
+    superAdminOnly: true,
+    items: [
+      { section: 'announcements', icon: 'megaphone', label: 'ข่าวสาร & โปรโมชั่น' },
+    ],
+  },
+  {
     label: 'การตั้งค่า',
     superAdminOnly: true,
     items: [
@@ -2833,6 +2933,11 @@ let _wpPoints = [];
 let _wpRouteId = null;
 let _wpSaving = false;
 let _wpEncoded = null; // encoded polyline string from Directions API
+let _wpMode = 'waypoint'; // 'waypoint' | 'start' | 'end'
+let _wpStartCoords = null;
+let _wpEndCoords = null;
+let _wpStartMarker = null;
+let _wpEndMarker = null;
 const MAPS_API_KEY = 'AIzaSyD7S9gqNZQ4rQDbNlDdCr0uDGz1RhWvwwM ';
 
 let _mapsLoadPromise = null;
@@ -2865,6 +2970,9 @@ async function openWaypointEditor(routeId) {
   _wpEncoded = route.route_polyline || null; // restore saved road polyline
   _wpPoints = [];
   try { const p = route.waypoints ? JSON.parse(route.waypoints) : []; if (Array.isArray(p)) _wpPoints = p.map(pt => ({lat: Number(pt.lat), lng: Number(pt.lng)})); } catch {}
+  _wpMode = 'waypoint';
+  _wpStartCoords = _parseCoords(route.start_coords);
+  _wpEndCoords = _parseCoords(route.end_coords);
 
   document.getElementById('wpTitle').textContent = `วาดเส้นทาง: ${route.route_name}`;
   document.getElementById('wpMeta').textContent = 'กำลังโหลดแผนที่...';
@@ -2904,8 +3012,7 @@ function _parseCoords(str) {
 function _wpInitMap(route) {
   const mapEl = document.getElementById('wpMap');
   mapEl.innerHTML = ''; // clear loading overlay / previous error message
-  const startPt = _parseCoords(route.start_coords);
-  const center = _wpPoints[0] ?? startPt ?? {lat: 13.7563, lng: 100.5018};
+  const center = _wpPoints[0] ?? _wpStartCoords ?? {lat: 13.7563, lng: 100.5018};
 
   _wpMap = new google.maps.Map(mapEl, {
     center,
@@ -2918,10 +3025,11 @@ function _wpInitMap(route) {
   google.maps.event.trigger(_wpMap, 'resize');
   setTimeout(() => { google.maps.event.trigger(_wpMap, 'resize'); _wpFitPoints(route); }, 300);
 
-  // Reference markers: start (green) / end (red)
-  const endPt = _parseCoords(route.end_coords);
-  if (startPt) new google.maps.Marker({ position: startPt, map: _wpMap, title: 'จุดต้นทาง', icon: { url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"><circle cx="9" cy="9" r="8" fill="%2316a34a" stroke="white" stroke-width="2"/><text x="9" y="13" text-anchor="middle" font-size="9" fill="white">S</text></svg>' }});
-  if (endPt)   new google.maps.Marker({ position: endPt,   map: _wpMap, title: 'จุดปลายทาง', icon: { url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"><circle cx="9" cy="9" r="8" fill="%23dc2626" stroke="white" stroke-width="2"/><text x="9" y="13" text-anchor="middle" font-size="9" fill="white">E</text></svg>' }});
+  // Draggable start / end markers
+  _wpStartMarker = _wpMakeEndpointMarker(_wpStartCoords, 'start');
+  _wpEndMarker   = _wpMakeEndpointMarker(_wpEndCoords,   'end');
+  wpSetMode('waypoint');
+  _wpUpdateCoordsBar();
 
   _wpPolyline = new google.maps.Polyline({
     path: _wpPoints,
@@ -2932,8 +3040,21 @@ function _wpInitMap(route) {
   });
 
   _wpMap.addListener('click', e => {
-    _wpPoints.push({lat: e.latLng.lat(), lng: e.latLng.lng()});
-    _wpRedraw();
+    const pt = {lat: e.latLng.lat(), lng: e.latLng.lng()};
+    if (_wpMode === 'start') {
+      _wpStartCoords = pt;
+      _wpPlaceEndpointMarker('start', pt);
+      _wpUpdateCoordsBar();
+      wpSetMode('waypoint');
+    } else if (_wpMode === 'end') {
+      _wpEndCoords = pt;
+      _wpPlaceEndpointMarker('end', pt);
+      _wpUpdateCoordsBar();
+      wpSetMode('waypoint');
+    } else {
+      _wpPoints.push(pt);
+      _wpRedraw();
+    }
   });
 
   _wpRedraw();
@@ -2983,14 +3104,77 @@ function _wpRedraw() {
 
 function _wpFitPoints(route) {
   const allPts = [..._wpPoints];
-  const s = _parseCoords(route?.start_coords), e = _parseCoords(route?.end_coords);
-  if (s) allPts.push(s);
-  if (e) allPts.push(e);
+  if (_wpStartCoords) allPts.push(_wpStartCoords);
+  if (_wpEndCoords) allPts.push(_wpEndCoords);
   if (allPts.length === 0) return;
   if (allPts.length === 1) { _wpMap.setCenter(allPts[0]); _wpMap.setZoom(14); return; }
   const bounds = new google.maps.LatLngBounds();
   allPts.forEach(p => bounds.extend(p));
   _wpMap.fitBounds(bounds, 60);
+}
+
+function wpSetMode(mode) {
+  _wpMode = mode;
+  ['waypoint', 'start', 'end'].forEach(m => {
+    const btn = document.getElementById('wpMode_' + m);
+    if (!btn) return;
+    const active = m === mode;
+    btn.style.background = active ? (m === 'start' ? '#16a34a' : m === 'end' ? '#dc2626' : '#2563eb') : '#fff';
+    btn.style.color = active ? '#fff' : '#374151';
+    btn.style.borderColor = active ? 'transparent' : '#d1d5db';
+  });
+  const instrEl = document.getElementById('wpInstrText');
+  if (!instrEl) return;
+  if (mode === 'start')
+    instrEl.innerHTML = '<strong>คลิกบนแผนที่</strong> เพื่อวางจุดเริ่มต้น (สีเขียว) · ลากหมุดเพื่อปรับตำแหน่ง';
+  else if (mode === 'end')
+    instrEl.innerHTML = '<strong>คลิกบนแผนที่</strong> เพื่อวางจุดสิ้นสุด (สีแดง) · ลากหมุดเพื่อปรับตำแหน่ง';
+  else
+    instrEl.innerHTML = '<strong>คลิกบนแผนที่</strong> เพื่อวางจุดหลัก · <strong>คลิกที่ marker</strong> เพื่อลบ · กด <strong>"จับเส้นตามถนน"</strong> ให้ Google วาดเส้นให้อัตโนมัติ';
+}
+
+function _wpUpdateCoordsBar() {
+  const bar = document.getElementById('wpCoordsBar');
+  if (!bar) return;
+  const fmt = pt => pt ? pt.lat.toFixed(6) + ', ' + pt.lng.toFixed(6) : 'ยังไม่ได้กำหนด';
+  bar.innerHTML = '<span style="margin-right:16px">🟢 <strong>เริ่มต้น:</strong> ' + fmt(_wpStartCoords) + '</span>'
+                + '<span>🔴 <strong>สิ้นสุด:</strong> ' + fmt(_wpEndCoords) + '</span>';
+}
+
+function _wpMakeEndpointMarker(coords, type) {
+  if (!coords || !_wpMap) return null;
+  return _wpPlaceEndpointMarker(type, coords);
+}
+
+function _wpPlaceEndpointMarker(type, coords) {
+  const isStart = type === 'start';
+  const fill  = isStart ? '%2316a34a' : '%23dc2626';
+  const label = isStart ? 'S' : 'E';
+  const title = isStart ? 'จุดเริ่มต้น — ลากเพื่อเปลี่ยน' : 'จุดสิ้นสุด — ลากเพื่อเปลี่ยน';
+  const icon = {
+    url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26">'
+       + '<circle cx="13" cy="13" r="12" fill="' + fill + '" stroke="white" stroke-width="2.5"/>'
+       + '<text x="13" y="17" text-anchor="middle" font-size="11" fill="white" font-weight="bold">' + label + '</text>'
+       + '</svg>',
+    anchor: new google.maps.Point(13, 13),
+  };
+  if (isStart) {
+    if (_wpStartMarker) _wpStartMarker.setMap(null);
+    _wpStartMarker = new google.maps.Marker({ position: coords, map: _wpMap, title, icon, draggable: true, zIndex: 100 });
+    _wpStartMarker.addListener('dragend', ev => {
+      _wpStartCoords = {lat: ev.latLng.lat(), lng: ev.latLng.lng()};
+      _wpUpdateCoordsBar();
+    });
+    return _wpStartMarker;
+  } else {
+    if (_wpEndMarker) _wpEndMarker.setMap(null);
+    _wpEndMarker = new google.maps.Marker({ position: coords, map: _wpMap, title, icon, draggable: true, zIndex: 100 });
+    _wpEndMarker.addListener('dragend', ev => {
+      _wpEndCoords = {lat: ev.latLng.lat(), lng: ev.latLng.lng()};
+      _wpUpdateCoordsBar();
+    });
+    return _wpEndMarker;
+  }
 }
 
 function wpUndo() {
@@ -3100,6 +3284,8 @@ async function wpSave() {
   try {
     const body = { waypoints: JSON.stringify(_wpPoints) };
     if (_wpEncoded) body.routePolyline = _wpEncoded;
+    if (_wpStartCoords) body.startCoords = _wpStartCoords.lat + ',' + _wpStartCoords.lng;
+    if (_wpEndCoords)   body.endCoords   = _wpEndCoords.lat   + ',' + _wpEndCoords.lng;
     await apiFetch(`/admin/routes/${_wpRouteId}`, { method: 'PUT', body: JSON.stringify(body) });
     toast(_wpEncoded ? '✅ บันทึกเส้นทาง (ตามถนน) สำเร็จ' : '✅ บันทึกเส้นทางสำเร็จ', 'success');
     closeWaypointEditor();
@@ -3116,8 +3302,11 @@ function closeWaypointEditor() {
   document.getElementById('wpOverlay').style.display = 'none';
   _wpMarkers.forEach(m => m.setMap(null));
   if (_wpRoadPolyline) _wpRoadPolyline.setMap(null);
+  if (_wpStartMarker) { _wpStartMarker.setMap(null); _wpStartMarker = null; }
+  if (_wpEndMarker)   { _wpEndMarker.setMap(null);   _wpEndMarker   = null; }
   _wpMarkers = []; _wpPoints = []; _wpMap = null; _wpPolyline = null;
   _wpRoadPolyline = null; _wpEncoded = null; _wpRouteId = null;
+  _wpStartCoords = null; _wpEndCoords = null; _wpMode = 'waypoint';
 }
 
 window.addEventListener('DOMContentLoaded', init);
@@ -3161,6 +3350,8 @@ window.toggleAssignZone     = toggleAssignZone;
 window.gotoPage             = gotoPage;
 window.toggleGroup          = toggleGroup;
 window.changePageSize  = changePageSize;
+window.wpSetMode       = wpSetMode;
+window.verifyEmail     = verifyEmail;
 window.ssToggle        = ssToggle;
 window.ssFilter        = ssFilter;
 window.openResetPasswordModal = openResetPasswordModal;

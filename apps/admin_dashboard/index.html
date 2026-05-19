@@ -297,11 +297,20 @@
       </div>
       <button onclick="closeWaypointEditor()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#6b7280;line-height:1">✕</button>
     </div>
-    <!-- Instructions bar -->
-    <div style="background:#eff6ff;border-bottom:1px solid #bfdbfe;padding:8px 20px;font-size:12px;color:#1e40af;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <span>📍</span>
-      <span><strong>คลิกบนแผนที่</strong> เพื่อวางจุดหลัก · <strong>คลิกที่ marker</strong> เพื่อลบ · กด <strong>"จับเส้นตามถนน"</strong> ให้ Google วาดเส้นให้อัตโนมัติ</span>
-      <span id="wpSnapStatus" style="margin-left:auto;font-weight:600"></span>
+    <!-- Instructions + mode toggle bar -->
+    <div style="background:#eff6ff;border-bottom:1px solid #bfdbfe;padding:8px 20px;display:flex;flex-direction:column;gap:5px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span id="wpInstrText" style="font-size:12px;color:#1e40af;flex:1"><strong>คลิกบนแผนที่</strong> เพื่อวางจุดหลัก · <strong>คลิกที่ marker</strong> เพื่อลบ · กด <strong>"จับเส้นตามถนน"</strong> ให้ Google วาดเส้นให้อัตโนมัติ</span>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          <button id="wpMode_waypoint" onclick="wpSetMode('waypoint')" style="padding:4px 10px;border-radius:20px;border:1px solid #d1d5db;font-size:12px;cursor:pointer;background:#2563eb;color:#fff;font-weight:600;transition:background .15s,color .15s">📍 วางจุด</button>
+          <button id="wpMode_start"    onclick="wpSetMode('start')"    style="padding:4px 10px;border-radius:20px;border:1px solid #d1d5db;font-size:12px;cursor:pointer;background:#fff;color:#374151;font-weight:600;transition:background .15s,color .15s">🟢 จุดเริ่มต้น</button>
+          <button id="wpMode_end"      onclick="wpSetMode('end')"      style="padding:4px 10px;border-radius:20px;border:1px solid #d1d5db;font-size:12px;cursor:pointer;background:#fff;color:#374151;font-weight:600;transition:background .15s,color .15s">🔴 จุดสิ้นสุด</button>
+        </div>
+        <span id="wpSnapStatus" style="font-size:12px;font-weight:600;color:#16a34a;flex-shrink:0"></span>
+      </div>
+      <div id="wpCoordsBar" style="font-size:11px;color:#374151;padding:2px 0">
+        🟢 <strong>เริ่มต้น:</strong> ยังไม่ได้กำหนด &nbsp;&nbsp; 🔴 <strong>สิ้นสุด:</strong> ยังไม่ได้กำหนด
+      </div>
     </div>
     <!-- Map — explicit height so Google Maps can render -->
     <div id="wpMap" style="flex:1;height:0;min-height:0;position:relative"></div>

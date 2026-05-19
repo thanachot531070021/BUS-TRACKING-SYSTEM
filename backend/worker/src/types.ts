@@ -261,3 +261,64 @@ export type CreateAnalyticsBody = {
   deviceType?: string;
   sessionId?: string;
 };
+
+// ─── Announcements ────────────────────────────────────────────────────────────
+
+export type AnnouncementType = 'promo' | 'news' | 'announcement';
+export type AnnouncementTone = 'promo' | 'warning' | 'success' | 'info';
+
+export type Announcement = {
+  id: string;
+  title: string;
+  subtitle?: string | null;
+  tag?: string | null;
+  type: AnnouncementType;
+  tone: AnnouncementTone;
+  icon_emoji?: string | null;
+  cta_text?: string | null;
+  cta_url?: string | null;
+  image_url?: string | null;
+  sort_order: number;
+  is_active: boolean;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  created_by?: string | null;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type CreateAnnouncementBody = {
+  title: string;
+  subtitle?: string | null;
+  tag?: string | null;
+  type?: AnnouncementType;
+  tone?: AnnouncementTone;
+  iconEmoji?: string | null;
+  ctaText?: string | null;
+  ctaUrl?: string | null;
+  imageUrl?: string | null;
+  sortOrder?: number;
+  isActive?: boolean;
+  startsAt?: string | null;
+  endsAt?: string | null;
+};
+
+export type UpdateAnnouncementBody = Partial<CreateAnnouncementBody>;
+
+// ─── User Favorite Routes ─────────────────────────────────────────────────────
+
+export type FavoriteRoute = {
+  id: string;
+  user_id: string;
+  route_id: string;
+  created_at?: string;
+  route?: {
+    id: string;
+    route_code: string;
+    route_name: string;
+    start_location?: string | null;
+    end_location?: string | null;
+    status: string;
+  } | null;
+};
