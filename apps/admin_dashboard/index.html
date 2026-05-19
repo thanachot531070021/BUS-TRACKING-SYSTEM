@@ -264,10 +264,15 @@
       </div>
       <h3>ยืนยันการลบ</h3>
       <p id="confirmText">คุณต้องการลบรายการนี้ใช่หรือไม่?</p>
+      <p style="margin:12px 0 6px;font-size:13px;color:#64748b">พิมพ์ <strong style="color:#ef4444">ลบ</strong> เพื่อยืนยัน</p>
+      <input id="confirmDeleteInput" type="text" placeholder='พิมพ์ "ลบ" เพื่อยืนยัน'
+        oninput="onConfirmInput()"
+        style="width:100%;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;transition:border-color .15s"
+        autocomplete="off">
     </div>
     <div class="modal-footer">
       <button class="btn btn-secondary" onclick="closeConfirm()">ยกเลิก</button>
-      <button class="btn btn-danger" id="confirmDeleteBtn" onclick="executeDelete()">ลบรายการ</button>
+      <button class="btn btn-danger" id="confirmDeleteBtn" onclick="executeDelete()" disabled style="opacity:.4;cursor:not-allowed">🗑️ ยืนยันการลบ</button>
     </div>
   </div>
 </div>

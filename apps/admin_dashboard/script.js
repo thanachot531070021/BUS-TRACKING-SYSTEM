@@ -2038,13 +2038,32 @@ function askDelete(section, id) {
   const cfg = SECTIONS[section];
   document.getElementById('confirmText').textContent =
     `คุณต้องการลบ "${cfg.title}" (ID: ${id.slice(0,10)}…) ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้`;
+  const input = document.getElementById('confirmDeleteInput');
+  input.value = '';
+  input.style.borderColor = '#e2e8f0';
   const btn = document.getElementById('confirmDeleteBtn');
-  btn.disabled = false; btn.textContent = '🗑️ ยืนยันการลบ';
+  btn.disabled = true; btn.style.opacity = '.4'; btn.style.cursor = 'not-allowed';
   document.getElementById('confirmModal').classList.remove('hidden');
+  setTimeout(() => input.focus(), 80);
+}
+
+function onConfirmInput() {
+  const input = document.getElementById('confirmDeleteInput');
+  const btn = document.getElementById('confirmDeleteBtn');
+  const ok = input.value.trim() === 'ลบ';
+  input.style.borderColor = input.value ? (ok ? '#22c55e' : '#ef4444') : '#e2e8f0';
+  btn.disabled = !ok;
+  btn.style.opacity = ok ? '1' : '.4';
+  btn.style.cursor = ok ? 'pointer' : 'not-allowed';
 }
 
 function closeConfirm() {
   document.getElementById('confirmModal').classList.add('hidden');
+  const input = document.getElementById('confirmDeleteInput');
+  input.value = '';
+  input.style.borderColor = '#e2e8f0';
+  const btn = document.getElementById('confirmDeleteBtn');
+  btn.disabled = true; btn.style.opacity = '.4'; btn.style.cursor = 'not-allowed';
   del.section = null; del.id = null;
 }
 
@@ -2814,7 +2833,7 @@ let _wpPoints = [];
 let _wpRouteId = null;
 let _wpSaving = false;
 let _wpEncoded = null; // encoded polyline string from Directions API
-const MAPS_API_KEY = 'AIzaSyD7S9gqNZQ4rQDbNlDdCr0uDGz1RhWvwwM';
+const MAPS_API_KEY = 'AIzaSyD7S9gqNZQ4rQDbNlDdCr0uDGz1RhWvwwM ';
 
 let _mapsLoadPromise = null;
 function _loadGoogleMaps() {
@@ -3082,17 +3101,18 @@ async function wpSave() {
     const body = { waypoints: JSON.stringify(_wpPoints) };
     if (_wpEncoded) body.routePolyline = _wpEncoded;
     await apiFetch(`/admin/routes/${_wpRouteId}`, { method: 'PUT', body: JSON.stringify(body) });
-    showToast(_wpEncoded ? '✅ บันทึกเส้นทาง (ตามถนน) สำเร็จ' : '✅ บันทึกเส้นทางสำเร็จ', 'success');
+    toast(_wpEncoded ? '✅ บันทึกเส้นทาง (ตามถนน) สำเร็จ' : '✅ บันทึกเส้นทางสำเร็จ', 'success');
     closeWaypointEditor();
     delete state.cache['routes'];
     loadSection('routes').catch(e => console.warn('reload routes:', e));
   } catch (err) {
     _wpSetSaving(false);
-    showToast('❌ บันทึกไม่สำเร็จ: ' + err.message, 'error');
+    toast('❌ บันทึกไม่สำเร็จ: ' + err.message, 'error');
   }
 }
 
 function closeWaypointEditor() {
+  _wpSetSaving(false);
   document.getElementById('wpOverlay').style.display = 'none';
   _wpMarkers.forEach(m => m.setMap(null));
   if (_wpRoadPolyline) _wpRoadPolyline.setMap(null);
@@ -3122,6 +3142,7 @@ window.askDelete      = askDelete;
 window.closeModal     = closeModal;
 window.submitModal    = submitModal;
 window.closeConfirm   = closeConfirm;
+window.onConfirmInput = onConfirmInput;
 window.executeDelete  = executeDelete;
 window.filterTable    = filterTable;
 window.saveApiUrl     = saveApiUrl;
@@ -3143,7 +3164,6 @@ window.changePageSize  = changePageSize;
 window.ssToggle        = ssToggle;
 window.ssFilter        = ssFilter;
 window.openResetPasswordModal = openResetPasswordModal;
-window.showToast           = showToast;
 window.openWaypointEditor  = openWaypointEditor;
 window.closeWaypointEditor = closeWaypointEditor;
 window.wpUndo        = wpUndo;
